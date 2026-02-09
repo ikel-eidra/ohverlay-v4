@@ -24,6 +24,9 @@ class TraySignals(QObject):
     quit_app = Signal()
     love_notes_path_set = Signal(str)
     size_changed = Signal(float)
+    telegram_token_set = Signal(str)
+    webhook_toggled = Signal(bool)
+    llm_key_set = Signal(str, str)  # provider, key
 
 
 class SystemTray(QSystemTrayIcon):
@@ -188,6 +191,43 @@ class SystemTray(QSystemTrayIcon):
 
         menu.addSeparator()
 
+        # --- Integrations ---
+        integrations_menu = menu.addMenu("Integrations")
+
+        # Telegram
+        telegram_action = integrations_menu.addAction("Set Telegram Bot Token...")
+        telegram_action.triggered.connect(self._set_telegram_token)
+
+        # Webhook
+        self._webhook_toggle = integrations_menu.addAction("Enable Webhook Server (port 7277)")
+        self._webhook_toggle.setCheckable(True)
+        self._webhook_toggle.setChecked(
+            self.config.get("webhook", "enabled") if self.config else False
+        )
+        self._webhook_toggle.triggered.connect(
+            lambda checked: self.signals.webhook_toggled.emit(checked)
+        )
+
+        integrations_menu.addSeparator()
+
+        # LLM Brain
+        llm_menu = integrations_menu.addMenu("LLM Brain")
+        anthropic_action = llm_menu.addAction("Set Anthropic API Key...")
+        anthropic_action.triggered.connect(
+            lambda: self._set_llm_key("anthropic")
+        )
+        openai_action = llm_menu.addAction("Set OpenAI API Key...")
+        openai_action.triggered.connect(
+            lambda: self._set_llm_key("openai")
+        )
+
+        # Status indicator
+        integrations_menu.addSeparator()
+        self._status_action = integrations_menu.addAction("Status: Initializing...")
+        self._status_action.setEnabled(False)
+
+        menu.addSeparator()
+
         # --- Quit ---
         quit_action = menu.addAction("Quit ZenFish")
         quit_action.triggered.connect(self.signals.quit_app.emit)
@@ -224,6 +264,30 @@ class SystemTray(QSystemTrayIcon):
         if ok and path:
             self.signals.love_notes_path_set.emit(path)
 
+    def _set_telegram_token(self):
+        """Prompt user for Telegram bot token."""
+        token, ok = QInputDialog.getText(
+            None, "Telegram Bot",
+            "Enter your Telegram Bot token (from @BotFather):"
+        )
+        if ok and token.strip():
+            self.signals.telegram_token_set.emit(token.strip())
+
+    def _set_llm_key(self, provider):
+        """Prompt user for LLM API key."""
+        label = "Anthropic" if provider == "anthropic" else "OpenAI"
+        key, ok = QInputDialog.getText(
+            None, f"{label} API Key",
+            f"Enter your {label} API key:"
+        )
+        if ok and key.strip():
+            self.signals.llm_key_set.emit(provider, key.strip())
+
     def update_sanctuary_toggle(self, enabled):
         """Update the sanctuary toggle state in the menu."""
         self._sanctuary_toggle.setChecked(enabled)
+
+    def update_status(self, text):
+        """Update the status indicator in integrations menu."""
+        if hasattr(self, '_status_action'):
+            self._status_action.setText(f"Status: {text}")

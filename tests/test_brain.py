@@ -77,6 +77,7 @@ def test_brain_resting_state():
 
 
 def test_brain_module_check():
+    pytest.importorskip("PySide6")
     brain = BehavioralReactor()
     from ui.bubbles import BubbleSystem
     bs = BubbleSystem()

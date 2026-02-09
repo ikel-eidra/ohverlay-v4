@@ -58,6 +58,20 @@ DEFAULT_CONFIG = {
         "feed_fish": "ctrl+alt+f",
         "toggle_sanctuary": "ctrl+alt+s",
         "toggle_visibility": "ctrl+alt+h"
+    },
+    "llm": {
+        "provider": "anthropic",
+        "anthropic_api_key": "",
+        "openai_api_key": "",
+        "model": ""
+    },
+    "telegram": {
+        "bot_token": "",
+        "allowed_user_ids": []
+    },
+    "webhook": {
+        "enabled": False,
+        "port": 7277
     }
 }
 
