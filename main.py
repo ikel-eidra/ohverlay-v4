@@ -106,6 +106,11 @@ class ZenFishApp:
         # Bubble system for communication
         self.brain.set_bubble_system(self.bubble_system)
 
+        # Restore persisted speed setting
+        saved_speed = self.config.get("fish", "speed") if self.config else None
+        if saved_speed:
+            self._on_speed_changed(saved_speed)
+
     def _init_modules(self):
         """Initialize and register communication modules with LLM brain."""
         module_cfg = self.config.get("modules") or {}
