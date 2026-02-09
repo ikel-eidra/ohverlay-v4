@@ -19,8 +19,11 @@ from PySide6.QtGui import QGuiApplication
 from engine.brain import BehavioralReactor
 from engine.aquarium import MonitorManager, AquariumSector
 from engine.sanctuary import SanctuaryEngine
+from engine.school import FishSchool
 from engine.llm_brain import LLMBrain
 from ui.skin import FishSkin
+from ui.tetra_skin import NeonTetraSkin
+from ui.discus_skin import DiscusSkin
 from ui.bubbles import BubbleSystem
 from ui.tray import SystemTray
 from config.settings import Settings
@@ -73,6 +76,11 @@ class ZenFishApp:
         """Create the fish skin renderer and bubble system."""
         self.skin = FishSkin(config=self.config)
         self.bubble_system = BubbleSystem(config=self.config)
+
+        # School mode state (None = solo betta mode)
+        self.school = None
+        self.school_skins = []
+        self.school_mode = False
 
     def _init_llm_brain(self):
         """Initialize the LLM Brain for intelligent orchestration."""
@@ -155,6 +163,7 @@ class ZenFishApp:
         self.tray.signals.telegram_token_set.connect(self._on_telegram_token)
         self.tray.signals.webhook_toggled.connect(self._on_webhook_toggled)
         self.tray.signals.llm_key_set.connect(self._on_llm_key_set)
+        self.tray.signals.species_changed.connect(self._on_species_changed)
         self.tray.show()
 
     def _init_hotkeys(self):
@@ -207,10 +216,18 @@ class ZenFishApp:
 
     def _tick(self):
         """Main loop: update brain AI, then push state to all screen sectors."""
-        self.brain.update()
-        fish_state = self.brain.get_state()
-        for sector in self.sectors:
-            sector.update_fish_state(fish_state)
+        if self.school_mode and self.school:
+            # School mode: update all fish via Boids engine
+            self.school.update()
+            school_states = self.school.get_all_states()
+            for sector in self.sectors:
+                sector.update_school_states(school_states)
+        else:
+            # Solo betta mode
+            self.brain.update()
+            fish_state = self.brain.get_state()
+            for sector in self.sectors:
+                sector.update_fish_state(fish_state)
 
     def _update_tray_status(self):
         """Update integration status in tray menu."""
@@ -254,6 +271,49 @@ class ZenFishApp:
         self.brain._dart_speed = preset["dart"]
         self.config.set("fish", "speed", speed_key)
         logger.info(f"Swimming speed set to: {preset['label']}")
+
+    def _on_species_changed(self, species, count):
+        """Switch between solo betta and school mode with different species."""
+        if species == "betta" and count <= 1:
+            # Return to solo betta mode
+            self.school_mode = False
+            self.school = None
+            self.school_skins = []
+            for sector in self.sectors:
+                sector.set_school_skins([])
+            logger.info("Switched to solo Betta mode.")
+            self.bubble_system.queue_message("Solo betta mode.", "ambient")
+            return
+
+        # Create school with appropriate skins
+        count = max(1, min(12, count))
+        self.school = FishSchool(self.total_bounds, species=species, count=count)
+        self.school.set_sanctuary(self.sanctuary)
+
+        # Create one skin per fish with unique seeds for variation
+        morph_list = list(DiscusSkin.MORPHS.keys())
+        self.school_skins = []
+        for i in range(count):
+            if species == "neon_tetra":
+                skin = NeonTetraSkin(seed=42 + i * 17)
+            elif species == "discus":
+                morph = morph_list[i % len(morph_list)]
+                skin = DiscusSkin(seed=42 + i * 17, morph=morph)
+            else:
+                skin = NeonTetraSkin(seed=42 + i * 17)
+            self.school_skins.append(skin)
+
+        # Push skins to all sectors
+        for sector in self.sectors:
+            sector.set_school_skins(self.school_skins)
+
+        self.school_mode = True
+        self.config.set("fish", "species", species)
+        self.config.set("fish", "school_count", count)
+
+        label = species.replace("_", " ").title()
+        logger.info(f"School mode: {count} {label}")
+        self.bubble_system.queue_message(f"{count} {label} swimming!", "ambient")
 
     def _on_sanctuary_toggled(self):
         enabled = self.sanctuary.toggle()
