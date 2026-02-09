@@ -2,6 +2,12 @@
 ZenFish Overlay - Main entry point.
 A transparent desktop companion: a lifelike Betta fish that swims natively
 across your 2-3 monitors with no aquarium background. The monitors ARE the tank.
+
+Features:
+- LLM-powered health reminders and news curation (Claude/OpenAI)
+- Real-time love notes via Telegram, WhatsApp/Messenger webhooks, or JSON file
+- Sanctuary zones (invisible boundaries) for deep work
+- Bubble communication system with category-based messages
 """
 
 import sys
@@ -13,6 +19,7 @@ from PySide6.QtGui import QGuiApplication
 from engine.brain import BehavioralReactor
 from engine.aquarium import MonitorManager, AquariumSector
 from engine.sanctuary import SanctuaryEngine
+from engine.llm_brain import LLMBrain
 from ui.skin import FishSkin
 from ui.bubbles import BubbleSystem
 from ui.tray import SystemTray
@@ -21,6 +28,8 @@ from modules.health import HealthModule
 from modules.love_notes import LoveNotesModule
 from modules.schedule import ScheduleModule
 from modules.news import NewsModule
+from modules.telegram_bridge import TelegramBridge
+from modules.webhook_server import WebhookServer
 from utils.logger import logger
 
 
@@ -38,15 +47,20 @@ class ZenFishApp:
         # Load configuration
         self.config = Settings()
 
-        # Initialize subsystems
+        # Initialize subsystems (order matters)
         self._init_monitors()
         self._init_rendering()
+        self._init_llm_brain()
+        self._init_messaging()
         self._init_brain()
         self._init_modules()
         self._init_tray()
         self._init_hotkeys()
         self._init_sectors()
         self._init_main_loop()
+
+        # Update tray status
+        self._update_tray_status()
 
         logger.info("ZenFish Overlay fully initialized. Your betta is swimming!")
 
@@ -59,6 +73,26 @@ class ZenFishApp:
         """Create the fish skin renderer and bubble system."""
         self.skin = FishSkin(config=self.config)
         self.bubble_system = BubbleSystem(config=self.config)
+
+    def _init_llm_brain(self):
+        """Initialize the LLM Brain for intelligent orchestration."""
+        self.llm_brain = LLMBrain(config=self.config)
+        if self.llm_brain.is_available:
+            logger.info(f"LLM Brain active: {self.llm_brain.provider} ({self.llm_brain.model})")
+        else:
+            logger.info("LLM Brain: no API key configured - using static fallback messages")
+
+    def _init_messaging(self):
+        """Initialize Telegram bridge and webhook server."""
+        # Telegram
+        self.telegram_bridge = TelegramBridge(config=self.config)
+        if self.telegram_bridge.enabled:
+            self.telegram_bridge.start()
+
+        # Webhook server for WhatsApp/Messenger
+        self.webhook_server = WebhookServer(config=self.config)
+        if self.webhook_server.enabled:
+            self.webhook_server.start()
 
     def _init_brain(self):
         """Create the behavioral AI and connect subsystems."""
@@ -73,19 +107,25 @@ class ZenFishApp:
         self.brain.set_bubble_system(self.bubble_system)
 
     def _init_modules(self):
-        """Initialize and register communication modules."""
+        """Initialize and register communication modules with LLM brain."""
         module_cfg = self.config.get("modules") or {}
 
-        self.health_module = HealthModule(config=self.config)
+        # Health module (LLM-enhanced)
+        self.health_module = HealthModule(config=self.config, llm_brain=self.llm_brain)
         self.health_module.enabled = module_cfg.get("health", True)
 
+        # Love notes (multi-source: file + telegram + webhook)
         self.love_notes_module = LoveNotesModule(config=self.config)
         self.love_notes_module.enabled = module_cfg.get("love_notes", True)
+        self.love_notes_module.set_telegram_bridge(self.telegram_bridge)
+        self.love_notes_module.set_webhook_server(self.webhook_server)
 
+        # Schedule
         self.schedule_module = ScheduleModule(config=self.config)
         self.schedule_module.enabled = module_cfg.get("schedule", True)
 
-        self.news_module = NewsModule(config=self.config)
+        # News (LLM-enhanced)
+        self.news_module = NewsModule(config=self.config, llm_brain=self.llm_brain)
         self.news_module.enabled = module_cfg.get("news", False)
 
         self.brain.add_module(self.health_module)
@@ -106,6 +146,9 @@ class ZenFishApp:
         self.tray.signals.quit_app.connect(self._on_quit)
         self.tray.signals.love_notes_path_set.connect(self._on_love_notes_path)
         self.tray.signals.size_changed.connect(self._on_size_changed)
+        self.tray.signals.telegram_token_set.connect(self._on_telegram_token)
+        self.tray.signals.webhook_toggled.connect(self._on_webhook_toggled)
+        self.tray.signals.llm_key_set.connect(self._on_llm_key_set)
         self.tray.show()
 
     def _init_hotkeys(self):
@@ -162,6 +205,19 @@ class ZenFishApp:
         fish_state = self.brain.get_state()
         for sector in self.sectors:
             sector.update_fish_state(fish_state)
+
+    def _update_tray_status(self):
+        """Update integration status in tray menu."""
+        parts = []
+        if self.llm_brain.is_available:
+            parts.append(f"LLM: {self.llm_brain.provider}")
+        if self.telegram_bridge.enabled:
+            parts.append("Telegram: ON")
+        if self.webhook_server.enabled:
+            parts.append(f"Webhook: :{self.webhook_server.port}")
+        if not parts:
+            parts.append("No integrations active")
+        self.tray.update_status(" | ".join(parts))
 
     # --- Signal handlers ---
 
@@ -221,6 +277,51 @@ class ZenFishApp:
         self.love_notes_module.set_source_path(path)
         self.config.set("love_notes", "source_path", path)
 
+    def _on_telegram_token(self, token):
+        """Handle Telegram bot token configuration."""
+        self.config.set("telegram", "bot_token", token)
+        self.telegram_bridge.token = token
+        self.telegram_bridge.enabled = True
+        self.telegram_bridge.start()
+        self._update_tray_status()
+        self.bubble_system.queue_message("Telegram connected! Send me love notes.", "love")
+        logger.info("Telegram bot token configured and bridge started.")
+
+    def _on_webhook_toggled(self, enabled):
+        """Toggle the webhook server on/off."""
+        self.config.set("webhook", "enabled", enabled)
+        if enabled:
+            self.webhook_server.enabled = True
+            if self.webhook_server.start():
+                self.bubble_system.queue_message(
+                    f"Webhook listening on port {self.webhook_server.port}", "ambient"
+                )
+        else:
+            self.webhook_server.stop()
+            self.webhook_server.enabled = False
+        self._update_tray_status()
+
+    def _on_llm_key_set(self, provider, key):
+        """Handle LLM API key configuration."""
+        if provider == "anthropic":
+            self.config.set("llm", "anthropic_api_key", key)
+            self.config.set("llm", "provider", "anthropic")
+        elif provider == "openai":
+            self.config.set("llm", "openai_api_key", key)
+            self.config.set("llm", "provider", "openai")
+
+        # Re-initialize the LLM brain with new key
+        self.llm_brain = LLMBrain(config=self.config)
+        self.health_module.set_llm_brain(self.llm_brain)
+        self.news_module.set_llm_brain(self.llm_brain)
+
+        if self.llm_brain.is_available:
+            self.bubble_system.queue_message(
+                f"LLM Brain active! ({self.llm_brain.provider})", "ambient"
+            )
+        self._update_tray_status()
+        logger.info(f"LLM key set for {provider}, brain re-initialized.")
+
     def _on_quit(self):
         logger.info("ZenFish shutting down...")
         self.timer.stop()
@@ -229,6 +330,8 @@ class ZenFishApp:
                 self._hotkey_listener.stop()
             except Exception:
                 pass
+        self.telegram_bridge.stop()
+        self.webhook_server.stop()
         self.config.save()
         self.app.quit()
 
