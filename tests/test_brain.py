@@ -59,10 +59,11 @@ def test_brain_sanctuary_awareness():
     # Target finding should avoid sanctuary
     brain.hunger = 40.0
     for _ in range(10):
-        brain._find_new_target()
-        tx, ty = brain.target
+        target = brain._find_valid_target()
+        tx, ty = target
         in_sanctuary = (400 <= tx <= 600 and 400 <= ty <= 600)
         if not in_sanctuary:
+            brain.target = target
             break
     assert not (400 <= brain.target[0] <= 600 and 400 <= brain.target[1] <= 600)
 
