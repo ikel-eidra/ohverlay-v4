@@ -24,6 +24,7 @@ class TraySignals(QObject):
     quit_app = Signal()
     love_notes_path_set = Signal(str)
     size_changed = Signal(float)
+    speed_changed = Signal(str)  # "super_slow", "slow", "normal", "fast"
     telegram_token_set = Signal(str)
     webhook_toggled = Signal(bool)
     llm_key_set = Signal(str, str)  # provider, key
@@ -136,6 +137,19 @@ class SystemTray(QSystemTrayIcon):
             action = size_menu.addAction(label)
             action.triggered.connect(
                 lambda checked, s=scale: self.signals.size_changed.emit(s)
+            )
+
+        # --- Speed Submenu ---
+        speed_menu = menu.addMenu("Swimming Speed")
+        for label, speed_key in [
+            ("Super Slow (Zen)", "super_slow"),
+            ("Slow (Calm)", "slow"),
+            ("Normal", "normal"),
+            ("Fast (Energetic)", "fast"),
+        ]:
+            action = speed_menu.addAction(label)
+            action.triggered.connect(
+                lambda checked, s=speed_key: self.signals.speed_changed.emit(s)
             )
 
         menu.addSeparator()

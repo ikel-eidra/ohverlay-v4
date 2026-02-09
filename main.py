@@ -146,6 +146,7 @@ class ZenFishApp:
         self.tray.signals.quit_app.connect(self._on_quit)
         self.tray.signals.love_notes_path_set.connect(self._on_love_notes_path)
         self.tray.signals.size_changed.connect(self._on_size_changed)
+        self.tray.signals.speed_changed.connect(self._on_speed_changed)
         self.tray.signals.telegram_token_set.connect(self._on_telegram_token)
         self.tray.signals.webhook_toggled.connect(self._on_webhook_toggled)
         self.tray.signals.llm_key_set.connect(self._on_llm_key_set)
@@ -232,6 +233,22 @@ class ZenFishApp:
         self.skin.size_scale = scale
         self.config.set("fish", "size_scale", scale)
         logger.info(f"Fish size set to: {scale}x")
+
+    def _on_speed_changed(self, speed_key):
+        """Adjust fish swimming speed."""
+        speed_map = {
+            "super_slow": {"max": 40, "cruise": 12, "idle": 5, "dart": 80, "label": "Super Slow"},
+            "slow": {"max": 90, "cruise": 30, "idle": 10, "dart": 150, "label": "Slow"},
+            "normal": {"max": 180, "cruise": 55, "idle": 20, "dart": 350, "label": "Normal"},
+            "fast": {"max": 300, "cruise": 100, "idle": 35, "dart": 500, "label": "Fast"},
+        }
+        preset = speed_map.get(speed_key, speed_map["normal"])
+        self.brain._max_speed = preset["max"]
+        self.brain._cruise_speed = preset["cruise"]
+        self.brain._idle_speed = preset["idle"]
+        self.brain._dart_speed = preset["dart"]
+        self.config.set("fish", "speed", speed_key)
+        logger.info(f"Swimming speed set to: {preset['label']}")
 
     def _on_sanctuary_toggled(self):
         enabled = self.sanctuary.toggle()
