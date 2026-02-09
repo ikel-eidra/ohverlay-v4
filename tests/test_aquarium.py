@@ -2,8 +2,8 @@ import sys
 from PySide6.QtWidgets import QApplication
 from engine.aquarium import MonitorManager
 
+
 def test_monitor_manager():
-    # We need a QApplication to access screens
     app = QApplication.instance() or QApplication(sys.argv)
     mm = MonitorManager()
     bounds = mm.get_total_bounds_tuple()
