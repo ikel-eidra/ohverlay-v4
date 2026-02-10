@@ -6,7 +6,7 @@ Renders fish (single or school) and bubbles with proper coordinate translation.
 
 from PySide6.QtWidgets import QMainWindow
 from PySide6.QtCore import Qt, QRect
-from PySide6.QtGui import QGuiApplication, QPainter
+from PySide6.QtGui import QGuiApplication, QPainter, QColor, QRadialGradient, QBrush
 from utils.logger import logger
 from ui.skin import FishSkin
 from ui.bubbles import BubbleSystem
@@ -118,6 +118,23 @@ class AquariumSector(QMainWindow):
         if self.visible:
             self.update()
 
+
+    def _draw_pellets(self, painter, pellets):
+        if not pellets:
+            return
+        for gx, gy in pellets:
+            lx = gx - self.screen_geometry.x()
+            ly = gy - self.screen_geometry.y()
+            if lx < -20 or ly < -20 or lx > self.screen_geometry.width() + 20 or ly > self.screen_geometry.height() + 20:
+                continue
+            grad = QRadialGradient(lx, ly, 5.5)
+            grad.setColorAt(0.0, QColor(245, 214, 130, 220))
+            grad.setColorAt(0.65, QColor(195, 145, 72, 210))
+            grad.setColorAt(1.0, QColor(110, 74, 36, 0))
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QBrush(grad))
+            painter.drawEllipse(int(lx - 4), int(ly - 4), 8, 8)
+
     def paintEvent(self, event):
         if not self.visible:
             return
@@ -141,6 +158,10 @@ class AquariumSector(QMainWindow):
             )
             self.bubble_system.render(painter)
             painter.restore()
+
+        # Render symbolic feed pellets (solo mode)
+        if self.fish_state:
+            self._draw_pellets(painter, self.fish_state.get("pellets", []))
 
         # Render fish - school mode or solo mode
         if self.school_mode and self.school_skins and self.school_states:
