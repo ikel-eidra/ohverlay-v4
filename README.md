@@ -46,6 +46,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## 🧭 Product Direction & Handoff
+
+For a current implementation-grounded roadmap (identity, milestones, guardrails, and release criteria), see the context primer:
+
+- [`docs/ohverlay_zenfish_context_primer.md`](docs/ohverlay_zenfish_context_primer.md)
+
 ---
 
 ## 🤝 Contribution

@@ -14,7 +14,7 @@ import sys
 import signal
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTimer, QBuffer, QByteArray
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QCursor
 
 from engine.brain import BehavioralReactor
 from engine.aquarium import MonitorManager, AquariumSector
@@ -302,7 +302,7 @@ class ZenFishApp:
         targets = result.get("targets") or []
 
         if action == "feed":
-            self.brain.feed()
+            self._on_feed_fish()
             if msg:
                 self.bubble_system.queue_message(msg, "ambient")
             elif targets:
@@ -435,8 +435,9 @@ class ZenFishApp:
             logger.info(f"Module '{module_key}' {'enabled' if enabled else 'disabled'}")
 
     def _on_feed_fish(self):
-        self.brain.feed()
-        self.bubble_system.queue_message("Yum! Thank you!", "ambient")
+        cursor = QCursor.pos()
+        self.brain.drop_pellet(cursor.x(), cursor.y(), count=4)
+        self.bubble_system.queue_message("Pellets dropped. Breathe and watch the flow.", "ambient")
 
     def _on_toggle_visibility(self):
         for sector in self.sectors:
