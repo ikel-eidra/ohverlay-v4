@@ -23,7 +23,7 @@ class BehavioralReactor:
 
     STATES = ("IDLE", "SEARCHING", "FEEDING", "RESTING", "COMMUNICATING", "DARTING", "FLARING")
 
-    def __init__(self):
+    def __init__(self, config=None):
         self.hunger = 0.0
         self.mood = 100.0
         self.position = np.array([100.0, 100.0])
@@ -81,8 +81,30 @@ class BehavioralReactor:
         self._cruise_speed = 55.0
         self._idle_speed = 20.0
         self._dart_speed = 350.0
+        # Motion profile (prototype keeps current behavior, realistic_v2 tightens
+        # turn limits and uses stronger thrust-to-fin coupling for lifelike motion).
+        self.motion_profile = "prototype"
+        self._thrust_factor = 0.0
+        self._tail_amp_factor = 1.0
+        self._tail_freq_factor = 1.0
+        self._turn_intensity = 0.0
+        self._load_motion_profile(config)
 
         logger.info("Neural Brain (Behavioral Reactor) initialized.")
+
+    def _load_motion_profile(self, config):
+        if not config:
+            return
+        fish_cfg = config.get("fish") if hasattr(config, "get") and callable(config.get) else {}
+        if isinstance(fish_cfg, dict):
+            requested = fish_cfg.get("motion_profile", "prototype")
+            self.set_motion_profile(requested)
+
+    def set_motion_profile(self, profile):
+        profile = (profile or "prototype").lower()
+        if profile not in {"prototype", "realistic_v2"}:
+            profile = "prototype"
+        self.motion_profile = profile
 
     def set_bounds(self, x, y, w, h):
         self.bounds = [x, y, w, h]
@@ -368,6 +390,20 @@ class BehavioralReactor:
         speed = np.linalg.norm(self.velocity)
         if speed > self._max_speed:
             self.velocity = self.velocity / speed * self._max_speed
+            speed = self._max_speed
+
+        # Motion telemetry for renderer-driven fin realism.
+        speed_norm = min(speed / max(self._max_speed, 1e-6), 1.0)
+        accel_mag = min(np.linalg.norm(target_vel - self.velocity) / max(self._max_speed, 1e-6), 1.0)
+        thrust_base = 0.55 * speed_norm + 0.45 * accel_mag
+        if self.motion_profile == "realistic_v2":
+            self._thrust_factor = min(1.0, thrust_base * 1.2)
+            self._tail_amp_factor = 0.8 + self._thrust_factor * 1.0
+            self._tail_freq_factor = 0.85 + self._thrust_factor * 0.95
+        else:
+            self._thrust_factor = thrust_base
+            self._tail_amp_factor = 0.9 + self._thrust_factor * 0.6
+            self._tail_freq_factor = 0.9 + self._thrust_factor * 0.5
 
     def _update_facing(self, dt):
         """Smooth facing angle update - fish turn gradually, not instantly."""
@@ -383,8 +419,16 @@ class BehavioralReactor:
         while diff < -math.pi:
             diff += 2 * math.pi
 
-        # Turn rate scales with speed (faster = tighter turns)
-        effective_turn = self.turn_speed * (0.5 + min(speed / 100.0, 1.5))
+        # Turn-rate model (realistic_v2: tighter at slow speed, wider at high speed).
+        if self.motion_profile == "realistic_v2":
+            speed_ratio = min(speed / max(self._max_speed, 1e-6), 1.0)
+            # Slow fish can pivot more, high-speed fish turn wider and slower.
+            effective_turn = self.turn_speed * (1.35 - 0.75 * speed_ratio)
+        else:
+            # Prototype behavior preserved.
+            effective_turn = self.turn_speed * (0.5 + min(speed / 100.0, 1.5))
+
+        effective_turn = max(0.35, effective_turn)
         max_turn = effective_turn * dt
 
         if abs(diff) < max_turn:
@@ -393,6 +437,9 @@ class BehavioralReactor:
             self.facing_angle += max_turn
         else:
             self.facing_angle -= max_turn
+
+        # Renderer hint: normalized turn intensity for fin/body reactions.
+        self._turn_intensity = min(abs(diff) / math.pi, 1.0)
 
     def _apply_sanctuary_forces(self, dt):
         if not self.sanctuary:
@@ -473,4 +520,9 @@ class BehavioralReactor:
             "state": self.state,
             "facing_angle": self.facing_angle,
             "is_flaring": self.state == "FLARING",
+            "motion_profile": self.motion_profile,
+            "thrust_factor": self._thrust_factor,
+            "tail_amp_factor": self._tail_amp_factor,
+            "tail_freq_factor": self._tail_freq_factor,
+            "turn_intensity": self._turn_intensity,
         }

@@ -6,6 +6,7 @@ to the fish's communication.
 """
 
 import threading
+import base64
 import time
 import json
 from collections import deque
@@ -49,6 +50,9 @@ no explanations. Just the message itself."""
         self.anthropic_key = ""
         self.openai_key = ""
         self.model = ""
+        self.enable_vision_foraging = False
+        self.vision_interval_minutes = 60
+        self.vision_model = "gpt-4o-mini"
         self._client = None
         self._lock = threading.Lock()
         self._cache = deque(maxlen=50)
@@ -67,6 +71,9 @@ no explanations. Just the message itself."""
         self.anthropic_key = lcfg.get("anthropic_api_key", "")
         self.openai_key = lcfg.get("openai_api_key", "")
         self.model = lcfg.get("model", "")
+        self.enable_vision_foraging = bool(lcfg.get("enable_vision_foraging", self.enable_vision_foraging))
+        self.vision_interval_minutes = max(5, int(lcfg.get("vision_interval_minutes", self.vision_interval_minutes) or 60))
+        self.vision_model = lcfg.get("vision_model", self.vision_model) or "gpt-4o-mini"
 
     def _init_client(self):
         """Initialize the LLM client based on available provider and keys."""
@@ -120,6 +127,78 @@ no explanations. Just the message itself."""
     @property
     def is_available(self):
         return self._client is not None
+
+    @property
+    def can_use_vision_foraging(self):
+        return (
+            self.is_available
+            and self.provider == "openai"
+            and self.enable_vision_foraging
+        )
+
+    def analyze_screen_foraging(self, image_bytes):
+        """
+        Analyze a screenshot and return a feeding suggestion dict:
+        {"action": "feed"|"none", "message": "...", "targets": [..]}.
+        """
+        if not self.can_use_vision_foraging or not image_bytes:
+            return None
+
+        now = time.time()
+        if now - self._last_request < self._min_interval:
+            return None
+
+        prompt = (
+            "You are ZenFish observing a desktop screenshot. "
+            "Detect simple object categories like icon, folder, browser, document, terminal. "
+            "If there are clear visual objects, return action=feed, otherwise action=none. "
+            "Keep message under 80 chars as if a fish bubble. "
+            "Return strict JSON only with keys: action, message, targets."
+        )
+
+        try:
+            with self._lock:
+                self._last_request = time.time()
+                image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+                response = self._client.chat.completions.create(
+                    model=self.vision_model or self.model or "gpt-4o-mini",
+                    max_tokens=180,
+                    messages=[
+                        {"role": "system", "content": self.SYSTEM_PROMPT},
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/png;base64,{image_b64}"},
+                                },
+                            ],
+                        },
+                    ],
+                )
+                msg = (response.choices[0].message.content or "").strip()
+                data = json.loads(msg)
+                action = (data.get("action") or "none").lower()
+                if action not in {"feed", "none"}:
+                    action = "none"
+                message = (data.get("message") or "")[:80]
+                targets = data.get("targets") or []
+                if not isinstance(targets, list):
+                    targets = []
+                return {"action": action, "message": message, "targets": targets}
+        except Exception as e:
+            logger.warning(f"LLM vision analysis failed: {e}")
+            return None
+
+    def analyze_screen_foraging_async(self, image_bytes, callback=None):
+        def _worker():
+            result = self.analyze_screen_foraging(image_bytes)
+            if callback and result:
+                callback(result)
+
+        thread = threading.Thread(target=_worker, daemon=True)
+        thread.start()
 
     def generate(self, prompt, context=""):
         """

@@ -13,7 +13,7 @@ Features:
 import sys
 import signal
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, QBuffer, QByteArray
 from PySide6.QtGui import QGuiApplication
 
 from engine.brain import BehavioralReactor
@@ -33,6 +33,7 @@ from modules.schedule import ScheduleModule
 from modules.news import NewsModule
 from modules.telegram_bridge import TelegramBridge
 from modules.webhook_server import WebhookServer
+from modules.updater import AppUpdater
 from utils.logger import logger
 
 
@@ -42,6 +43,8 @@ class ZenFishApp:
     def __init__(self):
         self.app = QApplication(sys.argv)
         self.app.setApplicationName("ZenFish Overlay")
+        self.app.setOrganizationName("Futol Ethical Technology Ecosystems")
+        self.app.setOrganizationDomain("futol-ethical-technology-ecosystems.local")
         self.app.setQuitOnLastWindowClosed(False)
 
         # Allow Ctrl+C to exit from terminal
@@ -55,12 +58,14 @@ class ZenFishApp:
         self._init_rendering()
         self._init_llm_brain()
         self._init_messaging()
+        self._init_updater()
         self._init_brain()
         self._init_modules()
         self._init_tray()
         self._init_hotkeys()
         self._init_sectors()
         self._init_main_loop()
+        self._init_vision_foraging()
 
         # Update tray status
         self._update_tray_status()
@@ -102,9 +107,35 @@ class ZenFishApp:
         if self.webhook_server.enabled:
             self.webhook_server.start()
 
+    def _init_updater(self):
+        """Initialize lightweight auto-update checker/downloader."""
+        self.updater = AppUpdater(config=self.config)
+        self._update_timer = None
+
+        if not self.updater.enabled:
+            return
+
+        self._update_timer = QTimer()
+        self._update_timer.timeout.connect(self._run_update_check)
+        interval_ms = max(1, self.updater.check_interval_hours) * 60 * 60 * 1000
+        self._update_timer.start(interval_ms)
+
+        # Run one startup check in background cadence.
+        QTimer.singleShot(2000, self._run_update_check)
+
+    def _run_update_check(self):
+        info = self.updater.check_for_updates()
+        if not info:
+            return
+        path = self.updater.download_pending_update()
+        if path:
+            self.bubble_system.queue_message(
+                f"Update {info['version']} ready. Contact: {self.updater.support_email}", "ambient"
+            )
+
     def _init_brain(self):
         """Create the behavioral AI and connect subsystems."""
-        self.brain = BehavioralReactor()
+        self.brain = BehavioralReactor(config=self.config)
         self.brain.set_bounds(*self.total_bounds)
 
         # Sanctuary engine (invisible boundaries)
@@ -229,6 +260,57 @@ class ZenFishApp:
             for sector in self.sectors:
                 sector.update_fish_state(fish_state)
 
+    def _init_vision_foraging(self):
+        """Optional OpenAI vision loop: hourly screenshot analysis for playful auto-feeding."""
+        self.vision_timer = None
+        if not self.llm_brain.can_use_vision_foraging:
+            return
+
+        interval_min = max(5, int(self.config.get("llm", "vision_interval_minutes") or 60))
+        self.vision_timer = QTimer()
+        self.vision_timer.timeout.connect(self._run_vision_foraging)
+        self.vision_timer.start(interval_min * 60 * 1000)
+        logger.info(f"Vision foraging enabled (every {interval_min} min).")
+
+    def _run_vision_foraging(self):
+        if not self.llm_brain.can_use_vision_foraging or self.school_mode:
+            return
+
+        screen = QGuiApplication.primaryScreen()
+        if not screen:
+            return
+
+        pixmap = screen.grabWindow(0)
+        if pixmap.isNull():
+            return
+
+        image = pixmap.toImage()
+        ba = QByteArray()
+        buf = QBuffer(ba)
+        buf.open(QBuffer.WriteOnly)
+        image.save(buf, "PNG")
+        png_bytes = bytes(ba)
+
+        def _on_result(result):
+            QTimer.singleShot(0, lambda: self._apply_vision_foraging_result(result))
+
+        self.llm_brain.analyze_screen_foraging_async(png_bytes, callback=_on_result)
+
+    def _apply_vision_foraging_result(self, result):
+        action = (result.get("action") or "none").lower()
+        msg = result.get("message") or ""
+        targets = result.get("targets") or []
+
+        if action == "feed":
+            self.brain.feed()
+            if msg:
+                self.bubble_system.queue_message(msg, "ambient")
+            elif targets:
+                target_str = ", ".join(str(t) for t in targets[:3])
+                self.bubble_system.queue_message(f"Nibbling near: {target_str}", "ambient")
+            else:
+                self.bubble_system.queue_message("I found tasty pixels on your screen!", "ambient")
+
     def _update_tray_status(self):
         """Update integration status in tray menu."""
         parts = []
@@ -238,6 +320,12 @@ class ZenFishApp:
             parts.append("Telegram: ON")
         if self.webhook_server.enabled:
             parts.append(f"Webhook: :{self.webhook_server.port}")
+        if self.llm_brain.can_use_vision_foraging:
+            parts.append("Vision: ON")
+        if hasattr(self, "updater") and self.updater.enabled:
+            parts.append("AutoUpdate: ON")
+        if hasattr(self, "updater") and self.updater.support_email:
+            parts.append(f"Support: {self.updater.support_email}")
         if not parts:
             parts.append("No integrations active")
         self.tray.update_status(" | ".join(parts))
@@ -301,6 +389,9 @@ class ZenFishApp:
                 skin = DiscusSkin(seed=42 + i * 17, morph=morph)
             else:
                 skin = NeonTetraSkin(seed=42 + i * 17)
+
+            if hasattr(skin, "apply_config"):
+                skin.apply_config(self.config)
             self.school_skins.append(skin)
 
         # Push skins to all sectors
@@ -401,6 +492,11 @@ class ZenFishApp:
             self.bubble_system.queue_message(
                 f"LLM Brain active! ({self.llm_brain.provider})", "ambient"
             )
+
+        if self.vision_timer:
+            self.vision_timer.stop()
+            self.vision_timer = None
+        self._init_vision_foraging()
         self._update_tray_status()
         logger.info(f"LLM key set for {provider}, brain re-initialized.")
 
@@ -412,6 +508,10 @@ class ZenFishApp:
                 self._hotkey_listener.stop()
             except Exception:
                 pass
+        if self.vision_timer:
+            self.vision_timer.stop()
+        if hasattr(self, "_update_timer") and self._update_timer:
+            self._update_timer.stop()
         self.telegram_bridge.stop()
         self.webhook_server.stop()
         self.config.save()

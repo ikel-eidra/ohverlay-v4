@@ -16,7 +16,8 @@ DEFAULT_CONFIG = {
         "size_scale": 1.0,
         "color_mode": "gradient",
         "color_shift_speed": 0.3,
-        "enable_glow": True
+        "enable_glow": True,
+        "motion_profile": "prototype"
     },
     "sanctuary": {
         "enabled": False,
@@ -59,11 +60,22 @@ DEFAULT_CONFIG = {
         "toggle_sanctuary": "ctrl+alt+s",
         "toggle_visibility": "ctrl+alt+h"
     },
+    "app": {
+        "version": "1.0.0",
+        "support_email": "support@futol.example",
+        "auto_update_enabled": True,
+        "update_check_hours": 6,
+        "update_manifest_url": "",
+        "update_channel": "stable"
+    },
     "llm": {
         "provider": "anthropic",
         "anthropic_api_key": "",
         "openai_api_key": "",
-        "model": ""
+        "model": "",
+        "enable_vision_foraging": False,
+        "vision_interval_minutes": 60,
+        "vision_model": "gpt-4o-mini"
     },
     "telegram": {
         "bot_token": "",

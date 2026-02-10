@@ -71,6 +71,7 @@ class DiscusSkin:
 
         # Body flex
         self.body_flex = 0.0
+        self._facing_left = False
 
     def set_colors(self, primary, secondary, accent):
         """Override base colors."""
@@ -81,7 +82,9 @@ class DiscusSkin:
     def apply_config(self, config):
         fish_cfg = config.get("fish") if hasattr(config, "get") and callable(config.get) else {}
         if isinstance(fish_cfg, dict):
-            self.size_scale = fish_cfg.get("size_scale", self.size_scale)
+            # Keep discus readable even when global size is set very small.
+            self.size_scale = max(0.85, fish_cfg.get("size_scale", self.size_scale))
+            self.opacity = fish_cfg.get("opacity", self.opacity)
 
     def _c(self, rgb, alpha=255):
         """Make QColor with opacity."""
@@ -116,8 +119,12 @@ class DiscusSkin:
 
         self.body_flex = math.sin(self.tail_phase * 0.4) * (2.0 + speed_factor * 3.0)
 
-        sc = self.size_scale * 0.7  # Discus are medium-large
-        flipped = abs(angle) > 90
+        sc = self.size_scale * 0.9  # Larger, more realistic discus presence
+        if vx < -2.0:
+            self._facing_left = True
+        elif vx > 2.0:
+            self._facing_left = False
+        flipped = self._facing_left
 
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
