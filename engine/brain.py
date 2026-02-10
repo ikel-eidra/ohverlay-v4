@@ -99,6 +99,7 @@ class BehavioralReactor:
         self._turn_intensity = 0.0
         self._swim_cadence = 0.0
         self._yaw_damping = 0.0
+        self._behavior_variety = 1.0
         self._load_motion_profile(config)
 
         logger.info("Neural Brain (Behavioral Reactor) initialized.")
