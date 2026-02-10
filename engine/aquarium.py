@@ -125,6 +125,12 @@ class AquariumSector(QMainWindow):
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
 
+        # Clear previous frame - CRITICAL for transparent overlays on Windows
+        # Without this, old pixels persist and fish leave trails
+        painter.setCompositionMode(QPainter.CompositionMode_Clear)
+        painter.fillRect(self.rect(), Qt.transparent)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+
         # Render bubbles
         if self.bubble_system:
             painter.save()
