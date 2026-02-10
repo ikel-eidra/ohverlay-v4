@@ -16,7 +16,8 @@ DEFAULT_CONFIG = {
         "size_scale": 1.0,
         "color_mode": "gradient",
         "color_shift_speed": 0.3,
-        "enable_glow": True
+        "enable_glow": True,
+        "motion_profile": "prototype"
     },
     "sanctuary": {
         "enabled": False,
@@ -63,7 +64,10 @@ DEFAULT_CONFIG = {
         "provider": "anthropic",
         "anthropic_api_key": "",
         "openai_api_key": "",
-        "model": ""
+        "model": "",
+        "enable_vision_foraging": False,
+        "vision_interval_minutes": 60,
+        "vision_model": "gpt-4o-mini"
     },
     "telegram": {
         "bot_token": "",
