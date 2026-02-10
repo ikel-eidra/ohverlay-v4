@@ -29,12 +29,8 @@ def _get_candidate_log_dirs():
     else:
         candidates.append(".")
 
-    # Final fallback for any environment. `tempfile.gettempdir()` can raise
-    # in hardened/containerized environments, so guard it.
-    try:
-        candidates.append(tempfile.gettempdir())
-    except Exception:
-        pass
+    # Final fallback for any environment.
+    candidates.append(tempfile.gettempdir())
 
     # De-duplicate while preserving order.
     seen = set()
