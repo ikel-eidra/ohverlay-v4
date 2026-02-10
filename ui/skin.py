@@ -50,6 +50,8 @@ class FishSkin:
         self.tail_amp_factor = 1.0
         self.tail_freq_factor = 1.0
         self.turn_intensity = 0.0
+        self.swim_cadence = 0.0
+        self._facing_left = False
 
         if config:
             self.apply_config(config)
@@ -109,17 +111,19 @@ class FishSkin:
         self.tail_amp_factor = fish_state.get("tail_amp_factor", 1.0)
         self.tail_freq_factor = fish_state.get("tail_freq_factor", 1.0)
         self.turn_intensity = fish_state.get("turn_intensity", 0.0)
+        self.swim_cadence = fish_state.get("swim_cadence", speed_factor)
 
         self.time += dt
+        turn_boost = 1.0 + self.turn_intensity * 0.38
         self.tail_phase += ((0.08 + 0.06 * speed_factor) * (1.0 + speed_factor * 0.8)
-                            * self.tail_freq_factor)
+                            * self.tail_freq_factor * turn_boost)
         self.glow_phase += 0.05
         self.color_shift_phase += self.color_shift_speed * dt
         self.breath_phase += 0.035
         self.pectoral_phase += 0.15 + speed_factor * 0.1
 
         # Body S-curve flex
-        self.body_flex_target = math.sin(self.tail_phase * 0.4) * (3.0 + speed_factor * 5.0) * (0.8 + self.tail_amp_factor * 0.35)
+        self.body_flex_target = math.sin(self.tail_phase * 0.4) * (3.0 + speed_factor * 5.0 + self.turn_intensity * 2.2) * (0.8 + self.tail_amp_factor * 0.35)
         self.body_flex += (self.body_flex_target - self.body_flex) * 0.12
 
         sc = self.size_scale
@@ -609,7 +613,7 @@ class FishSkin:
         painter.drawEllipse(QPointF(eye_x, eye_y), eye_r, eye_r * 0.88)
 
         # Iris - deep complex coloring
-        stress = hunger / 100.0
+        stress = min(1.0, 0.65 * (hunger / 100.0) + 0.35 * (1.0 - mood / 100.0))
         iris_calm = [20, 35, 90]
         iris_stressed = [170, 55, 25]
         iris_col = self._lerp_color(iris_calm, iris_stressed, stress)
@@ -665,7 +669,7 @@ class FishSkin:
     # ---- SCALES ----
     def _draw_scales(self, painter, speed_factor):
         """Iridescent scale pattern that shimmers with angle."""
-        shimmer_base = 12 + 8 * math.sin(self.time * 1.5)
+        shimmer_base = 12 + 8 * math.sin(self.time * 1.5) + self.swim_cadence * 6 + self.turn_intensity * 5
         painter.setPen(Qt.NoPen)
 
         # Scale rows following body contour

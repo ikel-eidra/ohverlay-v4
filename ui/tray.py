@@ -1,5 +1,5 @@
 """
-System tray icon and menu for ZenFish Overlay.
+System tray icon and menu for OHVERLAY.
 Provides settings, module toggles, color picker, sanctuary controls, and exit.
 """
 
@@ -66,7 +66,7 @@ class SystemTray(QSystemTrayIcon):
 
         self._create_icon()
         self._create_menu()
-        self.setToolTip("ZenFish Overlay")
+        self.setToolTip("OHVERLAY")
 
     def _create_icon(self):
         """Generate a simple fish icon for the tray."""
@@ -105,12 +105,12 @@ class SystemTray(QSystemTrayIcon):
         menu = QMenu()
 
         # --- Header ---
-        header = menu.addAction("ZenFish Overlay")
+        header = menu.addAction("OHVERLAY")
         header.setEnabled(False)
         menu.addSeparator()
 
         # --- Fish Controls ---
-        feed_action = menu.addAction("Feed Fish (Ctrl+Alt+F)")
+        feed_action = menu.addAction("Drop Pellets (Ctrl+Alt+F)")
         feed_action.triggered.connect(self.signals.feed_fish.emit)
 
         visibility_action = menu.addAction("Toggle Visibility (Ctrl+Alt+H)")
