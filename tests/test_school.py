@@ -80,6 +80,8 @@ def test_school_update():
     school = FishSchool((0, 0, 1920, 1080), species="neon_tetra", count=6)
     # Record initial positions
     initial_positions = [f.position.copy() for f in school.fish]
+    # Force a meaningful dt so fish actually move
+    school.last_update -= 0.05
     school.update()
     # At least some fish should have moved
     moved = False
