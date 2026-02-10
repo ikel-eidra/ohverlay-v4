@@ -104,8 +104,9 @@ class AquariumSector(QMainWindow):
         self.school_states = school_states
         self.school_local = []
 
-        padding = 150  # Smaller padding for smaller fish
         for state in school_states:
+            species = state.get("species", "neon_tetra")
+            padding = 320 if species == "discus" else 220
             global_pos = state["position"]
             local_x = global_pos[0] - self.screen_geometry.x()
             local_y = global_pos[1] - self.screen_geometry.y()

@@ -26,8 +26,9 @@ class NeonTetraSkin:
 
         # Each fish gets slight color variation
         self._hue_offset = (seed % 20) * 0.01
-        self.size_scale = 1.0
+        self.size_scale = 1.25
         self.opacity = 0.92
+        self._facing_left = False
 
     def set_colors(self, primary, secondary, accent):
         """Compatibility with tray color picker - tints the stripe."""
@@ -36,7 +37,7 @@ class NeonTetraSkin:
     def apply_config(self, config):
         fish_cfg = config.get("fish") if hasattr(config, "get") and callable(config.get) else {}
         if isinstance(fish_cfg, dict):
-            self.size_scale = fish_cfg.get("size_scale", self.size_scale)
+            self.size_scale = 1.25 * fish_cfg.get("size_scale", 1.0)
 
     def render(self, painter, local_pos, fish_state):
         x, y = local_pos
@@ -56,8 +57,12 @@ class NeonTetraSkin:
         self.breath_phase += 0.04
         self.shimmer_phase += 0.08
 
-        sc = self.size_scale * 0.45  # Tetras are small
-        flipped = abs(angle) > 90
+        sc = self.size_scale * 0.72  # More realistic desktop-visible size
+        if vx < -2.0:
+            self._facing_left = True
+        elif vx > 2.0:
+            self._facing_left = False
+        flipped = self._facing_left
 
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
