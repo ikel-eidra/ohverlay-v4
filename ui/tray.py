@@ -25,6 +25,7 @@ class TraySignals(QObject):
     love_notes_path_set = Signal(str)
     size_changed = Signal(float)
     speed_changed = Signal(str)  # "super_slow", "slow", "normal", "fast"
+    species_changed = Signal(str, int)  # species_name, count
     telegram_token_set = Signal(str)
     webhook_toggled = Signal(bool)
     llm_key_set = Signal(str, str)  # provider, key
@@ -150,6 +151,30 @@ class SystemTray(QSystemTrayIcon):
             action = speed_menu.addAction(label)
             action.triggered.connect(
                 lambda checked, s=speed_key: self.signals.speed_changed.emit(s)
+            )
+
+        # --- Species / School Mode ---
+        species_menu = menu.addMenu("Fish Species")
+
+        solo_action = species_menu.addAction("Solo Betta (default)")
+        solo_action.triggered.connect(
+            lambda: self.signals.species_changed.emit("betta", 1)
+        )
+
+        species_menu.addSeparator()
+        species_menu.addAction("--- School Mode ---").setEnabled(False)
+
+        for label, sp, count in [
+            ("Neon Tetra x6", "neon_tetra", 6),
+            ("Neon Tetra x10", "neon_tetra", 10),
+            ("Neon Tetra x12", "neon_tetra", 12),
+            ("Discus x3", "discus", 3),
+            ("Discus x5", "discus", 5),
+            ("Discus x6", "discus", 6),
+        ]:
+            action = species_menu.addAction(label)
+            action.triggered.connect(
+                lambda checked, s=sp, c=count: self.signals.species_changed.emit(s, c)
             )
 
         menu.addSeparator()

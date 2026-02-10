@@ -1,7 +1,7 @@
 """
 Multi-monitor overlay window system.
 Each AquariumSector is a transparent, click-through window on one monitor.
-Renders the fish and bubbles with proper coordinate translation.
+Renders fish (single or school) and bubbles with proper coordinate translation.
 """
 
 from PySide6.QtWidgets import QMainWindow
@@ -51,6 +51,12 @@ class AquariumSector(QMainWindow):
         self.bubble_system = bubble_system
         self.visible = True
 
+        # Multi-fish support
+        self.school_skins = []      # List of skin objects for school mode
+        self.school_states = []     # List of fish states
+        self.school_local = []      # List of (local_pos, should_render) tuples
+        self.school_mode = False
+
         self.setWindowFlags(
             Qt.FramelessWindowHint |
             Qt.WindowStaysOnTopHint |
@@ -63,8 +69,12 @@ class AquariumSector(QMainWindow):
 
         logger.info(f"Aquarium Sector {sector_id} initialized at {screen_geometry}")
 
+    def set_school_skins(self, skins):
+        """Set skin renderers for school mode."""
+        self.school_skins = skins
+        self.school_mode = len(skins) > 0
+
     def set_visible(self, visible):
-        """Toggle fish visibility."""
         self.visible = visible
         if visible:
             self.show()
@@ -72,13 +82,13 @@ class AquariumSector(QMainWindow):
             self.hide()
 
     def update_fish_state(self, fish_state):
-        """Update fish state and check if it should be rendered on this screen."""
+        """Update single fish state (solo mode)."""
         self.fish_state = fish_state
         global_pos = fish_state["position"]
         local_x = global_pos[0] - self.screen_geometry.x()
         local_y = global_pos[1] - self.screen_geometry.y()
 
-        padding = 250  # Extra padding for large fins
+        padding = 250
         if (-padding <= local_x <= self.screen_geometry.width() + padding and
                 -padding <= local_y <= self.screen_geometry.height() + padding):
             self.fish_local_pos = (local_x, local_y)
@@ -89,15 +99,33 @@ class AquariumSector(QMainWindow):
         if self.visible:
             self.update()
 
+    def update_school_states(self, school_states):
+        """Update all fish states for school mode."""
+        self.school_states = school_states
+        self.school_local = []
+
+        padding = 150  # Smaller padding for smaller fish
+        for state in school_states:
+            global_pos = state["position"]
+            local_x = global_pos[0] - self.screen_geometry.x()
+            local_y = global_pos[1] - self.screen_geometry.y()
+
+            should_render = (-padding <= local_x <= self.screen_geometry.width() + padding and
+                             -padding <= local_y <= self.screen_geometry.height() + padding)
+            self.school_local.append(((local_x, local_y), should_render))
+
+        if self.visible:
+            self.update()
+
     def paintEvent(self, event):
-        if not self.visible or not self.fish_state:
+        if not self.visible:
             return
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
 
-        # Render bubbles (they have global coords, need local translation)
+        # Render bubbles
         if self.bubble_system:
             painter.save()
             painter.translate(
@@ -107,8 +135,13 @@ class AquariumSector(QMainWindow):
             self.bubble_system.render(painter)
             painter.restore()
 
-        # Render fish
-        if self.should_render_fish:
+        # Render fish - school mode or solo mode
+        if self.school_mode and self.school_skins and self.school_states:
+            for idx, (state, (local_pos, should_render)) in enumerate(
+                    zip(self.school_states, self.school_local)):
+                if should_render and idx < len(self.school_skins):
+                    self.school_skins[idx].render(painter, local_pos, state)
+        elif self.fish_state and self.should_render_fish:
             self.skin.render(painter, self.fish_local_pos, self.fish_state)
 
         painter.end()
