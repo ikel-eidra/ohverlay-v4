@@ -47,6 +47,9 @@ class FishSkin:
         self.enable_glow = True
         self.size_scale = 1.0
         self.opacity = 0.92
+        self.tail_amp_factor = 1.0
+        self.tail_freq_factor = 1.0
+        self.turn_intensity = 0.0
 
         if config:
             self.apply_config(config)
@@ -103,15 +106,20 @@ class FishSkin:
         # Animation timing
         dt = 0.033
         speed_factor = min(speed / 120.0, 2.5)
+        self.tail_amp_factor = fish_state.get("tail_amp_factor", 1.0)
+        self.tail_freq_factor = fish_state.get("tail_freq_factor", 1.0)
+        self.turn_intensity = fish_state.get("turn_intensity", 0.0)
+
         self.time += dt
-        self.tail_phase += (0.08 + 0.06 * speed_factor) * (1.0 + speed_factor * 0.8)
+        self.tail_phase += ((0.08 + 0.06 * speed_factor) * (1.0 + speed_factor * 0.8)
+                            * self.tail_freq_factor)
         self.glow_phase += 0.05
         self.color_shift_phase += self.color_shift_speed * dt
         self.breath_phase += 0.035
         self.pectoral_phase += 0.15 + speed_factor * 0.1
 
         # Body S-curve flex
-        self.body_flex_target = math.sin(self.tail_phase * 0.4) * (3.0 + speed_factor * 5.0)
+        self.body_flex_target = math.sin(self.tail_phase * 0.4) * (3.0 + speed_factor * 5.0) * (0.8 + self.tail_amp_factor * 0.35)
         self.body_flex += (self.body_flex_target - self.body_flex) * 0.12
 
         sc = self.size_scale
@@ -262,7 +270,7 @@ class FishSkin:
             noise_c = self.perlin2.noise2d(t * 3.0, self.time * 1.0) * 8 * t
 
             # Primary wave: large sweeping motion
-            wave = math.sin(self.tail_phase - t * 2.8) * (8 + t * 22) * (0.5 + speed_factor * 0.5)
+            wave = math.sin(self.tail_phase - t * 2.8) * (8 + t * 22) * (0.5 + speed_factor * 0.5) * self.tail_amp_factor
             # Secondary wave: smaller, faster
             wave2 = math.sin(self.tail_phase * 1.7 - t * 4.0) * (3 + t * 8)
 
@@ -355,7 +363,7 @@ class FishSkin:
             base_height = 38 * envelope
 
             noise = self.perlin.octave_noise(t * 5.0 + 5.0, self.time * 1.0, octaves=3) * 6 * envelope
-            wave = math.sin(self.tail_phase * 0.6 - t * 2.5) * (3 + 7 * speed_factor) * envelope
+            wave = math.sin(self.tail_phase * 0.6 - t * 2.5) * (3 + 7 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.25)
             wave2 = math.sin(self.tail_phase * 1.3 - t * 3.5) * 2 * envelope
 
             points.append(QPointF(bx, -13 - base_height + wave + wave2 + noise))
@@ -418,7 +426,7 @@ class FishSkin:
             base_depth = 28 * envelope
 
             noise = self.perlin.octave_noise(t * 4.0 + 20.0, self.time * 1.1, octaves=3) * 5 * envelope
-            wave = math.sin(self.tail_phase * 0.7 - t * 2.4) * (3 + 6 * speed_factor) * envelope
+            wave = math.sin(self.tail_phase * 0.7 - t * 2.4) * (3 + 6 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.22)
 
             points.append(QPointF(bx, 12 + base_depth + wave + noise))
 
@@ -463,7 +471,7 @@ class FishSkin:
                 noise = self.perlin.octave_noise(
                     t * 3.5 + side * 30.0, self.time * 0.8 + side * 5.0, octaves=3
                 ) * 8 * t
-                wave = math.sin(self.tail_phase * 0.5 - t * 1.6 + side * 0.4) * (4 + 10 * speed_factor) * t
+                wave = math.sin(self.tail_phase * 0.5 - t * 1.6 + side * 0.4) * (4 + 10 * speed_factor) * t * (0.9 + self.tail_amp_factor * 0.2)
 
                 px = 8 - t * 40
                 py = side * (9 + t * 42) + wave + noise
@@ -515,8 +523,8 @@ class FishSkin:
         col = self._shifted_color(self.primary, 3.0)
 
         # Flutter motion
-        flutter = math.sin(self.pectoral_phase) * 8
-        flutter2 = math.sin(self.pectoral_phase * 0.7 + 1.0) * 5
+        flutter = math.sin(self.pectoral_phase) * (8 + self.turn_intensity * 2.0)
+        flutter2 = math.sin(self.pectoral_phase * 0.7 + 1.0) * (5 + self.turn_intensity * 1.5)
 
         for side_mult in [1]:  # Only visible side (the other is hidden by body)
             fin_path = QPainterPath()

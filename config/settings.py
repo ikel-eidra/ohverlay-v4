@@ -16,7 +16,8 @@ DEFAULT_CONFIG = {
         "size_scale": 1.0,
         "color_mode": "gradient",
         "color_shift_speed": 0.3,
-        "enable_glow": True
+        "enable_glow": True,
+        "motion_profile": "prototype"
     },
     "sanctuary": {
         "enabled": False,

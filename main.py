@@ -104,7 +104,7 @@ class ZenFishApp:
 
     def _init_brain(self):
         """Create the behavioral AI and connect subsystems."""
-        self.brain = BehavioralReactor()
+        self.brain = BehavioralReactor(config=self.config)
         self.brain.set_bounds(*self.total_bounds)
 
         # Sanctuary engine (invisible boundaries)
