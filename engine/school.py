@@ -105,6 +105,12 @@ class FishSchool:
         # Sanctuary reference
         self.sanctuary = None
 
+        # School roaming target so groups explore the full monitor, not one corner.
+        x_min, y_min, w, h = self.bounds
+        self._school_target = np.array([x_min + w * 0.5, y_min + h * 0.5], dtype=float)
+        self._school_target_changed_at = time.time()
+        self._school_target_interval = 8.0
+
         # Spawn fish
         self._spawn_fish(count)
         logger.info(f"School created: {count} {species}")
@@ -145,6 +151,24 @@ class FishSchool:
     def set_sanctuary(self, sanctuary):
         self.sanctuary = sanctuary
 
+    def _pick_school_target(self):
+        """Pick a new roaming target across the full available monitor space."""
+        x_min, y_min, w, h = self.bounds
+        margin_x = max(80, min(220, w * 0.08))
+        margin_y = max(80, min(180, h * 0.10))
+
+        for _ in range(20):
+            tx = np.random.uniform(x_min + margin_x, x_min + w - margin_x)
+            ty = np.random.uniform(y_min + margin_y, y_min + h - margin_y)
+            if self.sanctuary and self.sanctuary.is_in_sanctuary(tx, ty):
+                continue
+            self._school_target = np.array([tx, ty], dtype=float)
+            self._school_target_changed_at = time.time()
+            return
+
+        self._school_target = np.array([x_min + w * 0.5, y_min + h * 0.5], dtype=float)
+        self._school_target_changed_at = time.time()
+
     def update(self):
         """Update all fish with Boids flocking."""
         now = time.time()
@@ -156,6 +180,10 @@ class FishSchool:
             return
 
         params = self.params
+
+        if now - self._school_target_changed_at > self._school_target_interval:
+            self._pick_school_target()
+
         positions = np.array([f.position for f in self.fish])
         velocities = np.array([f.velocity for f in self.fish])
         n = len(self.fish)
@@ -215,6 +243,15 @@ class FishSchool:
                 math.sin(wander_angle * 0.7) * params["wander_strength"] * 0.6
             ])
             force += wander
+
+            # Global roaming target keeps school moving across the whole monitor.
+            to_target = self._school_target - fish.position
+            d_target = np.linalg.norm(to_target)
+            if d_target > 1.0:
+                force += (to_target / d_target) * (8.0 if params["school_tight"] else 5.0)
+            if d_target < 120:
+                # Gradually pick a fresh area once school reaches current target.
+                self._school_target_changed_at -= dt * 4.0
 
             # Boundary avoidance (soft repulsion)
             x_min, y_min, w, h = self.bounds

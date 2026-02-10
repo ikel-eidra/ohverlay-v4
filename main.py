@@ -355,6 +355,9 @@ class ZenFishApp:
                 skin = DiscusSkin(seed=42 + i * 17, morph=morph)
             else:
                 skin = NeonTetraSkin(seed=42 + i * 17)
+
+            if hasattr(skin, "apply_config"):
+                skin.apply_config(self.config)
             self.school_skins.append(skin)
 
         # Push skins to all sectors

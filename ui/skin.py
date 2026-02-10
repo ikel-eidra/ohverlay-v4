@@ -123,7 +123,12 @@ class FishSkin:
         self.body_flex += (self.body_flex_target - self.body_flex) * 0.12
 
         sc = self.size_scale
-        flipped = abs(angle) > 90
+        # Hysteresis on left/right facing avoids flip jitter near +/-90°.
+        if vx < -2.0:
+            self._facing_left = True
+        elif vx > 2.0:
+            self._facing_left = False
+        flipped = self._facing_left
 
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
