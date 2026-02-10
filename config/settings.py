@@ -60,6 +60,14 @@ DEFAULT_CONFIG = {
         "toggle_sanctuary": "ctrl+alt+s",
         "toggle_visibility": "ctrl+alt+h"
     },
+    "app": {
+        "version": "1.0.0",
+        "support_email": "support@futol.example",
+        "auto_update_enabled": True,
+        "update_check_hours": 6,
+        "update_manifest_url": "",
+        "update_channel": "stable"
+    },
     "llm": {
         "provider": "anthropic",
         "anthropic_api_key": "",

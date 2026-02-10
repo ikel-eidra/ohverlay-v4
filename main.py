@@ -33,6 +33,7 @@ from modules.schedule import ScheduleModule
 from modules.news import NewsModule
 from modules.telegram_bridge import TelegramBridge
 from modules.webhook_server import WebhookServer
+from modules.updater import AppUpdater
 from utils.logger import logger
 
 
@@ -57,6 +58,7 @@ class ZenFishApp:
         self._init_rendering()
         self._init_llm_brain()
         self._init_messaging()
+        self._init_updater()
         self._init_brain()
         self._init_modules()
         self._init_tray()
@@ -104,6 +106,32 @@ class ZenFishApp:
         self.webhook_server = WebhookServer(config=self.config)
         if self.webhook_server.enabled:
             self.webhook_server.start()
+
+    def _init_updater(self):
+        """Initialize lightweight auto-update checker/downloader."""
+        self.updater = AppUpdater(config=self.config)
+        self._update_timer = None
+
+        if not self.updater.enabled:
+            return
+
+        self._update_timer = QTimer()
+        self._update_timer.timeout.connect(self._run_update_check)
+        interval_ms = max(1, self.updater.check_interval_hours) * 60 * 60 * 1000
+        self._update_timer.start(interval_ms)
+
+        # Run one startup check in background cadence.
+        QTimer.singleShot(2000, self._run_update_check)
+
+    def _run_update_check(self):
+        info = self.updater.check_for_updates()
+        if not info:
+            return
+        path = self.updater.download_pending_update()
+        if path:
+            self.bubble_system.queue_message(
+                f"Update {info['version']} ready. Contact: {self.updater.support_email}", "ambient"
+            )
 
     def _init_brain(self):
         """Create the behavioral AI and connect subsystems."""
