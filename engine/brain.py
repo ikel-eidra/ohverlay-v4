@@ -21,7 +21,7 @@ from utils.logger import logger
 class BehavioralReactor:
     """The fish's brain: realistic behavior, smooth movement, environmental awareness."""
 
-    STATES = ("IDLE", "SEARCHING", "FEEDING", "RESTING", "COMMUNICATING", "DARTING", "FLARING")
+    STATES = ("IDLE", "SEARCHING", "FEEDING", "RESTING", "COMMUNICATING", "DARTING", "FLARING", "SURFACE_BREATH")
 
     def __init__(self, config=None):
         self.hunger = 0.0
@@ -54,6 +54,13 @@ class BehavioralReactor:
 
         # -- Resting --
         self._rest_timer = 0.0
+        self._patrol_pause_timer = 0.0
+        self._reverse_timer = 0.0
+
+        # -- Surface breathing cadence --
+        self._surface_breath_interval = np.random.uniform(30.0, 60.0)
+        self._surface_breath_elapsed = 0.0
+        self._surface_target = None
 
         # -- Darting (burst speed) --
         self._dart_timer = 0.0
@@ -234,7 +241,12 @@ class BehavioralReactor:
                     # Slow rest drift to preserve natural pacing.
                     self.state = "RESTING"
                     self._rest_timer = 0.0
+                    self._patrol_pause_timer = np.random.uniform(5.0, 10.0)
                     return
+
+                if roll < dart_chance + 0.10:
+                    # Brief reverse sweep similar to real betta repositioning.
+                    self._reverse_timer = np.random.uniform(0.25, 0.65)
 
                 # Default: gentle drift
                 self._find_drift_target()
@@ -273,9 +285,11 @@ class BehavioralReactor:
         elif self.state == "RESTING":
             self._rest_timer += dt
             self.mood = min(100.0, self.mood + 0.5 * dt)
-            if self._rest_timer > 4.0 + np.random.exponential(2.0):
+            pause_done = self._rest_timer > max(4.0 + np.random.exponential(2.0), self._patrol_pause_timer)
+            if pause_done:
                 self.state = "IDLE"
                 self._idle_timer = 0.0
+                self._patrol_pause_timer = 0.0
 
         elif self.state == "DARTING":
             self._dart_timer += dt
@@ -290,6 +304,21 @@ class BehavioralReactor:
                 self.state = "IDLE"
                 self._flare_timer = 0.0
                 self.mood = min(100.0, self.mood + 5.0)
+
+        elif self.state == "SURFACE_BREATH":
+            if self._surface_target is None:
+                self.state = "IDLE"
+            elif np.linalg.norm(self._surface_target - self.position) < 22.0:
+                # Short gulp bob at surface
+                self._feed_nibble_timer += dt
+                self.velocity *= 0.90
+                self.velocity[1] += math.sin(self._feed_nibble_timer * 10.0) * 1.4
+                if self._feed_nibble_timer > 1.2:
+                    self._feed_nibble_timer = 0.0
+                    self.state = "IDLE"
+                    self.mood = min(100.0, self.mood + 1.0)
+            else:
+                self._feed_nibble_timer = 0.0
 
         elif self.state == "COMMUNICATING":
             self._comm_timer += dt
