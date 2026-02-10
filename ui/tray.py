@@ -110,7 +110,7 @@ class SystemTray(QSystemTrayIcon):
         menu.addSeparator()
 
         # --- Fish Controls ---
-        feed_action = menu.addAction("Feed Fish (Ctrl+Alt+F)")
+        feed_action = menu.addAction("Drop Pellets (Ctrl+Alt+F)")
         feed_action.triggered.connect(self.signals.feed_fish.emit)
 
         visibility_action = menu.addAction("Toggle Visibility (Ctrl+Alt+H)")
