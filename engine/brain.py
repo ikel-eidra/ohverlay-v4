@@ -85,11 +85,13 @@ class BehavioralReactor:
         self._dart_speed = 350.0
         # Motion profile (prototype keeps current behavior, realistic_v2 tightens
         # turn limits and uses stronger thrust-to-fin coupling for lifelike motion).
-        self.motion_profile = "prototype"
+        self.motion_profile = "realistic_v2"
         self._thrust_factor = 0.0
         self._tail_amp_factor = 1.0
         self._tail_freq_factor = 1.0
         self._turn_intensity = 0.0
+        self._swim_cadence = 0.0
+        self._yaw_damping = 0.0
         self._load_motion_profile(config)
 
         logger.info("Neural Brain (Behavioral Reactor) initialized.")
@@ -99,11 +101,11 @@ class BehavioralReactor:
             return
         fish_cfg = config.get("fish") if hasattr(config, "get") and callable(config.get) else {}
         if isinstance(fish_cfg, dict):
-            requested = fish_cfg.get("motion_profile", "prototype")
+            requested = fish_cfg.get("motion_profile", "realistic_v2")
             self.set_motion_profile(requested)
 
     def set_motion_profile(self, profile):
-        profile = (profile or "prototype").lower()
+        profile = (profile or "realistic_v2").lower()
         if profile not in {"prototype", "realistic_v2"}:
             profile = "prototype"
         self.motion_profile = profile
@@ -425,11 +427,12 @@ class BehavioralReactor:
 
         speed_norm = min(speed / max(self._max_speed, 1e-6), 1.0)
         accel_mag = min(np.linalg.norm(target_vel - self.velocity) / max(self._max_speed, 1e-6), 1.0)
-        thrust_base = 0.55 * speed_norm + 0.45 * accel_mag
+        self._swim_cadence = self._swim_cadence * 0.9 + speed_norm * 0.1
+        thrust_base = 0.5 * speed_norm + 0.35 * accel_mag + 0.15 * self._swim_cadence
         if self.motion_profile == "realistic_v2":
-            self._thrust_factor = min(1.0, thrust_base * 1.2)
-            self._tail_amp_factor = 0.8 + self._thrust_factor * 1.0
-            self._tail_freq_factor = 0.85 + self._thrust_factor * 0.95
+            self._thrust_factor = min(1.0, thrust_base * 1.24)
+            self._tail_amp_factor = 0.78 + self._thrust_factor * 1.05
+            self._tail_freq_factor = 0.82 + self._thrust_factor * 1.0 + self._yaw_damping * 0.08
         else:
             self._thrust_factor = thrust_base
             self._tail_amp_factor = 0.9 + self._thrust_factor * 0.6
@@ -453,7 +456,7 @@ class BehavioralReactor:
         if self.motion_profile == "realistic_v2":
             speed_ratio = min(speed / max(self._max_speed, 1e-6), 1.0)
             # Slow fish can pivot more, high-speed fish turn wider and slower.
-            effective_turn = self.turn_speed * (1.35 - 0.75 * speed_ratio)
+            effective_turn = self.turn_speed * (1.30 - 0.68 * speed_ratio) * (0.92 + self._yaw_damping * 0.22)
         else:
             # Prototype behavior preserved.
             effective_turn = self.turn_speed * (0.5 + min(speed / 100.0, 1.5))

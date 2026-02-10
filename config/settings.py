@@ -17,7 +17,7 @@ DEFAULT_CONFIG = {
         "color_mode": "gradient",
         "color_shift_speed": 0.3,
         "enable_glow": True,
-        "motion_profile": "prototype"
+        "motion_profile": "realistic_v2"
     },
     "sanctuary": {
         "enabled": False,
@@ -62,10 +62,10 @@ DEFAULT_CONFIG = {
     },
     "app": {
         "version": "1.0.0",
-        "support_email": "support@futol.example",
+        "support_email": "support@ohverlay.com",
         "auto_update_enabled": True,
         "update_check_hours": 6,
-        "update_manifest_url": "",
+        "update_manifest_url": "https://ohverlay.com/updates/manifest.json",
         "update_channel": "stable"
     },
     "llm": {

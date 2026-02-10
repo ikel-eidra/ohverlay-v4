@@ -1,5 +1,5 @@
 """
-ZenFish Overlay - Main entry point.
+OHVERLAY - Main entry point.
 A transparent desktop companion: a lifelike Betta fish that swims natively
 across your 2-3 monitors with no aquarium background. The monitors ARE the tank.
 
@@ -42,7 +42,7 @@ class ZenFishApp:
 
     def __init__(self):
         self.app = QApplication(sys.argv)
-        self.app.setApplicationName("ZenFish Overlay")
+        self.app.setApplicationName("OHVERLAY")
         self.app.setOrganizationName("Futol Ethical Technology Ecosystems")
         self.app.setOrganizationDomain("futol-ethical-technology-ecosystems.local")
         self.app.setQuitOnLastWindowClosed(False)
@@ -70,7 +70,7 @@ class ZenFishApp:
         # Update tray status
         self._update_tray_status()
 
-        logger.info("ZenFish Overlay fully initialized. Your betta is swimming!")
+        logger.info("OHVERLAY fully initialized. Your betta is swimming!")
 
     def _init_monitors(self):
         """Detect monitors - they form the fish's entire world."""
@@ -518,7 +518,7 @@ class ZenFishApp:
 
 
 def main():
-    logger.info("Starting ZenFish Overlay...")
+    logger.info("Starting OHVERLAY...")
     app = ZenFishApp()
     sys.exit(app.run())
 

@@ -37,8 +37,7 @@ For a current implementation-grounded roadmap (identity, milestones, guardrails,
 
 ---
 
-## 🤝 Contribution
+**Ohverlay & ZenFish**: calm your workspace, ethically.
 
-We are building the future of desktop agents. Join us in crafting the code that brings Aether to life.
 
-> *"Computed with Love & Silicon"*
+Official site: https://ohverlay.com
