@@ -322,10 +322,6 @@ class ZenFishApp:
             parts.append(f"Webhook: :{self.webhook_server.port}")
         if self.llm_brain.can_use_vision_foraging:
             parts.append("Vision: ON")
-        if hasattr(self, "updater") and self.updater.enabled:
-            parts.append("AutoUpdate: ON")
-        if hasattr(self, "updater") and self.updater.support_email:
-            parts.append(f"Support: {self.updater.support_email}")
         if not parts:
             parts.append("No integrations active")
         self.tray.update_status(" | ".join(parts))
@@ -510,8 +506,6 @@ class ZenFishApp:
                 pass
         if self.vision_timer:
             self.vision_timer.stop()
-        if hasattr(self, "_update_timer") and self._update_timer:
-            self._update_timer.stop()
         self.telegram_bridge.stop()
         self.webhook_server.stop()
         self.config.save()

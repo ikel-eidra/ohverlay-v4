@@ -82,8 +82,7 @@ class DiscusSkin:
     def apply_config(self, config):
         fish_cfg = config.get("fish") if hasattr(config, "get") and callable(config.get) else {}
         if isinstance(fish_cfg, dict):
-            # Keep discus readable even when global size is set very small.
-            self.size_scale = max(0.85, fish_cfg.get("size_scale", self.size_scale))
+            self.size_scale = fish_cfg.get("size_scale", self.size_scale)
             self.opacity = fish_cfg.get("opacity", self.opacity)
 
     def _c(self, rgb, alpha=255):
