@@ -42,6 +42,8 @@ class ZenFishApp:
     def __init__(self):
         self.app = QApplication(sys.argv)
         self.app.setApplicationName("ZenFish Overlay")
+        self.app.setOrganizationName("Futol Ethical Technology Ecosystems")
+        self.app.setOrganizationDomain("futol-ethical-technology-ecosystems.local")
         self.app.setQuitOnLastWindowClosed(False)
 
         # Allow Ctrl+C to exit from terminal

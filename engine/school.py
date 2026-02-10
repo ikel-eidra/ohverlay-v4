@@ -45,6 +45,7 @@ class SchoolFish:
             "mood": self.mood,
             "state": self.state,
             "facing_angle": self.facing_angle,
+            "species": self.species,
         }
 
 
