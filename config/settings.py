@@ -64,7 +64,10 @@ DEFAULT_CONFIG = {
         "provider": "anthropic",
         "anthropic_api_key": "",
         "openai_api_key": "",
-        "model": ""
+        "model": "",
+        "enable_vision_foraging": False,
+        "vision_interval_minutes": 60,
+        "vision_model": "gpt-4o-mini"
     },
     "telegram": {
         "bot_token": "",
