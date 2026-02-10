@@ -92,7 +92,7 @@ class FishSkin:
         speed = math.sqrt(vx * vx + vy * vy)
 
         if abs(vx) < 0.1 and abs(vy) < 0.1:
-            angle = 0
+            angle = math.degrees(fish_state.get("facing_angle", 0))
         else:
             angle = math.degrees(math.atan2(vy, vx))
 
