@@ -41,6 +41,7 @@ def test_brain_feed_is_symbolic_pellet_drop():
     brain = BehavioralReactor()
     brain.hunger = 50.0
     brain.mood = 60.0
+    prev_state = brain.state
     brain.feed()
     assert brain.state == "FEEDING"
     assert len(brain._pellets) >= 1

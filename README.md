@@ -1,44 +1,27 @@
-# ✧ P R O J E C T  A E T H E R : V 2 ✧
+# Ohverlay: Ethical Desktop Overlay Companion
 
-> **The Next Evolution of Desktop Companionship**
+![Hero Image: Uno the Purple Betta](https://via.placeholder.com/1200x400/9333EA/C084FC?text=Uno+the+Purple+Betta+Swimming+Gracefully)
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)
-![Python](https://img.shields.io/badge/python-v3.11+-blue.svg?style=for-the-badge&logo=python)
-![Platform](https://img.shields.io/badge/platform-Windows-blue.svg?style=for-the-badge&logo=windows)
+Ohverlay is a calm, semi-transparent desktop overlay companion ecosystem. The current runtime experience is **ZenFish Overlay**: a lifelike betta fish that swims across your monitor space without interrupting your workflow.
 
----
+> Focus right now: **Ohverlay + ZenFish muna** — relaxation, practicality, and ethics first.
 
-## 🌌 Overview
+![Demo GIF: Zenfish in Action](https://via.placeholder.com/800x450/000000/FFFFFF?text=Zenfish+Swim+Demo+GIF)
 
-**Project Aether** (ZenFish) is an intelligent, non-intrusive desktop overlay that brings life to your workspace. What started as a simple swimming fish has evolved into a fully agentic companion capable of managing your schedule, monitoring your health, and providing intelligent assistance—all while swimming peacefully on your screen.
+## Overview
+ZenFish is designed as a quiet companion for productivity-heavy workflows. It gives ambient presence, subtle supportive prompts, and natural fish behavior while staying non-intrusive and user-controlled.
 
-**Version 2** marks a complete re-imagining of the core architecture, designed for:
-*   **Modular Intelligence:** A new plugin-based brain.
-*   **Hyper-Realistic Fluidity:** Enhanced physics and swimming behaviors.
-*   **Deep Integration:** Seamless connection with your OS and workflows.
+## Current Key Features
+- **Lifelike Betta Rendering**: Uno-inspired purple betta styling with procedural animation and glow.
+- **Multi-Monitor Overlay**: Smooth movement across one or more screens.
+- **Click-Through UX**: Transparent overlay that does not block your normal desktop interaction.
+- **Symbolic Pellet Interaction**: `Ctrl+Alt+F` drops pellets where the user points, and fish responds while **continuing to swim** (no hard stop/feed dependency).
+- **Calm Integrations**: Bubble-based modules for health, schedule, love notes, and news.
+- **Optional LLM Brain**: Anthropic/OpenAI support with graceful fallback behavior when unavailable.
 
----
+![Screenshot: Multi-Monitor Swim](https://via.placeholder.com/800x450/9333EA/C084FC?text=Multi-Monitor+Swim+Screenshot)
 
-## ✨ Key Features (Planned V2)
-
-| Feature | Description |
-| :--- | :--- |
-| **🎨 Neural Aesthetics** | Glassmorphism UI 2.0 with dynamic, mood-based theming. |
-| **🧠 Cortex Core** | Advanced LLM integration for proactive assistance, not just reactive chat. |
-| **⚡ Performance** | Rust-backed physics engine for near-zero resource usage. |
-| **🔌 Synapse Plugins** | Community-driven ecosystem for extending capabilities. |
-
----
-
-## 🚀 Getting Started (Development)
-
-This repository is the active development ground for V2.
-
-### Prerequisites
-*   Python 3.11+
-*   Poetry (Recommended) or pip
-
-### Installation
+## Installation (Development)
 ```bash
 git clone https://github.com/YourUsername/Project-Aether-Fin-V2.git
 cd Project-Aether-Fin-V2
