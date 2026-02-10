@@ -9,9 +9,10 @@ from utils.logger import logger
 
 DEFAULT_CONFIG = {
     "fish": {
-        "primary_color": [30, 80, 220],
-        "secondary_color": [180, 40, 120],
-        "accent_color": [255, 100, 200],
+        "primary_color": [255, 118, 54],
+        "secondary_color": [35, 84, 170],
+        "accent_color": [255, 240, 235],
+        "betta_palette": "nemo_galaxy",
         "opacity": 0.9,
         "size_scale": 1.0,
         "color_mode": "gradient",

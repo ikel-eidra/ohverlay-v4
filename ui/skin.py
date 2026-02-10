@@ -25,6 +25,17 @@ from engine.perlin import PerlinNoise
 class FishSkin:
     """Photorealistic Betta fish with procedurally animated flowing fins."""
 
+
+    FAMOUS_BETTA_PALETTES = {
+        "nemo_galaxy": ([255, 118, 54], [35, 84, 170], [255, 240, 235]),
+        "mustard_gas": ([26, 95, 195], [244, 190, 52], [255, 244, 184]),
+        "koi_candy": ([240, 78, 62], [248, 244, 236], [35, 38, 42]),
+        "black_orchid": ([34, 30, 56], [94, 70, 180], [210, 152, 255]),
+        "copper_dragon": ([130, 82, 30], [212, 150, 67], [255, 229, 162]),
+        "lavender_halfmoon": ([141, 95, 226], [230, 184, 255], [255, 238, 255]),
+        "turquoise_butterfly": ([42, 176, 204], [18, 87, 154], [233, 247, 255]),
+    }
+
     def __init__(self, config=None):
         self.perlin = PerlinNoise(seed=42)
         self.perlin2 = PerlinNoise(seed=137)  # Second noise for variety
@@ -61,6 +72,11 @@ class FishSkin:
         if not fish_cfg:
             return
         if isinstance(fish_cfg, dict):
+            palette_name = str(fish_cfg.get("betta_palette", "")).lower().strip()
+            if palette_name in self.FAMOUS_BETTA_PALETTES:
+                p, s2, a = self.FAMOUS_BETTA_PALETTES[palette_name]
+                self.primary, self.secondary, self.accent = list(p), list(s2), list(a)
+
             self.primary = fish_cfg.get("primary_color", self.primary)
             self.secondary = fish_cfg.get("secondary_color", self.secondary)
             self.accent = fish_cfg.get("accent_color", self.accent)
@@ -80,7 +96,7 @@ class FishSkin:
 
     def _shifted_color(self, base, phase_offset=0.0):
         t = (math.sin(self.color_shift_phase + phase_offset) + 1.0) / 2.0
-        shifted = self._lerp_color(base, self.secondary, t * 0.35)
+        shifted = self._lerp_color(base, self.secondary, t * (0.25 + self.turn_intensity * 0.18 + self.swim_cadence * 0.08))
         return shifted
 
     def _make_color(self, rgb, alpha=255):

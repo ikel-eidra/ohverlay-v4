@@ -210,23 +210,28 @@ class BehavioralReactor:
                 self._idle_timer = 0.0
                 roll = np.random.random()
 
-                if roll < 0.03 and self.mood > 40:
-                    # Rare dart burst
+                pellet_excited = 0.15 if self._pellets else 0.0
+                dart_chance = (0.02 + pellet_excited * 0.6) * self._behavior_variety
+                flare_gate = 62.0 - pellet_excited * 14.0
+                rest_chance = (0.16 - pellet_excited * 0.4) / max(self._behavior_variety, 1e-6)
+
+                if roll < dart_chance and self.mood > 35:
+                    # Short, elegant pursuit burst when curious/excited.
                     self.state = "DARTING"
                     self._dart_timer = 0.0
                     dart_dir = np.random.uniform(-1, 1, size=2)
                     dart_dir /= np.linalg.norm(dart_dir) + 1e-6
-                    self.target = self.position + dart_dir * np.random.uniform(100, 250)
+                    self.target = self.position + dart_dir * np.random.uniform(90, 220)
                     return
 
-                if roll < 0.06 and self.mood < 60:
-                    # Flare display when mood is low
+                if roll < dart_chance + 0.03 and self.mood < flare_gate:
+                    # Occasional display flare when confidence drops.
                     self.state = "FLARING"
                     self._flare_timer = 0.0
                     return
 
-                if roll < 0.20:
-                    # Rest
+                if roll < dart_chance + 0.03 + max(0.06, rest_chance):
+                    # Slow rest drift to preserve natural pacing.
                     self.state = "RESTING"
                     self._rest_timer = 0.0
                     return
