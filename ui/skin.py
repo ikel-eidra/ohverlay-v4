@@ -50,7 +50,6 @@ class FishSkin:
         self.tail_amp_factor = 1.0
         self.tail_freq_factor = 1.0
         self.turn_intensity = 0.0
-        self._facing_left = False
 
         if config:
             self.apply_config(config)
