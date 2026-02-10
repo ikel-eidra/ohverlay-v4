@@ -29,51 +29,16 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## Portable Runtime Goal
-For public users, distribution targets:
-1. Download ZIP bundle from official site.
-2. Extract and run `start.bat`.
-3. No admin prompts for standard usage.
+## 🧭 Product Direction & Handoff
 
-## Usage
-- **Drop Pellets**: `Ctrl+Alt+F` (symbolic, stress-relief style interaction).
-- **Toggle Sanctuary**: `Ctrl+Alt+S`.
-- **Toggle Visibility**: `Ctrl+Alt+H`.
-- **Customize**: Update local config (`~/.zenfish/config.json`) or tray options.
-
-## Product Guardrails (Non-Negotiable)
-- Local-first defaults and graceful fallbacks.
-- Opt-in controls for sensitive features.
-- No trust-breaking auto-behavior (ex: silent executable runs).
-- Ethical, non-intrusive attention design.
-
-## Tech Stack
-- **Python + PySide6 (Qt)** for transparent overlay windows and rendering.
-- **Procedural animation** (sine/perlin + steering dynamics) for movement realism.
-- **Modular integration layer** for communication and productivity features.
-
-## Roadmap Snapshot
-- **v1.x hardening**: behavioral smoothness, visual QA, updater hardening.
-- **v2 direction**: richer bubble interactions, privacy-safe analytics opt-in, deeper ecosystem integration.
-- **Long-term**: companion channels (extensions/mobile) without replacing desktop core.
-
-## Points for Coders (Pass-On Notes)
-- Keep CPU budget disciplined for low-end office PCs.
-- Continue improving fish physics realism and fin-body coupling.
-- Keep bubble UX subtle (non-disruptive, contextual).
-- Build API/MCP/SDK connectors incrementally and safely.
-- Keep security and privacy posture transparent and opt-in.
-- Avoid branded ad assets until official client agreements.
-
-## Product Direction & Handoff
-For implementation-grounded context (identity, milestones, risks, guardrails, and release criteria), see:
+For a current implementation-grounded roadmap (identity, milestones, guardrails, and release criteria), see the context primer:
 
 - [`docs/ohverlay_zenfish_context_primer.md`](docs/ohverlay_zenfish_context_primer.md)
 
-## Contributing
-Pull requests are welcome. Keep changes calm-by-default, ethically aligned, and performance-aware.
+---
 
-## License
-MIT — free to use and modify.
+## 🤝 Contribution
 
-**Ohverlay & ZenFish**: calm your workspace, ethically.
+We are building the future of desktop agents. Join us in crafting the code that brings Aether to life.
+
+> *"Computed with Love & Silicon"*

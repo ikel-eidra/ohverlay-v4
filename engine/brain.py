@@ -139,6 +139,7 @@ class BehavioralReactor:
                 "vy": np.random.uniform(18.0, 34.0),
                 "age": 0.0,
             })
+        self.state = "FEEDING"
         self._feed_nibble_timer = 0.0
         self._pellet_last_drop = time.time()
         self.mood = min(100.0, self.mood + 4.0)
@@ -195,6 +196,13 @@ class BehavioralReactor:
             self._idle_timer += dt
             self._hover_phase += dt * 1.8
 
+            # Pellets trigger focused feeding search.
+            if self._pellets:
+                self.state = "FEEDING"
+                self._feed_nibble_timer = 0.0
+                self._idle_timer = 0.0
+                return
+
             # Occasional behaviors
             if self._idle_timer > 2.5 + np.random.exponential(2.0):
                 self._idle_timer = 0.0
@@ -225,6 +233,10 @@ class BehavioralReactor:
                 self._find_drift_target()
 
         elif self.state == "SEARCHING":
+            if self._pellets:
+                self.state = "FEEDING"
+                self._feed_nibble_timer = 0.0
+                return
             # Follow waypoints for curved path
             if self._waypoint_idx < len(self._waypoints):
                 current_wp = self._waypoints[self._waypoint_idx]
@@ -235,8 +247,21 @@ class BehavioralReactor:
                 self.state = "IDLE"
 
         elif self.state == "FEEDING":
-            # Legacy compatibility: feeding is now symbolic and non-blocking.
-            self.state = "IDLE"
+            self._feed_nibble_timer += dt
+            if not self._pellets:
+                self.state = "IDLE"
+                self._feed_nibble_timer = 0.0
+                return
+
+            nearest_idx = min(
+                range(len(self._pellets)),
+                key=lambda i: np.linalg.norm(self._pellets[i]["pos"] - self.position)
+            )
+            nearest = self._pellets[nearest_idx]
+            if np.linalg.norm(nearest["pos"] - self.position) < 18.0:
+                self._pellets.pop(nearest_idx)
+                self.mood = min(100.0, self.mood + 1.6)
+                self.hunger = max(0.0, self.hunger - 3.0)
 
         elif self.state == "RESTING":
             self._rest_timer += dt
@@ -321,42 +346,6 @@ class BehavioralReactor:
 
         self._idle_drift_target = candidate
 
-    def _apply_pellet_attraction(self, dt):
-        """Non-blocking pellet attraction so fish keeps swimming while interacting."""
-        if not self._pellets:
-            return
-
-        self._feed_nibble_timer += dt
-        nearest_idx = min(
-            range(len(self._pellets)),
-            key=lambda i: np.linalg.norm(self._pellets[i]["pos"] - self.position)
-        )
-        nearest = self._pellets[nearest_idx]
-        dist = np.linalg.norm(nearest["pos"] - self.position)
-
-        # Consume when close enough.
-        if dist < 16.0:
-            self._pellets.pop(nearest_idx)
-            self.mood = min(100.0, self.mood + 1.6)
-            self.hunger = max(0.0, self.hunger - 3.0)
-            return
-
-        # Apply gentle steering force without overriding current behavior.
-        direction = nearest["pos"] - self.position
-        if dist > 1e-6:
-            direction = direction / dist
-            desired_speed = min(self._max_speed * 0.50, self._idle_speed + 38.0 + dist * 0.18)
-            desired = direction * desired_speed
-            steering = desired - self.velocity
-            sn = np.linalg.norm(steering)
-            max_accel = 90.0
-            if sn > max_accel:
-                steering = steering / sn * max_accel
-            self.velocity += steering * dt * 0.85
-
-            # tiny nibble oscillation while approaching pellets
-            self.velocity += np.array([0.0, math.sin(self._feed_nibble_timer * 8.0) * 0.6])
-
     def _steer_towards(self, target, max_accel=130.0, drag=0.06, desired_speed=None):
         direction = target - self.position
         dist = np.linalg.norm(direction)
@@ -386,9 +375,14 @@ class BehavioralReactor:
                 self._steer_towards(wp, max_accel=120.0, drag=0.045)
 
         elif self.state == "FEEDING":
-            # Backward-compat fallback; feeding no longer blocks swimming flow.
-            self.state = "IDLE"
-            self.velocity *= 0.96
+            if self._pellets:
+                nearest = min(self._pellets, key=lambda p: np.linalg.norm(p["pos"] - self.position))
+                desired = min(self._max_speed * 0.55, 75.0 + np.linalg.norm(nearest["pos"] - self.position) * 0.25)
+                self._steer_towards(nearest["pos"], max_accel=145.0, drag=0.07, desired_speed=desired)
+                nibble_freq = math.sin(self._feed_nibble_timer * 7.0)
+                self.velocity += np.array([0.0, nibble_freq * 1.0])
+            else:
+                self.velocity *= 0.92
 
         elif self.state == "RESTING":
             self.velocity *= 0.97
@@ -421,9 +415,6 @@ class BehavioralReactor:
                 hover_y = math.sin(self._hover_phase * 0.7 + 0.5) * 0.5
                 self._hover_offset = np.array([hover_x, hover_y])
                 self.velocity = self.velocity * 0.97 + self._hover_offset * 0.3
-
-        # Keep pellet response non-blocking across all states.
-        self._apply_pellet_attraction(dt)
 
         self.position += self.velocity * dt
 
