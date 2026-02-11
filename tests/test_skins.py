@@ -3,8 +3,9 @@ import sys
 import pytest
 import math
 
-pyside6 = pytest.importorskip("PySide6")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 from PySide6.QtWidgets import QApplication
+pytest.importorskip("PySide6.QtGui", exc_type=ImportError)
 
 from ui.tetra_skin import NeonTetraSkin
 from ui.discus_skin import DiscusSkin

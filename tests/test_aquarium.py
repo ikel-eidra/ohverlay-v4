@@ -1,7 +1,7 @@
 import sys
 import pytest
 
-pytest.importorskip("PySide6")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 from PySide6.QtWidgets import QApplication
 from engine.aquarium import MonitorManager
 
