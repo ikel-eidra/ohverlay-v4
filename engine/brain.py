@@ -281,6 +281,10 @@ class BehavioralReactor:
                 self._find_drift_target()
 
         elif self.state == "SEARCHING":
+            if self._pellets:
+                self.state = "FEEDING"
+                self._feed_nibble_timer = 0.0
+                return
             # Follow waypoints for curved path
             if self._waypoint_idx < len(self._waypoints):
                 current_wp = self._waypoints[self._waypoint_idx]
@@ -289,8 +293,6 @@ class BehavioralReactor:
                     self._waypoint_idx += 1
             else:
                 self.state = "IDLE"
-                self._idle_timer = 0.0
-                self._find_drift_target()
 
         elif self.state == "FEEDING":
             # Legacy compatibility: feeding is now symbolic and non-blocking.
@@ -402,17 +404,9 @@ class BehavioralReactor:
         if not self._pellets:
             return
 
-        # Prevent lock-in: very old pellets remain visible but no longer strongly attract.
-        active_indices = [
-            i for i, p in enumerate(self._pellets)
-            if p.get("age", 0.0) < min(85.0, p.get("life_seconds", 120.0) * 0.75)
-        ]
-        if not active_indices:
-            return
-
         self._feed_nibble_timer += dt
         nearest_idx = min(
-            active_indices,
+            range(len(self._pellets)),
             key=lambda i: np.linalg.norm(self._pellets[i]["pos"] - self.position)
         )
         nearest = self._pellets[nearest_idx]
@@ -425,29 +419,23 @@ class BehavioralReactor:
             self.hunger = max(0.0, self.hunger - 3.0)
             return
 
-        # Avoid hard-lock pursuit from too far away while still keeping nibble behavior nearby.
-        if dist > 280.0:
-            return
-
         # Apply gentle steering force without overriding current behavior.
         direction = nearest["pos"] - self.position
         if dist > 1e-6:
             direction = direction / dist
-            age_ratio = min(1.0, nearest.get("age", 0.0) / max(nearest.get("life_seconds", 120.0), 1e-6))
-            attraction_gain = max(0.30, 1.0 - age_ratio * 0.75)
-            desired_speed = min(self._max_speed * 0.44, self._idle_speed + 30.0 + dist * 0.15)
+            desired_speed = min(self._max_speed * 0.50, self._idle_speed + 38.0 + dist * 0.18)
             desired = direction * desired_speed
             steering = desired - self.velocity
             sn = np.linalg.norm(steering)
-            max_accel = 72.0
+            max_accel = 90.0
             if sn > max_accel:
                 steering = steering / sn * max_accel
-            self.velocity += steering * dt * (0.55 * attraction_gain)
+            self.velocity += steering * dt * 0.85
 
             # tiny nibble oscillation while approaching pellets + lateral assess zig-zag.
-            self.velocity += np.array([0.0, math.sin(self._feed_nibble_timer * 8.0) * 0.35])
+            self.velocity += np.array([0.0, math.sin(self._feed_nibble_timer * 8.0) * 0.6])
             lateral = np.array([-direction[1], direction[0]])
-            self.velocity += lateral * (math.sin(self._feed_nibble_timer * 3.0) * 0.45)
+            self.velocity += lateral * (math.sin(self._feed_nibble_timer * 3.0) * 0.9)
 
     def _steer_towards(self, target, max_accel=130.0, drag=0.06, desired_speed=None):
         direction = target - self.position

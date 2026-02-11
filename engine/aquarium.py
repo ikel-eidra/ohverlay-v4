@@ -174,21 +174,13 @@ class AquariumSector(QMainWindow):
             )
 
             grad = QLinearGradient(x, bottom, x, top_y)
-            grad.setColorAt(0.0, QColor(30, 110, 72, 190))
-            grad.setColorAt(0.55, QColor(72, 190, 112, 170))
-            grad.setColorAt(1.0, QColor(168, 244, 188, 130))
+            grad.setColorAt(0.0, QColor(36, 104, 70, 130))
+            grad.setColorAt(0.55, QColor(68, 166, 98, 118))
+            grad.setColorAt(1.0, QColor(120, 210, 148, 80))
             pen = QPen(QBrush(grad), stem["thickness"])
             pen.setCapStyle(Qt.RoundCap)
             painter.setPen(pen)
             painter.drawPath(path)
-
-            # Add a few soft leaf highlights so plants are visible on bright desktops.
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(150, 235, 170, 92))
-            for i in range(1, 4):
-                ly = bottom - stem_h * (0.25 + i * 0.18)
-                lx = x + math.sin(stem["phase"] + i * 1.2 + t * 0.5) * (4.5 + i * 1.8)
-                painter.drawEllipse(int(lx - 2), int(ly - 2), 5, 5)
 
     def _draw_pellets(self, painter, pellets):
         if not pellets:

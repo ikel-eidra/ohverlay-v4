@@ -129,7 +129,6 @@ class FishSkin:
         self.tail_freq_factor = fish_state.get("tail_freq_factor", 1.0)
         self.turn_intensity = fish_state.get("turn_intensity", 0.0)
         self.swim_cadence = fish_state.get("swim_cadence", speed_factor)
-        self._state_boost = state_boost
 
         self.time += dt
         turn_boost = 1.0 + self.turn_intensity * 0.38
