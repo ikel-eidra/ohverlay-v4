@@ -236,7 +236,7 @@ class BehavioralReactor:
                 self._explore_timer = 0.0
                 self._explore_interval = np.random.uniform(9.0, 18.0)
                 destination = self._find_valid_target()
-                self._build_path_to(destination)
+                self._generate_wandering_path(destination)
                 self.state = "SEARCHING"
                 return
 
