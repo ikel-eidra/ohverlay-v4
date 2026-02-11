@@ -80,12 +80,10 @@ A candidate is considered "perfection" only when these pillars stay balanced:
 
 ## 9) Distribution Model
 
-- **Current stage:** private prelaunch distribution only (controlled family/team rollout).
 - **Windows (primary):** PyInstaller, accurate metadata, installer + portable fallback.
 - **macOS (secondary):** signed/notarized distribution with tray/overlay validation.
 - **Browser extension:** lightweight companion and desktop acquisition channel.
 - **Android/iOS:** companion-first (sync/status/rewards), wallpaper/widget later.
-- **Public website launch gate:** hold until copyright notices, channel controls, and release governance are fully in place.
 
 ## 10) Minimal Analytics Blueprint
 

@@ -129,21 +129,16 @@ class AquariumSector(QMainWindow):
 
 
     def _build_plant_layout(self):
-        """Build a compact 5-6 stem layout with mixed broadleaf + feathery accents."""
         stems = []
-        width = max(240, self.screen_geometry.width())
-        count = 5 if width < 1500 else 6
-        margin = max(30, min(120, width * 0.08))
-        for i in range(count):
-            t = i / max(1, count - 1)
-            x_base = margin + t * (width - margin * 2)
+        width = max(200, self.screen_geometry.width())
+        count = max(7, min(18, width // 150))
+        for _ in range(int(count)):
             stems.append({
-                "x": float(x_base + random.uniform(-18.0, 18.0)),
+                "x": random.uniform(20, max(21, self.screen_geometry.width() - 20)),
                 "phase": random.uniform(0.0, math.pi * 2),
-                "sway": random.uniform(6.0, 14.0),
-                "thickness": random.uniform(2.4, 4.8),
-                "h_mult": random.uniform(0.86, 1.10),
-                "style": "broadleaf" if i % 2 == 0 else "feathery",
+                "sway": random.uniform(7.0, 16.0),
+                "thickness": random.uniform(2.2, 4.2),
+                "h_mult": random.uniform(0.82, 1.08),
             })
         return stems
 
@@ -165,7 +160,7 @@ class AquariumSector(QMainWindow):
         t = time.time()
 
         for stem in self._plant_stems:
-            stem_h = h * 0.90 * growth_ratio * stem["h_mult"]
+            stem_h = h * 0.92 * growth_ratio * stem["h_mult"]
             top_y = max(waterline, bottom - stem_h)
             x = stem["x"]
             sway = math.sin(t * 0.42 + stem["phase"]) * stem["sway"]
@@ -173,40 +168,19 @@ class AquariumSector(QMainWindow):
             path = QPainterPath()
             path.moveTo(x, bottom)
             path.cubicTo(
-                x + sway * 0.28, bottom - stem_h * 0.33,
-                x - sway * 0.75, bottom - stem_h * 0.68,
+                x + sway * 0.3, bottom - stem_h * 0.32,
+                x - sway * 0.8, bottom - stem_h * 0.66,
                 x + sway, top_y
             )
 
             grad = QLinearGradient(x, bottom, x, top_y)
-            grad.setColorAt(0.0, QColor(28, 108, 66, 190))
-            grad.setColorAt(0.55, QColor(78, 194, 118, 175))
-            grad.setColorAt(1.0, QColor(174, 250, 192, 136))
+            grad.setColorAt(0.0, QColor(36, 104, 70, 130))
+            grad.setColorAt(0.55, QColor(68, 166, 98, 118))
+            grad.setColorAt(1.0, QColor(120, 210, 148, 80))
             pen = QPen(QBrush(grad), stem["thickness"])
             pen.setCapStyle(Qt.RoundCap)
             painter.setPen(pen)
             painter.drawPath(path)
-
-            painter.setPen(Qt.NoPen)
-            if stem.get("style") == "broadleaf":
-                # Alternate broad leaves like stem plants in real aquariums.
-                for i in range(1, 7):
-                    fy = bottom - stem_h * (0.18 + i * 0.115)
-                    side = -1 if i % 2 == 0 else 1
-                    fx = x + side * (5.5 + i * 0.6) + math.sin(t * 0.8 + i + stem["phase"]) * 1.6
-                    leaf_w = 10 + i * 0.8
-                    leaf_h = 4.8 + i * 0.35
-                    painter.setBrush(QColor(138, 236, 156, 105))
-                    painter.drawEllipse(QPointF(fx, fy), leaf_w * 0.45, leaf_h)
-            else:
-                # Feather-like tufts for texture variety.
-                painter.setPen(QPen(QColor(146, 235, 164, 88), 0.9))
-                for i in range(1, 9):
-                    fy = bottom - stem_h * (0.10 + i * 0.09)
-                    reach = 5 + i * 1.4
-                    bend = math.sin(stem["phase"] + i * 0.8 + t * 0.7) * 2.4
-                    painter.drawLine(QPointF(x, fy), QPointF(x + reach + bend, fy - 2.0))
-                    painter.drawLine(QPointF(x, fy), QPointF(x - reach + bend * 0.2, fy - 1.6))
 
     def _draw_pellets(self, painter, pellets):
         if not pellets:

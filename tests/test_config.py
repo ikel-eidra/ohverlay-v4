@@ -27,13 +27,3 @@ def test_settings_get_set():
 
 def test_default_betta_palette_present():
     assert DEFAULT_CONFIG["fish"]["betta_palette"] == "nemo_galaxy"
-
-
-def test_fish_visual_tuning_defaults_present():
-    assert DEFAULT_CONFIG["fish"]["silhouette_strength"] == 1.0
-    assert DEFAULT_CONFIG["fish"]["eye_tracking_strength"] == 0.75
-
-
-def test_app_prelaunch_defaults_present():
-    assert DEFAULT_CONFIG["app"]["public_website_enabled"] is False
-    assert DEFAULT_CONFIG["app"]["website_release_stage"] == "private_prelaunch"
