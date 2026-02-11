@@ -25,8 +25,8 @@ class NeonTetraSkin:
         self.shimmer_phase = 0.0
 
         # Each fish gets slight color variation
-        self._hue_offset = (seed % 20) * 0.01
-        self.size_scale = 1.25
+        self._hue_offset = (((seed * 97) % 360) / 360.0 - 0.5) * 0.12
+        self.size_scale = 1.0
         self.opacity = 0.92
         self._facing_left = False
 
@@ -37,7 +37,11 @@ class NeonTetraSkin:
     def apply_config(self, config):
         fish_cfg = config.get("fish") if hasattr(config, "get") and callable(config.get) else {}
         if isinstance(fish_cfg, dict):
-            self.size_scale = 1.25 * fish_cfg.get("size_scale", 1.0)
+            raw_scale = fish_cfg.get("size_scale", self.size_scale)
+            try:
+                self.size_scale = max(0.2, min(3.0, float(raw_scale)))
+            except (TypeError, ValueError):
+                pass
 
     def render(self, painter, local_pos, fish_state):
         x, y = local_pos
@@ -128,9 +132,10 @@ class NeonTetraSkin:
         stripe.closeSubpath()
 
         # Iridescent blue-green gradient that shifts
-        r_base = int(20 + shimmer * 30)
-        g_base = int(180 + shimmer * 40)
-        b_base = int(255 - shimmer * 20)
+        hue_shift = self._hue_offset
+        r_base = max(0, min(255, int(20 + shimmer * 30 + hue_shift * 90)))
+        g_base = max(0, min(255, int(180 + shimmer * 40 + hue_shift * 30)))
+        b_base = max(0, min(255, int(255 - shimmer * 20 - hue_shift * 60)))
 
         stripe_grad = QLinearGradient(18, 0, -24, 0)
         stripe_grad.setColorAt(0.0, QColor(r_base, g_base, b_base, int(230 * self.opacity)))

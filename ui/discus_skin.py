@@ -281,7 +281,8 @@ class DiscusSkin:
             wave = math.sin(self.tail_phase * 0.5 - t * 2.0) * (2 + 4 * speed_factor) * envelope
 
             # Body contour at this x position
-            body_y = -24 * math.sin(((bx + 22) / 46.0) * math.pi) ** 0.6
+            contour = max(0.0, math.sin(((bx + 22) / 46.0) * math.pi))
+            body_y = -24 * (contour ** 0.6)
             points.append(QPointF(bx, body_y - height + wave + noise))
 
         for layer, (la, ls) in enumerate([(90, 1.0), (40, 0.6)]):
@@ -329,7 +330,8 @@ class DiscusSkin:
             noise = self.perlin.octave_noise(t * 3.5 + 15.0, self.time * 0.8, octaves=2) * 3 * envelope
             wave = math.sin(self.tail_phase * 0.6 - t * 2.2) * (2 + 4 * speed_factor) * envelope
 
-            body_y = 24 * math.sin(((bx + 22) / 46.0) * math.pi) ** 0.6
+            contour = max(0.0, math.sin(((bx + 22) / 46.0) * math.pi))
+            body_y = 24 * (contour ** 0.6)
             points.append(QPointF(bx, body_y + depth + wave + noise))
 
         for la, ls in [(80, 1.0), (35, 0.6)]:
