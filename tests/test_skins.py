@@ -204,31 +204,3 @@ def test_betta_skin_visual_controls_clamped():
     skin.apply_config(FakeConfig())
     assert skin.silhouette_strength == pytest.approx(1.9)
     assert skin.eye_tracking_strength == pytest.approx(0.0)
-
-
-def test_betta_skin_visual_controls_invalid_types_keep_defaults():
-    skin = FishSkin()
-    default_s = skin.silhouette_strength
-    default_e = skin.eye_tracking_strength
-
-    class FakeConfig:
-        def get(self, key):
-            return {
-                "silhouette_strength": "ultra",
-                "eye_tracking_strength": object(),
-            }
-
-    skin.apply_config(FakeConfig())
-    assert skin.silhouette_strength == pytest.approx(default_s)
-    assert skin.eye_tracking_strength == pytest.approx(default_e)
-
-
-def test_betta_independent_palette_set_returns_distinct_pair():
-    palettes = FishSkin.independent_palette_set(count=2, preferred="nemo_galaxy")
-    assert len(palettes) == 2
-    assert palettes[0] != palettes[1]
-
-
-def test_betta_independent_palette_set_clamps_count():
-    palettes = FishSkin.independent_palette_set(count=99, preferred="nemo_galaxy")
-    assert len(palettes) == 2

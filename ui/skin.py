@@ -37,30 +37,6 @@ class FishSkin:
         "turquoise_butterfly": ([42, 176, 204], [18, 87, 154], [233, 247, 255]),
     }
 
-    @classmethod
-    def independent_palette_set(cls, count=2, preferred="nemo_galaxy"):
-        """Return up to 2 distinct betta palettes for multi-betta mode."""
-        count = max(1, min(2, int(count)))
-        names = list(cls.FAMOUS_BETTA_PALETTES.keys())
-        preferred = str(preferred or "").lower().strip()
-
-        selected = []
-        if preferred in cls.FAMOUS_BETTA_PALETTES:
-            selected.append(preferred)
-
-        remaining = [n for n in names if n not in selected]
-        random.shuffle(remaining)
-        while len(selected) < count and remaining:
-            selected.append(remaining.pop(0))
-
-        if not selected:
-            selected = ["nemo_galaxy"]
-
-        return [
-            tuple(cls.FAMOUS_BETTA_PALETTES[name])
-            for name in selected[:count]
-        ]
-
     def __init__(self, config=None):
         self.perlin = PerlinNoise(seed=42)
         self.perlin2 = PerlinNoise(seed=137)  # Second noise for variety
@@ -109,18 +85,8 @@ class FishSkin:
             self.accent = fish_cfg.get("accent_color", self.accent)
             self.color_shift_speed = fish_cfg.get("color_shift_speed", self.color_shift_speed)
             self.enable_glow = fish_cfg.get("enable_glow", self.enable_glow)
-            self.silhouette_strength = self._safe_clamped_float(
-                fish_cfg.get("silhouette_strength", self.silhouette_strength),
-                self.silhouette_strength,
-                0.45,
-                1.9,
-            )
-            self.eye_tracking_strength = self._safe_clamped_float(
-                fish_cfg.get("eye_tracking_strength", self.eye_tracking_strength),
-                self.eye_tracking_strength,
-                0.0,
-                1.0,
-            )
+            self.silhouette_strength = max(0.45, min(1.9, float(fish_cfg.get("silhouette_strength", self.silhouette_strength))))
+            self.eye_tracking_strength = max(0.0, min(1.0, float(fish_cfg.get("eye_tracking_strength", self.eye_tracking_strength))))
             self.size_scale = fish_cfg.get("size_scale", self.size_scale)
             self.opacity = fish_cfg.get("opacity", self.opacity)
 
@@ -177,7 +143,6 @@ class FishSkin:
         self.tail_freq_factor = fish_state.get("tail_freq_factor", 1.0)
         self.turn_intensity = fish_state.get("turn_intensity", 0.0)
         self.swim_cadence = fish_state.get("swim_cadence", speed_factor)
-        self._state_boost = state_boost
 
         self.time += dt
         turn_boost = 1.0 + self.turn_intensity * 0.38
@@ -331,14 +296,6 @@ class FishSkin:
         painter.setBrush(QBrush(grad))
         painter.drawEllipse(QPointF(15.2, -2.0), 7.4, 5.6)
 
-        # Subtle maxilla highlight near mouth for stronger head read.
-        jaw_grad = QRadialGradient(27.5, 0.0, 4.8)
-        jaw_grad.setColorAt(0.0, self._make_color([250, 240, 232], 30))
-        jaw_grad.setColorAt(0.7, self._make_color(self._lerp_color(self.primary, [30, 20, 20], 0.45), 18))
-        jaw_grad.setColorAt(1.0, QColor(0, 0, 0, 0))
-        painter.setBrush(QBrush(jaw_grad))
-        painter.drawEllipse(QPointF(27.2, -0.2), 4.2, 2.8)
-
     # ---- CAUDAL (TAIL) FIN ----
     def _draw_silhouette_rim(self, painter, speed_factor):
         """Crisp rim light to improve Uno outline readability on mixed desktops."""
@@ -350,7 +307,7 @@ class FishSkin:
         rim.cubicTo(-37, 2, -31, 6 - flex * 0.1, -24, 11 - flex * 0.2)
         rim.cubicTo(10, 14 - flex * 0.3, 27, 7 - flex * 0.2, 31.5, 0.3)
 
-        rim_alpha = int((32 + 16 * min(1.0, speed_factor * 0.55 + self.turn_intensity * 0.6)) * self.silhouette_strength)
+        rim_alpha = int(32 + 16 * min(1.0, speed_factor * 0.55 + self.turn_intensity * 0.6))
         rim_col = self._lerp_color(self.accent, [255, 255, 255], 0.45)
         painter.setPen(QPen(self._make_color(rim_col, rim_alpha), 0.9))
         painter.setBrush(Qt.NoBrush)
@@ -722,15 +679,8 @@ class FishSkin:
     # ---- EYE ----
     def _draw_eye(self, painter, mood, hunger, vx=0.0, vy=0.0):
         """Photorealistic eye with corneal reflection and depth."""
-        eye_x, eye_y = 22.6, -4.1
-        eye_r = 5.15
-
-        speed = math.sqrt(vx * vx + vy * vy)
-        look_scale = self.eye_tracking_strength * min(1.0, speed / 180.0)
-        look_x = max(-0.9, min(0.9, (vx / max(1.0, speed)) * 0.85 * look_scale))
-        look_y = max(-0.55, min(0.55, (vy / max(1.0, speed)) * 0.55 * look_scale))
-        iris_x = eye_x + look_x
-        iris_y = eye_y + look_y
+        eye_x, eye_y = 22.8, -4.2
+        eye_r = 5.05
 
         # Dorsal eyelid shadow for depth/readability.
         lid_grad = QRadialGradient(eye_x - 0.6, eye_y - 1.6, eye_r * 1.1)
@@ -802,15 +752,15 @@ class FishSkin:
 
         # Primary specular highlight (corneal reflection)
         painter.setBrush(QColor(255, 255, 255, 215))
-        painter.drawEllipse(QPointF(iris_x + 1.55, iris_y - 1.55), 1.35, 1.15)
+        painter.drawEllipse(QPointF(eye_x + 1.55, eye_y - 1.55), 1.35, 1.15)
 
         # Secondary smaller highlight
         painter.setBrush(QColor(255, 255, 255, 128))
-        painter.drawEllipse(QPointF(iris_x - 0.75, iris_y + 0.95), 0.68, 0.56)
+        painter.drawEllipse(QPointF(eye_x - 0.75, eye_y + 0.95), 0.68, 0.56)
 
         # Tiny glint for wet-eye realism.
         painter.setBrush(QColor(255, 255, 255, 86))
-        painter.drawEllipse(QPointF(iris_x + 0.25, iris_y - 0.05), 0.32, 0.28)
+        painter.drawEllipse(QPointF(eye_x + 0.25, eye_y - 0.05), 0.32, 0.28)
 
     # ---- SCALES ----
     def _draw_scales(self, painter, speed_factor):

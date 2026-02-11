@@ -18,8 +18,6 @@ DEFAULT_CONFIG = {
         "color_mode": "gradient",
         "color_shift_speed": 0.3,
         "enable_glow": True,
-        "silhouette_strength": 1.0,
-        "eye_tracking_strength": 0.75,
         "motion_profile": "realistic_v2"
     },
     "sanctuary": {
@@ -66,8 +64,6 @@ DEFAULT_CONFIG = {
     "app": {
         "version": "1.0.0",
         "support_email": "support@ohverlay.com",
-        "public_website_enabled": False,
-        "website_release_stage": "private_prelaunch",
         "auto_update_enabled": True,
         "update_check_hours": 6,
         "update_manifest_url": "https://ohverlay.com/updates/manifest.json",
