@@ -145,16 +145,33 @@ class AquariumSector(QMainWindow):
 
 
     def _build_plant_layout(self):
-        """Build a compact 5-6 stem layout with mixed broadleaf + feathery accents."""
+        """
+        Build a compact plant cluster near the taskbar (bottom right where time/date is).
+        Like a real aquarium, plants are grouped together, not spread across the whole tank.
+        """
         stems = []
         width = max(240, self.screen_geometry.width())
+        height = max(200, self.screen_geometry.height())
+        
+        # Place plants near bottom right (taskbar area with time/date)
+        # In a 1920x1080 screen: taskbar is ~bottom 40px, time is right side
+        taskbar_area_width = min(400, width * 0.25)  # Rightmost 25% or 400px
+        taskbar_x_start = width - taskbar_area_width - 20  # Start from right side
+        
+        # 5-6 stems clustered together
         count = 5 if width < 1500 else 6
-        margin = max(30, min(120, width * 0.08))
+        cluster_center_x = taskbar_x_start + taskbar_area_width * 0.5
+        cluster_spread = min(120, taskbar_area_width * 0.4)  # Tight cluster
+        
         for i in range(count):
-            t = i / max(1, count - 1)
-            x_base = margin + t * (width - margin * 2)
+            # Cluster around center point with small variation
+            offset_x = random.uniform(-cluster_spread, cluster_spread)
+            # Taller stems in back, shorter in front for depth
+            height_bias = (i / max(1, count - 1)) - 0.5  # -0.5 to 0.5
+            x_pos = cluster_center_x + offset_x + height_bias * 30
+            
             stems.append({
-                "x": float(x_base + random.uniform(-18.0, 18.0)),
+                "x": float(x_pos),
                 "phase": random.uniform(0.0, math.pi * 2),
                 "sway": random.uniform(6.0, 14.0),
                 "thickness": random.uniform(2.4, 4.8),

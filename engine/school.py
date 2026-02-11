@@ -16,7 +16,7 @@ from utils.logger import logger
 
 
 class SchoolFish:
-    """Individual fish within a school."""
+    """Individual fish within a school with realistic burst-and-coast behavior."""
 
     def __init__(self, fish_id, position, species="neon_tetra"):
         self.fish_id = fish_id
@@ -38,6 +38,12 @@ class SchoolFish:
         self.state = "SCHOOLING"
         self.mood = 80 + np.random.random() * 20
         self.hunger = np.random.random() * 10
+        
+        # Burst-and-coast swimming (realistic neon tetra behavior)
+        self._burst_timer = 0.0
+        self._is_bursting = False
+        self._next_burst_time = np.random.uniform(0.5, 2.0)
+        self._burst_direction = np.random.uniform(0, 2 * math.pi)
 
     def get_state(self):
         return {
@@ -54,17 +60,23 @@ class SchoolFish:
 # Species behavior profiles
 SPECIES_PARAMS = {
     "neon_tetra": {
-        "max_speed": 106,
-        "cruise_speed": 52,
-        "separation_radius": 34,
-        "alignment_radius": 110,
-        "cohesion_radius": 150,
-        "separation_weight": 3.1,
-        "alignment_weight": 1.5,
-        "cohesion_weight": 0.55,
-        "turn_speed": 3.25,      # radians/sec - fast but smooth
-        "wander_strength": 9,
-        "school_tight": True,
+        # Realistic neon tetra parameters based on scientific research:
+        # - Maintain ~2.18cm (22px) cognitive bubble (personal space)
+        # - Burst-and-coast swimming pattern
+        # - Loose shoaling when comfortable, tighter when threatened
+        "max_speed": 140,        # Burst speed ~14 cm/s scaled
+        "cruise_speed": 45,      # Coasting speed
+        "separation_radius": 45, # Strong personal space (2.18cm * 20px/cm)
+        "alignment_radius": 130,
+        "cohesion_radius": 180,
+        "separation_weight": 4.5,# Strong repulsion to prevent clumping
+        "alignment_weight": 1.2, # Gentle alignment
+        "cohesion_weight": 0.35, # Loose cohesion - don't clump!
+        "turn_speed": 4.0,       # Fast turns for burst-and-coast
+        "wander_strength": 12,   # Individual exploration
+        "school_tight": False,   # Loose shoaling, not tight schooling
+        "burst_duration": 0.5,   # Seconds of active swimming
+        "coast_duration": 1.2,   # Seconds of gliding
     },
     "discus": {
         "max_speed": 65,
@@ -255,23 +267,79 @@ class FishSchool:
                 force += toward_center * params["cohesion_weight"] * 0.01
 
             if self.species == "neon_tetra":
-                # Prevent pathological clustering: gently push out from overly dense core.
+                # REALISTIC NEON TETRA BEHAVIOR (based on scientific research):
+                # - Maintain ~2.18cm (22px) cognitive bubble (personal space)
+                # - Short-range repulsion prevents clumping
+                # - Loose shoaling, not tight schooling when comfortable
+                
+                # 1. Strong anti-clumping: maintain cognitive bubble
+                for j in range(n):
+                    if i == j:
+                        continue
+                    diff = fish.position - positions[j]
+                    dist = np.linalg.norm(diff)
+                    # Strong repulsion at close range (< 1 body length = ~30px)
+                    if dist < 35 and dist > 0:
+                        repulsion = diff / dist * (35 - dist) * 2.5
+                        force += repulsion
+                
+                # 2. Desired spacing ring - don't get too close to school center
                 to_core = fish.position - school_center
                 d_core = np.linalg.norm(to_core)
-                desired_ring = 70.0 + fish._school_role * 35.0 + school_density_scale * 40.0
+                desired_ring = 90.0 + fish._school_role * 40.0  # Wider spacing
                 if d_core < desired_ring:
                     core_dir = to_core / (d_core + 1e-6)
-                    force += core_dir * (desired_ring - d_core) * 0.11
-
-                # Ribbon-school look: lane bias perpendicular to travel axis.
+                    force += core_dir * (desired_ring - d_core) * 0.25
+                
+                # 3. Loose ribbon formation - perpendicular offset from travel axis
                 axis = self._school_target - school_center
                 axis_norm = np.linalg.norm(axis)
                 if axis_norm > 1e-6:
                     axis /= axis_norm
                     lane_vec = np.array([-axis[1], axis[0]])
-                    lane_offset = fish._lane_bias * (22.0 + school_density_scale * 18.0)
+                    # Wider lane spacing to prevent clumping
+                    lane_offset = fish._lane_bias * (35.0 + school_density_scale * 25.0)
                     projected = np.dot(fish.position - school_center, lane_vec)
-                    force += lane_vec * (lane_offset - projected) * 0.085
+                    force += lane_vec * (lane_offset - projected) * 0.12
+                
+                # 4. BURST-AND-COAST SWIMMING (realistic neon tetra behavior)
+                fish._burst_timer += dt
+                if not fish._is_bursting:
+                    # Coasting phase - gliding with minimal movement
+                    if fish._burst_timer >= fish._next_burst_time:
+                        # Start new burst
+                        fish._is_bursting = True
+                        fish._burst_timer = 0.0
+                        # Pick new burst direction (slightly random, generally toward school target)
+                        target_dir = self._school_target - fish.position
+                        if np.linalg.norm(target_dir) > 1:
+                            target_dir = target_dir / np.linalg.norm(target_dir)
+                        else:
+                            target_dir = np.array([1, 0])
+                        # Add randomness for natural movement
+                        angle = np.random.uniform(-0.8, 0.8)
+                        cos_a, sin_a = math.cos(angle), math.sin(angle)
+                        fish._burst_direction = math.atan2(
+                            target_dir[1] * cos_a + target_dir[0] * sin_a,
+                            target_dir[0] * cos_a - target_dir[1] * sin_a
+                        )
+                    else:
+                        # During coast: gentle deceleration, minimal steering
+                        fish.velocity *= 0.92  # Drag during coast
+                else:
+                    # Burst phase - active swimming
+                    burst_force = 180.0  # Strong acceleration
+                    burst_vec = np.array([math.cos(fish._burst_direction), math.sin(fish._burst_direction)])
+                    force += burst_vec * burst_force
+                    
+                    if fish._burst_timer >= params.get("burst_duration", 0.5):
+                        # End burst, start coast
+                        fish._is_bursting = False
+                        fish._burst_timer = 0.0
+                        fish._next_burst_time = np.random.uniform(
+                            params.get("coast_duration", 1.2) * 0.7,
+                            params.get("coast_duration", 1.2) * 1.3
+                        )
 
             # Wander force (prevents fish from getting stuck)
             wander_angle = fish._phase_offset + now * 0.5
