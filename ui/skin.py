@@ -129,7 +129,6 @@ class FishSkin:
         self.tail_freq_factor = fish_state.get("tail_freq_factor", 1.0)
         self.turn_intensity = fish_state.get("turn_intensity", 0.0)
         self.swim_cadence = fish_state.get("swim_cadence", speed_factor)
-        self._state_boost = state_boost
 
         self.time += dt
         turn_boost = 1.0 + self.turn_intensity * 0.38
@@ -282,14 +281,6 @@ class FishSkin:
         painter.setPen(Qt.NoPen)
         painter.setBrush(QBrush(grad))
         painter.drawEllipse(QPointF(15.2, -2.0), 7.4, 5.6)
-
-        # Subtle maxilla highlight near mouth for stronger head read.
-        jaw_grad = QRadialGradient(27.5, 0.0, 4.8)
-        jaw_grad.setColorAt(0.0, self._make_color([250, 240, 232], 30))
-        jaw_grad.setColorAt(0.7, self._make_color(self._lerp_color(self.primary, [30, 20, 20], 0.45), 18))
-        jaw_grad.setColorAt(1.0, QColor(0, 0, 0, 0))
-        painter.setBrush(QBrush(jaw_grad))
-        painter.drawEllipse(QPointF(27.2, -0.2), 4.2, 2.8)
 
     # ---- CAUDAL (TAIL) FIN ----
     def _draw_silhouette_rim(self, painter, speed_factor):
@@ -674,8 +665,8 @@ class FishSkin:
     # ---- EYE ----
     def _draw_eye(self, painter, mood, hunger):
         """Photorealistic eye with corneal reflection and depth."""
-        eye_x, eye_y = 22.6, -4.1
-        eye_r = 5.15
+        eye_x, eye_y = 22.8, -4.2
+        eye_r = 5.05
 
         # Dorsal eyelid shadow for depth/readability.
         lid_grad = QRadialGradient(eye_x - 0.6, eye_y - 1.6, eye_r * 1.1)
