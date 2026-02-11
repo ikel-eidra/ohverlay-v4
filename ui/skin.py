@@ -173,6 +173,7 @@ class FishSkin:
         self._draw_gill_plate(painter)
         self._draw_eye(painter, mood, hunger)
         self._draw_scales(painter, speed_factor)
+        self._draw_cheek_iridescence(painter)
         self._draw_body_highlight(painter)
         self._draw_silhouette_rim(painter, speed_factor)
 
@@ -270,6 +271,16 @@ class FishSkin:
         h_grad.setColorAt(1.0, QColor(255, 255, 255, 0))
         painter.setBrush(QBrush(h_grad))
         painter.drawPath(highlight)
+
+    def _draw_cheek_iridescence(self, painter):
+        """Subtle gill-cheek iridescence patch for real betta face depth."""
+        grad = QRadialGradient(15.5, -2.5, 8.0)
+        grad.setColorAt(0.0, self._make_color(self._lerp_color(self.accent, [220, 255, 255], 0.45), 58))
+        grad.setColorAt(0.55, self._make_color(self._lerp_color(self.primary, self.accent, 0.35), 32))
+        grad.setColorAt(1.0, QColor(0, 0, 0, 0))
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QBrush(grad))
+        painter.drawEllipse(QPointF(15.2, -2.0), 7.4, 5.6)
 
     # ---- CAUDAL (TAIL) FIN ----
     def _draw_silhouette_rim(self, painter, speed_factor):
@@ -411,10 +422,10 @@ class FishSkin:
 
             # Taller peak envelope, asymmetric (higher toward front)
             envelope = math.sin(t * math.pi) ** 0.6 * (1.0 - t * 0.2)
-            base_height = 38 * envelope
+            base_height = (40 + self.swim_cadence * 4.0) * envelope
 
             noise = self.perlin.octave_noise(t * 5.0 + 5.0, self.time * 1.0, octaves=3) * 6 * envelope
-            wave = math.sin(self.tail_phase * 0.6 - t * 2.5) * (3 + 7 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.25)
+            wave = math.sin(self.tail_phase * 0.6 - t * 2.5) * (3 + 7.6 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.28) * self._state_boost
             wave2 = math.sin(self.tail_phase * 1.3 - t * 3.5) * 2 * envelope
 
             points.append(QPointF(bx, -13 - base_height + wave + wave2 + noise))
@@ -474,10 +485,10 @@ class FishSkin:
             bx = base_start_x + (base_end_x - base_start_x) * t
 
             envelope = math.sin(t * math.pi) ** 0.7
-            base_depth = 28 * envelope
+            base_depth = (30 + self.swim_cadence * 2.6) * envelope
 
             noise = self.perlin.octave_noise(t * 4.0 + 20.0, self.time * 1.1, octaves=3) * 5 * envelope
-            wave = math.sin(self.tail_phase * 0.7 - t * 2.4) * (3 + 6 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.22)
+            wave = math.sin(self.tail_phase * 0.7 - t * 2.4) * (3 + 6.8 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.24) * self._state_boost
 
             points.append(QPointF(bx, 12 + base_depth + wave + noise))
 
@@ -636,8 +647,8 @@ class FishSkin:
     # ---- EYE ----
     def _draw_eye(self, painter, mood, hunger):
         """Photorealistic eye with corneal reflection and depth."""
-        eye_x, eye_y = 22, -4
-        eye_r = 4.8
+        eye_x, eye_y = 22.8, -4.2
+        eye_r = 5.05
 
         # Dark ring around eye
         painter.setPen(Qt.NoPen)
