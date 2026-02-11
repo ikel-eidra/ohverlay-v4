@@ -3,11 +3,13 @@ import sys
 import pytest
 import math
 
-pyside6 = pytest.importorskip("PySide6")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 from PySide6.QtWidgets import QApplication
+pytest.importorskip("PySide6.QtGui", exc_type=ImportError)
 
 from ui.tetra_skin import NeonTetraSkin
 from ui.discus_skin import DiscusSkin
+from ui.skin import FishSkin
 
 
 @pytest.fixture(scope="module")
@@ -169,3 +171,85 @@ def test_discus_render_all_morphs(qapp):
         painter = QPainter(pixmap)
         skin.render(painter, (100, 100), _make_fish_state())
         painter.end()
+
+
+# --- Betta (Uno) Skin Tests ---
+
+def test_betta_skin_visual_controls_apply_config():
+    skin = FishSkin()
+
+    class FakeConfig:
+        def get(self, key):
+            return {
+                "silhouette_strength": 1.35,
+                "eye_tracking_strength": 0.4,
+                "betta_palette": "mustard_gas",
+            }
+
+    skin.apply_config(FakeConfig())
+    assert skin.silhouette_strength == pytest.approx(1.35)
+    assert skin.eye_tracking_strength == pytest.approx(0.4)
+    assert skin.eye_tracking_damping == pytest.approx(0.18)
+
+
+def test_betta_skin_visual_controls_clamped():
+    skin = FishSkin()
+
+    class FakeConfig:
+        def get(self, key):
+            return {
+                "silhouette_strength": 9.0,
+                "eye_tracking_strength": -3.0,
+                "eye_tracking_damping": 9.0,
+            }
+
+    skin.apply_config(FakeConfig())
+    assert skin.silhouette_strength == pytest.approx(1.9)
+    assert skin.eye_tracking_strength == pytest.approx(0.0)
+    assert skin.eye_tracking_damping == pytest.approx(0.45)
+
+
+def test_betta_skin_visual_controls_invalid_types_keep_defaults():
+    skin = FishSkin()
+    default_s = skin.silhouette_strength
+    default_e = skin.eye_tracking_strength
+    default_d = skin.eye_tracking_damping
+
+    class FakeConfig:
+        def get(self, key):
+            return {
+                "silhouette_strength": "ultra",
+                "eye_tracking_strength": object(),
+                "eye_tracking_damping": "slow",
+            }
+
+    skin.apply_config(FakeConfig())
+    assert skin.silhouette_strength == pytest.approx(default_s)
+    assert skin.eye_tracking_strength == pytest.approx(default_e)
+    assert skin.eye_tracking_damping == pytest.approx(default_d)
+
+
+def test_betta_independent_palette_set_returns_distinct_pair():
+    palettes = FishSkin.independent_palette_set(count=2, preferred="nemo_galaxy")
+    assert len(palettes) == 2
+    assert palettes[0] != palettes[1]
+
+
+def test_betta_independent_palette_set_clamps_count():
+    palettes = FishSkin.independent_palette_set(count=99, preferred="nemo_galaxy")
+    assert len(palettes) == 2
+
+
+def test_betta_eye_tracking_damping_smooths_offsets():
+    skin = FishSkin()
+    skin.eye_tracking_strength = 1.0
+    skin.eye_tracking_damping = 0.2
+
+    x1, y1 = skin._compute_eye_look(180.0, 0.0)
+    x2, y2 = skin._compute_eye_look(180.0, 0.0)
+
+    assert x1 > 0.0
+    assert x2 > x1
+    assert x2 < 0.9
+    assert y1 == pytest.approx(0.0)
+    assert y2 == pytest.approx(0.0)

@@ -9,15 +9,19 @@ from utils.logger import logger
 
 DEFAULT_CONFIG = {
     "fish": {
-        "primary_color": [30, 80, 220],
-        "secondary_color": [180, 40, 120],
-        "accent_color": [255, 100, 200],
+        "primary_color": [255, 118, 54],
+        "secondary_color": [35, 84, 170],
+        "accent_color": [255, 240, 235],
+        "betta_palette": "nemo_galaxy",
         "opacity": 0.9,
         "size_scale": 1.0,
         "color_mode": "gradient",
         "color_shift_speed": 0.3,
         "enable_glow": True,
-        "motion_profile": "prototype"
+        "silhouette_strength": 1.0,
+        "eye_tracking_strength": 0.75,
+        "eye_tracking_damping": 0.18,
+        "motion_profile": "realistic_v2"
     },
     "sanctuary": {
         "enabled": False,
@@ -49,6 +53,12 @@ DEFAULT_CONFIG = {
         "rss_feeds": [],
         "check_interval_minutes": 30
     },
+    "ambient": {
+        "falling_leaves_enabled": True,
+        "falling_leaves_interval_seconds": 300,
+        "falling_leaves_burst_min": 6,
+        "falling_leaves_burst_max": 8
+    },
     "bubbles": {
         "enabled": True,
         "max_visible": 5,
@@ -62,10 +72,12 @@ DEFAULT_CONFIG = {
     },
     "app": {
         "version": "1.0.0",
-        "support_email": "support@futol.example",
+        "support_email": "support@ohverlay.com",
+        "public_website_enabled": False,
+        "website_release_stage": "private_prelaunch",
         "auto_update_enabled": True,
         "update_check_hours": 6,
-        "update_manifest_url": "",
+        "update_manifest_url": "https://ohverlay.com/updates/manifest.json",
         "update_channel": "stable"
     },
     "llm": {
