@@ -1,6 +1,6 @@
 import pytest
 
-pytest.importorskip("PySide6")
+pytest.importorskip("PySide6.QtGui", exc_type=ImportError)
 from ui.bubbles import Bubble, BubbleSystem
 
 
