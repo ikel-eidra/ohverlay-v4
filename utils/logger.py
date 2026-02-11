@@ -16,11 +16,11 @@ def _get_candidate_log_dirs():
         home = os.path.expanduser("~")
 
         if local_app_data:
-            candidates.append(os.path.join(local_app_data, "AetherFin", "logs"))
+            candidates.append(os.path.join(local_app_data, "Ohverlay", "logs"))
         if app_data:
-            candidates.append(os.path.join(app_data, "AetherFin", "logs"))
+            candidates.append(os.path.join(app_data, "Ohverlay", "logs"))
         if home and home != "~":
-            candidates.append(os.path.join(home, ".aether_fin", "logs"))
+            candidates.append(os.path.join(home, ".ohverlay", "logs"))
 
         # Keep executable directory as a late fallback for portable/unrestricted setups.
         exe_dir = os.path.dirname(sys.executable)
@@ -59,7 +59,7 @@ def setup_logger():
         try:
             os.makedirs(log_dir, exist_ok=True)
             logger.add(
-                os.path.join(log_dir, "aether_fin.log"),
+                os.path.join(log_dir, "ohverlay.log"),
                 rotation="10 MB",
                 level="DEBUG",
             )
