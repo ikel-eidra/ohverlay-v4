@@ -120,6 +120,7 @@ class FishSkin:
         hunger = fish_state.get("hunger", 0)
         mood = fish_state.get("mood", 100)
         state = fish_state.get("state", "IDLE")
+        state_boost = 1.15 if state in {"DARTING", "FLARING"} else 1.0
 
         # Animation timing
         dt = 0.033
@@ -173,6 +174,7 @@ class FishSkin:
         self._draw_eye(painter, mood, hunger)
         self._draw_scales(painter, speed_factor)
         self._draw_body_highlight(painter)
+        self._draw_silhouette_rim(painter, speed_factor)
 
         painter.restore()
 
@@ -180,9 +182,9 @@ class FishSkin:
     def _draw_glow(self, painter, mood):
         if not self.enable_glow:
             return
-        glow_size = 65 + math.sin(self.glow_phase) * 10
+        glow_size = 62 + math.sin(self.glow_phase) * 9
         breath = math.sin(self.breath_phase) * 0.25 + 0.75
-        glow_alpha = int(28 * breath * (mood / 100.0))
+        glow_alpha = int(22 * breath * (mood / 100.0))
         col = self._shifted_color(self.primary, 0.5)
 
         gradient = QRadialGradient(0, 0, glow_size)
@@ -206,27 +208,27 @@ class FishSkin:
         body_path.moveTo(32, 0)  # Mouth tip
         # Upper contour
         body_path.cubicTo(
-            28, -6 + flex * 0.3,
-            16, -15 + flex * 0.5,
-            0, -16 + flex * 0.7
+            29, -5 + flex * 0.3,
+            17, -16 + flex * 0.5,
+            0, -17 + flex * 0.72
         )
         body_path.cubicTo(
-            -12, -16 + flex * 0.6,
-            -24, -12 + flex * 0.3,
-            -30, -5 + flex * 0.1
+            -13, -17 + flex * 0.62,
+            -25, -12 + flex * 0.3,
+            -31, -5 + flex * 0.1
         )
         # Caudal peduncle (narrow tail base)
-        body_path.cubicTo(-33, -3, -35, -2, -36, 0)
+        body_path.cubicTo(-34, -3, -37, -2, -38, 0)
         # Lower contour
-        body_path.cubicTo(-35, 2, -33, 3, -30, 5 - flex * 0.1)
+        body_path.cubicTo(-37, 2, -34, 3, -31, 5 - flex * 0.1)
         body_path.cubicTo(
-            -24, 12 - flex * 0.3,
-            -12, 16 - flex * 0.6,
-            0, 16 - flex * 0.7
+            -25, 12 - flex * 0.3,
+            -13, 17 - flex * 0.62,
+            0, 17 - flex * 0.72
         )
         body_path.cubicTo(
-            16, 15 - flex * 0.5,
-            28, 6 - flex * 0.3,
+            17, 16 - flex * 0.5,
+            29, 5 - flex * 0.3,
             32, 0
         )
 
@@ -270,11 +272,27 @@ class FishSkin:
         painter.drawPath(highlight)
 
     # ---- CAUDAL (TAIL) FIN ----
+    def _draw_silhouette_rim(self, painter, speed_factor):
+        """Crisp rim light to improve Uno outline readability on mixed desktops."""
+        rim = QPainterPath()
+        flex = self.body_flex
+        rim.moveTo(31.5, -0.3)
+        rim.cubicTo(27.0, -7 + flex * 0.2, 10, -14 + flex * 0.3, -24, -11 + flex * 0.2)
+        rim.cubicTo(-31, -6 + flex * 0.1, -37, -2, -38, 0)
+        rim.cubicTo(-37, 2, -31, 6 - flex * 0.1, -24, 11 - flex * 0.2)
+        rim.cubicTo(10, 14 - flex * 0.3, 27, 7 - flex * 0.2, 31.5, 0.3)
+
+        rim_alpha = int(32 + 16 * min(1.0, speed_factor * 0.55 + self.turn_intensity * 0.6))
+        rim_col = self._lerp_color(self.accent, [255, 255, 255], 0.45)
+        painter.setPen(QPen(self._make_color(rim_col, rim_alpha), 0.9))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawPath(rim)
+
     def _draw_caudal_fin(self, painter, speed_factor):
         """Massive halfmoon caudal fin with translucent membrane and ray structure."""
-        num_rays = 28
-        fin_length = 65
-        fin_spread = 55  # Halfmoon = wide spread
+        num_rays = 32
+        fin_length = 68 + self.swim_cadence * 3.0
+        fin_spread = 58 + self.turn_intensity * 4.0  # Halfmoon = wide spread
 
         col_top = self._shifted_color(self.accent, 1.0)
         col_mid = self._shifted_color(self.primary, 1.5)
@@ -295,7 +313,7 @@ class FishSkin:
             noise_c = self.perlin2.noise2d(t * 3.0, self.time * 1.0) * 8 * t
 
             # Primary wave: large sweeping motion
-            wave = math.sin(self.tail_phase - t * 2.8) * (8 + t * 22) * (0.5 + speed_factor * 0.5) * self.tail_amp_factor
+            wave = math.sin(self.tail_phase - t * 2.8) * (8 + t * 24) * (0.5 + speed_factor * 0.52) * self.tail_amp_factor * self._state_boost
             # Secondary wave: smaller, faster
             wave2 = math.sin(self.tail_phase * 1.7 - t * 4.0) * (3 + t * 8)
 
@@ -368,6 +386,14 @@ class FishSkin:
         for p in lower_points[1:]:
             edge_path2.lineTo(p)
         painter.drawPath(edge_path2)
+
+        # Trailing filament tips for premium halfmoon silhouette.
+        painter.setPen(QPen(self._make_color(self._lerp_color(col_top, [255, 255, 255], 0.5), 20), 0.55))
+        for idx in range(max(4, num_rays - 7), num_rays + 1, 2):
+            p_up = upper_points[idx]
+            p_lo = lower_points[idx]
+            painter.drawLine(p_up, QPointF(p_up.x() - 4.0, p_up.y() - 2.0))
+            painter.drawLine(p_lo, QPointF(p_lo.x() - 4.0, p_lo.y() + 2.0))
 
     # ---- DORSAL FIN ----
     def _draw_dorsal_fin(self, painter, speed_factor):
