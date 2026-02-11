@@ -94,6 +94,15 @@ class FishSkin:
         self.secondary = list(secondary)
         self.accent = list(accent)
 
+    @staticmethod
+    def _safe_clamped_float(value, default, minimum, maximum):
+        """Parse numeric config safely and clamp to allowed range."""
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            return default
+        return max(minimum, min(maximum, parsed))
+
     def _lerp_color(self, c1, c2, t):
         t = max(0.0, min(1.0, t))
         return [int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3)]
