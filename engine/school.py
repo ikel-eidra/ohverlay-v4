@@ -102,6 +102,7 @@ class FishSchool:
         self.bounds = list(bounds)  # [x, y, w, h]
         self.species = species
         self.params = SPECIES_PARAMS.get(species, SPECIES_PARAMS["neon_tetra"])
+        self._speed_scale = 1.0
         self.fish = []
         self.last_update = time.time()
 
@@ -117,6 +118,14 @@ class FishSchool:
         # Spawn fish
         self._spawn_fish(count)
         logger.info(f"School created: {count} {species}")
+
+    def set_speed_scale(self, scale):
+        """Apply a global movement multiplier for school-mode speed presets."""
+        try:
+            value = float(scale)
+        except (TypeError, ValueError):
+            return
+        self._speed_scale = max(0.35, min(2.0, value))
 
     def _spawn_fish(self, count):
         """Spawn fish in a loose cluster."""
@@ -303,12 +312,12 @@ class FishSchool:
                 force[1] += sy * 0.5
 
             # Apply force to velocity with smooth acceleration
-            fish.velocity += force * dt
+            fish.velocity += force * dt * self._speed_scale
             fish.velocity *= 0.97  # Drag
 
             # Speed limits
             speed = np.linalg.norm(fish.velocity)
-            max_spd = params["max_speed"] * fish._speed_mult
+            max_spd = params["max_speed"] * self._speed_scale * fish._speed_mult
             if speed > max_spd:
                 fish.velocity = fish.velocity / speed * max_spd
             elif speed < 3.0:

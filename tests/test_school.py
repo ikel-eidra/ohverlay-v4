@@ -157,3 +157,25 @@ def test_neon_tetra_school_not_pathologically_clumped():
     dists = np.linalg.norm(positions - center, axis=1)
     # Expect school spread ring, not all fish collapsed into a tiny center cluster.
     assert float(dists.mean()) > 30.0
+
+
+def test_school_speed_scale_clamped():
+    school = FishSchool((0, 0, 1920, 1080), species="neon_tetra", count=4)
+    school.set_speed_scale(-99)
+    assert school._speed_scale == pytest.approx(0.35)
+    school.set_speed_scale(99)
+    assert school._speed_scale == pytest.approx(2.0)
+
+
+def test_school_speed_scale_caps_velocity():
+    school = FishSchool((0, 0, 1920, 1080), species="neon_tetra", count=1)
+    school.set_speed_scale(0.5)
+
+    fish = school.fish[0]
+    fish.velocity = np.array([900.0, 0.0], dtype=float)
+
+    school.last_update -= 0.05
+    school.update()
+
+    max_allowed = SPECIES_PARAMS["neon_tetra"]["max_speed"] * school._speed_scale * fish._speed_mult
+    assert float(np.linalg.norm(fish.velocity)) <= max_allowed + 1e-6

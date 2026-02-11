@@ -63,6 +63,7 @@ class ZenFishApp:
         self._init_tray()
         self._init_hotkeys()
         self._init_sectors()
+        self._restore_fish_mode()
         self._init_main_loop()
         self._init_vision_foraging()
 
@@ -239,6 +240,35 @@ class ZenFishApp:
             sector.show()
             self.sectors.append(sector)
 
+    def _restore_fish_mode(self):
+        """Restore persisted species/school mode after sectors exist."""
+        species = str(self.config.get("fish", "species") or "betta").strip().lower()
+        raw_count = self.config.get("fish", "school_count")
+        try:
+            count = int(raw_count) if raw_count is not None else 1
+        except (TypeError, ValueError):
+            count = 1
+
+        if species == "betta" and count <= 1:
+            return
+        if species not in {"betta", "neon_tetra", "discus"}:
+            species = "neon_tetra"
+        self._on_species_changed(species, max(1, count))
+
+    @staticmethod
+    def _school_speed_scale_for(speed_key):
+        scale_map = {
+            "super_slow": 0.55,
+            "slow": 0.80,
+            "normal": 1.00,
+            "fast": 1.25,
+        }
+        return scale_map.get(speed_key, 1.00)
+
+    def _apply_school_speed(self, speed_key):
+        if self.school and hasattr(self.school, "set_speed_scale"):
+            self.school.set_speed_scale(self._school_speed_scale_for(speed_key))
+
     def _init_main_loop(self):
         """Set up the 30 FPS update loop."""
         self.timer = QTimer()
@@ -337,6 +367,9 @@ class ZenFishApp:
 
     def _on_size_changed(self, scale):
         self.skin.size_scale = scale
+        for school_skin in self.school_skins:
+            if hasattr(school_skin, "size_scale"):
+                school_skin.size_scale = scale
         self.config.set("fish", "size_scale", scale)
         logger.info(f"Fish size set to: {scale}x")
 
@@ -353,6 +386,7 @@ class ZenFishApp:
         self.brain._cruise_speed = preset["cruise"]
         self.brain._idle_speed = preset["idle"]
         self.brain._dart_speed = preset["dart"]
+        self._apply_school_speed(speed_key)
         self.config.set("fish", "speed", speed_key)
         logger.info(f"Swimming speed set to: {preset['label']}")
 
@@ -373,6 +407,8 @@ class ZenFishApp:
         if species == "betta" and count == 2:
             self.school = FishSchool(self.total_bounds, species="betta", count=2)
             self.school.set_sanctuary(self.sanctuary)
+            current_speed = self.config.get("fish", "speed") or "normal"
+            self._apply_school_speed(current_speed)
 
             pref = self.config.get("fish", "betta_palette") if self.config else "nemo_galaxy"
             palettes = FishSkin.independent_palette_set(count=2, preferred=pref)
@@ -398,16 +434,18 @@ class ZenFishApp:
         if species == "discus":
             logger.info("Discus temporarily disabled; using Neon Tetra school mode.")
             species = "neon_tetra"
+        if species != "neon_tetra":
+            # Betta-first phase: keep school mode constrained to neon tetra.
+            species = "neon_tetra"
         count = max(1, min(12, count))
         self.school = FishSchool(self.total_bounds, species=species, count=count)
         self.school.set_sanctuary(self.sanctuary)
+        current_speed = self.config.get("fish", "speed") or "normal"
+        self._apply_school_speed(current_speed)
 
         # Create one skin per fish with unique seeds for variation
         self.school_skins = []
         for i in range(count):
-            if species != "neon_tetra":
-                # Betta-first phase: keep school mode constrained to neon tetra.
-                species = "neon_tetra"
             skin = NeonTetraSkin(seed=42 + i * 17)
 
             if hasattr(skin, "apply_config"):
