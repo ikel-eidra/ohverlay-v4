@@ -23,3 +23,7 @@ def test_settings_get_set():
     settings = Settings()
     settings.set("fish", "primary_color", [255, 0, 0])
     assert settings.get("fish", "primary_color") == [255, 0, 0]
+
+
+def test_default_betta_palette_present():
+    assert DEFAULT_CONFIG["fish"]["betta_palette"] == "nemo_galaxy"
