@@ -18,6 +18,8 @@ DEFAULT_CONFIG = {
         "color_mode": "gradient",
         "color_shift_speed": 0.3,
         "enable_glow": True,
+        "silhouette_strength": 1.0,
+        "eye_tracking_strength": 0.75,
         "motion_profile": "realistic_v2"
     },
     "sanctuary": {
