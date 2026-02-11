@@ -1,5 +1,5 @@
 """
-System tray icon and menu for ZenFish Overlay.
+System tray icon and menu for OHVERLAY.
 Provides settings, module toggles, color picker, sanctuary controls, and exit.
 """
 
@@ -36,16 +36,15 @@ class SystemTray(QSystemTrayIcon):
 
     # Preset color themes for the betta fish
     COLOR_PRESETS = {
+        # Sought-after betta strains (popular in high-end hobby circles)
+        "Nemo Galaxy": ([255, 118, 54], [35, 84, 170], [255, 240, 235]),
+        "Mustard Gas": ([26, 95, 195], [244, 190, 52], [255, 244, 184]),
+        "Koi Candy": ([240, 78, 62], [248, 244, 236], [35, 38, 42]),
+        "Black Orchid": ([34, 30, 56], [94, 70, 180], [210, 152, 255]),
+        "Copper Dragon": ([130, 82, 30], [212, 150, 67], [255, 229, 162]),
+        "Lavender Halfmoon": ([141, 95, 226], [230, 184, 255], [255, 238, 255]),
+        "Turquoise Butterfly": ([42, 176, 204], [18, 87, 154], [233, 247, 255]),
         "Royal Blue": ([30, 80, 220], [60, 20, 180], [120, 140, 255]),
-        "Crimson Red": ([200, 30, 40], [160, 20, 60], [255, 100, 80]),
-        "Emerald Green": ([20, 160, 80], [10, 100, 120], [100, 255, 160]),
-        "Purple Galaxy": ([120, 40, 200], [80, 20, 160], [200, 120, 255]),
-        "Sunset Orange": ([240, 120, 30], [200, 60, 40], [255, 200, 100]),
-        "Rose Pink": ([220, 80, 140], [180, 40, 120], [255, 160, 200]),
-        "Teal Lagoon": ([30, 180, 180], [20, 120, 160], [100, 240, 240]),
-        "Golden Koi": ([220, 180, 40], [200, 120, 20], [255, 230, 120]),
-        "Midnight Black": ([40, 40, 60], [20, 20, 40], [80, 80, 120]),
-        "Pearl White": ([200, 200, 210], [160, 170, 190], [240, 240, 255]),
     }
 
     def __init__(self, config=None, parent=None):
@@ -66,7 +65,7 @@ class SystemTray(QSystemTrayIcon):
 
         self._create_icon()
         self._create_menu()
-        self.setToolTip("ZenFish Overlay")
+        self.setToolTip("OHVERLAY")
 
     def _create_icon(self):
         """Generate a simple fish icon for the tray."""
@@ -105,12 +104,12 @@ class SystemTray(QSystemTrayIcon):
         menu = QMenu()
 
         # --- Header ---
-        header = menu.addAction("ZenFish Overlay")
+        header = menu.addAction("OHVERLAY")
         header.setEnabled(False)
         menu.addSeparator()
 
         # --- Fish Controls ---
-        feed_action = menu.addAction("Feed Fish (Ctrl+Alt+F)")
+        feed_action = menu.addAction("Drop Pellets (Ctrl+Alt+F)")
         feed_action.triggered.connect(self.signals.feed_fish.emit)
 
         visibility_action = menu.addAction("Toggle Visibility (Ctrl+Alt+H)")
@@ -161,6 +160,11 @@ class SystemTray(QSystemTrayIcon):
             lambda: self.signals.species_changed.emit("betta", 1)
         )
 
+        duo_betta_action = species_menu.addAction("Dual Betta x2 (independent)")
+        duo_betta_action.triggered.connect(
+            lambda: self.signals.species_changed.emit("betta", 2)
+        )
+
         species_menu.addSeparator()
         species_menu.addAction("--- School Mode ---").setEnabled(False)
 
@@ -168,9 +172,6 @@ class SystemTray(QSystemTrayIcon):
             ("Neon Tetra x6", "neon_tetra", 6),
             ("Neon Tetra x10", "neon_tetra", 10),
             ("Neon Tetra x12", "neon_tetra", 12),
-            ("Discus x3", "discus", 3),
-            ("Discus x5", "discus", 5),
-            ("Discus x6", "discus", 6),
         ]:
             action = species_menu.addAction(label)
             action.triggered.connect(
@@ -276,7 +277,7 @@ class SystemTray(QSystemTrayIcon):
     def _pick_custom_color(self):
         """Open color picker for custom primary color."""
         color = QColorDialog.getColor(
-            QColor(*self.COLOR_PRESETS["Royal Blue"][0]),
+            QColor(*self.COLOR_PRESETS["Nemo Galaxy"][0]),
             None, "Choose Primary Fish Color"
         )
         if color.isValid():

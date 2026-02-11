@@ -1,4 +1,4 @@
-# ZenFish Overlay - Installation Guide
+# OHVERLAY (ZenFish) - Installation Guide
 
 ## Option A: Portable .exe (Recommended for office PC, NO admin needed)
 
@@ -8,9 +8,8 @@ You need Python on ANY computer to build it once. Then copy the result to your o
 
 ```
 # On your home PC with Python installed:
-git clone https://github.com/ikel-eidra/Project-Aether-Fin.git
-cd Project-Aether-Fin
-git checkout claude/polish-fish-app-deploy-ehS2b
+git clone https://github.com/ohverlay/ohverlay.git
+cd ohverlay
 
 pip install pyinstaller PySide6 numpy loguru requests pynput anthropic
 pyinstaller zenfish.spec --noconfirm --clean
@@ -59,9 +58,8 @@ If you can't install Python normally (no admin), use the **embeddable** version:
 set PATH=C:\Users\YourName\PortablePython;C:\Users\YourName\PortablePython\Scripts;%PATH%
 
 cd C:\Users\YourName\Desktop
-git clone https://github.com/ikel-eidra/Project-Aether-Fin.git
-cd Project-Aether-Fin
-git checkout claude/polish-fish-app-deploy-ehS2b
+git clone https://github.com/ohverlay/ohverlay.git
+cd ohverlay
 
 pip install --user PySide6 numpy loguru requests pynput anthropic
 ```
@@ -75,7 +73,7 @@ C:\Users\YourName\PortablePython\python.exe main.py
 ### Step 5 (Optional): Create a shortcut
 
 1. Right-click Desktop → New → Shortcut
-2. Location: `C:\Users\YourName\PortablePython\python.exe C:\Users\YourName\Desktop\Project-Aether-Fin\main.py`
+2. Location: `C:\Users\YourName\PortablePython\python.exe C:\Users\YourName\Desktop\ohverlay\main.py`
 3. Name it "ZenFish"
 4. Double-click to launch!
 
@@ -85,9 +83,8 @@ C:\Users\YourName\PortablePython\python.exe main.py
 
 ```
 pip install PySide6 numpy loguru requests pynput anthropic
-git clone https://github.com/ikel-eidra/Project-Aether-Fin.git
-cd Project-Aether-Fin
-git checkout claude/polish-fish-app-deploy-ehS2b
+git clone https://github.com/ohverlay/ohverlay.git
+cd ohverlay
 python main.py
 ```
 
@@ -96,7 +93,7 @@ python main.py
 ## Tray Controls
 
 Right-click the fish icon in your system tray (bottom-right corner) to access:
-- **Fish Species**: Solo Betta, Neon Tetra (x6/x10/x12), Discus (x3/x5/x6)
+- **Fish Species**: Solo Betta, Neon Tetra (x6/x10/x12)
 - **Swimming Speed**: Super Slow, Slow, Normal, Fast
 - **Fish Size**: Tiny to Very Large
 - **Color Theme**: Various betta colors
