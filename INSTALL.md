@@ -93,7 +93,7 @@ python main.py
 ## Tray Controls
 
 Right-click the fish icon in your system tray (bottom-right corner) to access:
-- **Fish Species**: Solo Betta, Neon Tetra (x6/x10/x12), Discus (x3/x5/x6)
+- **Fish Species**: Solo Betta, Neon Tetra (x6/x10/x12)
 - **Swimming Speed**: Super Slow, Slow, Normal, Fast
 - **Fish Size**: Tiny to Very Large
 - **Color Theme**: Various betta colors

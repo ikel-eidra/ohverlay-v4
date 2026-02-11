@@ -613,36 +613,54 @@ class FishSkin:
 
     # ---- GILL PLATE ----
     def _draw_gill_plate(self, painter):
-        """Subtle gill plate marking and mouth."""
+        """Gill plate, operculum shading, and expressive mouth geometry."""
         col = self._lerp_color(self.primary, [0, 0, 0], 0.15)
 
-        # Gill arc
-        breath = math.sin(self.breath_phase * 2.0) * 1.5
-        painter.setPen(QPen(self._make_color(col, 45), 0.6))
+        # Operculum volume shadow gives head mass near gill cover.
+        operculum = QRadialGradient(14.0, 0.0, 11.0)
+        operculum.setColorAt(0.0, self._make_color(self._lerp_color(self.primary, [18, 16, 24], 0.38), 44))
+        operculum.setColorAt(0.6, self._make_color(self._lerp_color(self.primary, [18, 16, 24], 0.54), 26))
+        operculum.setColorAt(1.0, QColor(0, 0, 0, 0))
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QBrush(operculum))
+        painter.drawEllipse(QPointF(14.0, 0.0), 10.5, 9.0)
+
+        breath = math.sin(self.breath_phase * 2.0) * 1.6
         painter.setBrush(Qt.NoBrush)
+
+        # Primary gill arc (main plate seam).
+        painter.setPen(QPen(self._make_color(col, 58), 0.9))
         gill_path = QPainterPath()
-        gill_path.moveTo(16, -8)
-        gill_path.cubicTo(14, -4, 14, 4 + breath, 16, 8)
+        gill_path.moveTo(16.8, -9.0)
+        gill_path.cubicTo(14.4, -4.5, 14.1, 4.6 + breath, 16.7, 9.0)
         painter.drawPath(gill_path)
 
-        # Second gill line
+        # Secondary inner seam.
         gill_path2 = QPainterPath()
-        gill_path2.moveTo(14, -6)
-        gill_path2.cubicTo(12, -3, 12, 3 + breath * 0.7, 14, 6)
-        painter.setPen(QPen(self._make_color(col, 25), 0.4))
+        gill_path2.moveTo(14.5, -7.0)
+        gill_path2.cubicTo(12.6, -3.3, 12.4, 3.6 + breath * 0.7, 14.4, 7.0)
+        painter.setPen(QPen(self._make_color(col, 34), 0.55))
         painter.drawPath(gill_path2)
 
-        # Mouth line
-        painter.setPen(QPen(self._make_color(self._lerp_color(self.primary, [0, 0, 0], 0.3), 60), 0.5))
-        mouth_open = max(0, math.sin(self.breath_phase * 1.5) * 0.8)
-        mouth_path = QPainterPath()
-        mouth_path.moveTo(32, 0)
-        mouth_path.cubicTo(31, -1.5, 30, -1.5 - mouth_open, 29, -0.5)
-        painter.drawPath(mouth_path)
-        mouth_path2 = QPainterPath()
-        mouth_path2.moveTo(32, 0)
-        mouth_path2.cubicTo(31, 1.5, 30, 1.5 + mouth_open, 29, 0.5)
-        painter.drawPath(mouth_path2)
+        # Mouth line with slight pout/extension at inhale.
+        mouth_open = max(0.0, math.sin(self.breath_phase * 1.5) * 1.0)
+        pout = 0.7 + mouth_open * 0.45
+        lip_col = self._lerp_color(self.primary, [0, 0, 0], 0.34)
+        painter.setPen(QPen(self._make_color(lip_col, 78), 0.72))
+
+        mouth_upper = QPainterPath()
+        mouth_upper.moveTo(32.0, -0.1)
+        mouth_upper.cubicTo(31.0, -1.8, 30.0 + pout * 0.1, -2.1 - mouth_open, 28.6 + pout, -0.55)
+        painter.drawPath(mouth_upper)
+
+        mouth_lower = QPainterPath()
+        mouth_lower.moveTo(32.0, 0.1)
+        mouth_lower.cubicTo(31.0, 1.9, 30.0 + pout * 0.1, 2.1 + mouth_open, 28.6 + pout, 0.58)
+        painter.drawPath(mouth_lower)
+
+        # Tiny reflective lip highlight.
+        painter.setPen(QPen(self._make_color([255, 242, 232], 34), 0.35))
+        painter.drawLine(QPointF(30.2, -0.7), QPointF(28.9 + pout * 0.25, -0.34))
 
     # ---- EYE ----
     def _draw_eye(self, painter, mood, hunger):
@@ -650,8 +668,15 @@ class FishSkin:
         eye_x, eye_y = 22.8, -4.2
         eye_r = 5.05
 
-        # Dark ring around eye
+        # Dorsal eyelid shadow for depth/readability.
+        lid_grad = QRadialGradient(eye_x - 0.6, eye_y - 1.6, eye_r * 1.1)
+        lid_grad.setColorAt(0.0, self._make_color(self._lerp_color(self.primary, [16, 14, 18], 0.45), 44))
+        lid_grad.setColorAt(1.0, QColor(0, 0, 0, 0))
         painter.setPen(Qt.NoPen)
+        painter.setBrush(QBrush(lid_grad))
+        painter.drawEllipse(QPointF(eye_x - 0.3, eye_y - 1.1), eye_r * 1.0, eye_r * 0.72)
+
+        # Dark ring around eye
         ring_col = self._lerp_color(self.primary, [0, 0, 0], 0.5)
         painter.setBrush(self._make_color(ring_col, 120))
         painter.drawEllipse(QPointF(eye_x, eye_y), eye_r + 1.2, eye_r * 0.95 + 1.0)
@@ -712,12 +737,16 @@ class FishSkin:
         painter.drawEllipse(QPointF(eye_x, eye_y), pupil_size, pupil_size * 0.92)
 
         # Primary specular highlight (corneal reflection)
-        painter.setBrush(QColor(255, 255, 255, 210))
-        painter.drawEllipse(QPointF(eye_x + 1.6, eye_y - 1.6), 1.3, 1.1)
+        painter.setBrush(QColor(255, 255, 255, 215))
+        painter.drawEllipse(QPointF(eye_x + 1.55, eye_y - 1.55), 1.35, 1.15)
 
         # Secondary smaller highlight
-        painter.setBrush(QColor(255, 255, 255, 120))
-        painter.drawEllipse(QPointF(eye_x - 0.8, eye_y + 1.0), 0.6, 0.5)
+        painter.setBrush(QColor(255, 255, 255, 128))
+        painter.drawEllipse(QPointF(eye_x - 0.75, eye_y + 0.95), 0.68, 0.56)
+
+        # Tiny glint for wet-eye realism.
+        painter.setBrush(QColor(255, 255, 255, 86))
+        painter.drawEllipse(QPointF(eye_x + 0.25, eye_y - 0.05), 0.32, 0.28)
 
     # ---- SCALES ----
     def _draw_scales(self, painter, speed_factor):

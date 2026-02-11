@@ -23,7 +23,6 @@ from engine.school import FishSchool
 from engine.llm_brain import LLMBrain
 from ui.skin import FishSkin
 from ui.tetra_skin import NeonTetraSkin
-from ui.discus_skin import DiscusSkin
 from ui.bubbles import BubbleSystem
 from ui.tray import SystemTray
 from config.settings import Settings
@@ -370,21 +369,20 @@ class ZenFishApp:
             return
 
         # Create school with appropriate skins
+        if species == "discus":
+            logger.info("Discus temporarily disabled; using Neon Tetra school mode.")
+            species = "neon_tetra"
         count = max(1, min(12, count))
         self.school = FishSchool(self.total_bounds, species=species, count=count)
         self.school.set_sanctuary(self.sanctuary)
 
         # Create one skin per fish with unique seeds for variation
-        morph_list = list(DiscusSkin.MORPHS.keys())
         self.school_skins = []
         for i in range(count):
-            if species == "neon_tetra":
-                skin = NeonTetraSkin(seed=42 + i * 17)
-            elif species == "discus":
-                morph = morph_list[i % len(morph_list)]
-                skin = DiscusSkin(seed=42 + i * 17, morph=morph)
-            else:
-                skin = NeonTetraSkin(seed=42 + i * 17)
+            if species != "neon_tetra":
+                # Betta-first phase: keep school mode constrained to neon tetra.
+                species = "neon_tetra"
+            skin = NeonTetraSkin(seed=42 + i * 17)
 
             if hasattr(skin, "apply_config"):
                 skin.apply_config(self.config)

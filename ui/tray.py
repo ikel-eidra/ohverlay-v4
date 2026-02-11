@@ -167,9 +167,6 @@ class SystemTray(QSystemTrayIcon):
             ("Neon Tetra x6", "neon_tetra", 6),
             ("Neon Tetra x10", "neon_tetra", 10),
             ("Neon Tetra x12", "neon_tetra", 12),
-            ("Discus x3", "discus", 3),
-            ("Discus x5", "discus", 5),
-            ("Discus x6", "discus", 6),
         ]:
             action = species_menu.addAction(label)
             action.triggered.connect(
