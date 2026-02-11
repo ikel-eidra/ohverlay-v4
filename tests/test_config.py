@@ -32,6 +32,7 @@ def test_default_betta_palette_present():
 def test_fish_visual_tuning_defaults_present():
     assert DEFAULT_CONFIG["fish"]["silhouette_strength"] == 1.0
     assert DEFAULT_CONFIG["fish"]["eye_tracking_strength"] == 0.75
+    assert DEFAULT_CONFIG["fish"]["eye_tracking_damping"] == 0.18
 
 
 def test_app_prelaunch_defaults_present():

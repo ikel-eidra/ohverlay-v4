@@ -72,6 +72,7 @@ For approved early users, distribution targets:
 For implementation-grounded context (identity, milestones, risks, guardrails, and release criteria), see:
 
 - [`docs/ohverlay_zenfish_context_primer.md`](docs/ohverlay_zenfish_context_primer.md)
+- [`docs/website_grant_experience_plan.md`](docs/website_grant_experience_plan.md)
 
 ## Contributing
 Pull requests are welcome. Keep changes calm-by-default, ethically aligned, and performance-aware.

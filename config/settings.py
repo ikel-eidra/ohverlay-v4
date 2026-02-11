@@ -20,6 +20,7 @@ DEFAULT_CONFIG = {
         "enable_glow": True,
         "silhouette_strength": 1.0,
         "eye_tracking_strength": 0.75,
+        "eye_tracking_damping": 0.18,
         "motion_profile": "realistic_v2"
     },
     "sanctuary": {

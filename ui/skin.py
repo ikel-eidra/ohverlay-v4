@@ -83,6 +83,9 @@ class FishSkin:
         self.enable_glow = True
         self.silhouette_strength = 1.0
         self.eye_tracking_strength = 0.75
+        self.eye_tracking_damping = 0.18
+        self._eye_look_x = 0.0
+        self._eye_look_y = 0.0
         self.size_scale = 1.0
         self.opacity = 0.92
         self.tail_amp_factor = 1.0
@@ -121,6 +124,12 @@ class FishSkin:
                 0.0,
                 1.0,
             )
+            self.eye_tracking_damping = self._safe_clamped_float(
+                fish_cfg.get("eye_tracking_damping", self.eye_tracking_damping),
+                self.eye_tracking_damping,
+                0.05,
+                0.45,
+            )
             self.size_scale = fish_cfg.get("size_scale", self.size_scale)
             self.opacity = fish_cfg.get("opacity", self.opacity)
 
@@ -137,6 +146,23 @@ class FishSkin:
         except (TypeError, ValueError):
             return default
         return max(minimum, min(maximum, parsed))
+
+    def _compute_eye_look(self, vx, vy):
+        """Smoothed eye tracking offsets to avoid robotic micro-jitter."""
+        speed = math.sqrt(vx * vx + vy * vy)
+        look_scale = self.eye_tracking_strength * min(1.0, speed / 180.0)
+
+        if speed > 1e-6:
+            desired_x = max(-0.9, min(0.9, (vx / speed) * 0.85 * look_scale))
+            desired_y = max(-0.55, min(0.55, (vy / speed) * 0.55 * look_scale))
+        else:
+            desired_x = 0.0
+            desired_y = 0.0
+
+        damp = max(0.05, min(0.45, self.eye_tracking_damping))
+        self._eye_look_x += (desired_x - self._eye_look_x) * damp
+        self._eye_look_y += (desired_y - self._eye_look_y) * damp
+        return self._eye_look_x, self._eye_look_y
 
     def _lerp_color(self, c1, c2, t):
         t = max(0.0, min(1.0, t))
@@ -220,7 +246,8 @@ class FishSkin:
         self._draw_dorsal_fin(painter, speed_factor)
         self._draw_pectoral_fins(painter, speed_factor)
         self._draw_gill_plate(painter)
-        self._draw_eye(painter, mood, hunger, vx, vy)
+        eye_look_x, eye_look_y = self._compute_eye_look(vx, vy)
+        self._draw_eye(painter, mood, hunger, eye_look_x, eye_look_y)
         self._draw_scales(painter, speed_factor)
         self._draw_cheek_iridescence(painter)
         self._draw_body_highlight(painter)
@@ -720,15 +747,11 @@ class FishSkin:
         painter.drawLine(QPointF(30.2, -0.7), QPointF(28.9 + pout * 0.25, -0.34))
 
     # ---- EYE ----
-    def _draw_eye(self, painter, mood, hunger, vx=0.0, vy=0.0):
+    def _draw_eye(self, painter, mood, hunger, look_x=0.0, look_y=0.0):
         """Photorealistic eye with corneal reflection and depth."""
         eye_x, eye_y = 22.6, -4.1
         eye_r = 5.15
 
-        speed = math.sqrt(vx * vx + vy * vy)
-        look_scale = self.eye_tracking_strength * min(1.0, speed / 180.0)
-        look_x = max(-0.9, min(0.9, (vx / max(1.0, speed)) * 0.85 * look_scale))
-        look_y = max(-0.55, min(0.55, (vy / max(1.0, speed)) * 0.55 * look_scale))
         iris_x = eye_x + look_x
         iris_y = eye_y + look_y
 
