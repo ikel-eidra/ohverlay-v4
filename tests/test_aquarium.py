@@ -40,3 +40,24 @@ def test_leaf_cycle_gust_fades_and_resets_schedule():
     assert sector._leaf_phase == "idle"
     assert len(sector._leaf_particles) == 0
     assert sector._next_leaf_burst_at > 0
+
+
+def test_leaf_config_can_disable_effect():
+    app = QApplication.instance() or QApplication(sys.argv)
+
+    class FakeConfig:
+        def get(self, section, key=None):
+            if section == "ambient" and key is None:
+                return {
+                    "falling_leaves_enabled": False,
+                    "falling_leaves_interval_seconds": 300,
+                    "falling_leaves_burst_min": 6,
+                    "falling_leaves_burst_max": 8,
+                }
+            return None
+
+    sector = AquariumSector(QRect(0, 0, 800, 600), sector_id=2, config=FakeConfig())
+    sector._spawn_leaf_burst()
+    sector._update_leaves()
+    assert sector._leaf_phase == "idle"
+    assert len(sector._leaf_particles) == 0

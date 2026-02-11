@@ -233,7 +233,8 @@ class ZenFishApp:
             sector = AquariumSector(
                 screen.geometry(), i,
                 skin=self.skin,
-                bubble_system=self.bubble_system
+                bubble_system=self.bubble_system,
+                config=self.config
             )
             sector.show()
             self.sectors.append(sector)

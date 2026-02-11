@@ -5,6 +5,7 @@ def test_default_config_structure():
     assert "fish" in DEFAULT_CONFIG
     assert "sanctuary" in DEFAULT_CONFIG
     assert "modules" in DEFAULT_CONFIG
+    assert "ambient" in DEFAULT_CONFIG
     assert "bubbles" in DEFAULT_CONFIG
     assert "hotkeys" in DEFAULT_CONFIG
 
@@ -27,3 +28,21 @@ def test_settings_get_set():
 
 def test_default_betta_palette_present():
     assert DEFAULT_CONFIG["fish"]["betta_palette"] == "nemo_galaxy"
+
+
+def test_fish_visual_tuning_defaults_present():
+    assert DEFAULT_CONFIG["fish"]["silhouette_strength"] == 1.0
+    assert DEFAULT_CONFIG["fish"]["eye_tracking_strength"] == 0.75
+    assert DEFAULT_CONFIG["fish"]["eye_tracking_damping"] == 0.18
+
+
+def test_app_prelaunch_defaults_present():
+    assert DEFAULT_CONFIG["app"]["public_website_enabled"] is False
+    assert DEFAULT_CONFIG["app"]["website_release_stage"] == "private_prelaunch"
+
+
+def test_ambient_leaf_defaults_present():
+    assert DEFAULT_CONFIG["ambient"]["falling_leaves_enabled"] is True
+    assert DEFAULT_CONFIG["ambient"]["falling_leaves_interval_seconds"] == 300
+    assert DEFAULT_CONFIG["ambient"]["falling_leaves_burst_min"] == 6
+    assert DEFAULT_CONFIG["ambient"]["falling_leaves_burst_max"] == 8

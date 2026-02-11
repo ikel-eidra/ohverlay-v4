@@ -31,10 +31,12 @@ python main.py
 ```
 
 ## Portable Runtime Goal
-For public users, distribution targets:
-1. Download ZIP bundle from official site.
+For approved early users, distribution targets:
+1. Download ZIP bundle from the official private channel.
 2. Extract and run `start.bat`.
 3. No admin prompts for standard usage.
+
+> Public website launch remains intentionally gated until copyright, brand controls, and release governance are finalized.
 
 ## Usage
 - **Drop Pellets**: `Ctrl+Alt+F` (symbolic, stress-relief style interaction).
@@ -70,14 +72,18 @@ For public users, distribution targets:
 For implementation-grounded context (identity, milestones, risks, guardrails, and release criteria), see:
 
 - [`docs/ohverlay_zenfish_context_primer.md`](docs/ohverlay_zenfish_context_primer.md)
+- [`docs/website_grant_experience_plan.md`](docs/website_grant_experience_plan.md)
+- [`docs/conflict_resolution_runbook.md`](docs/conflict_resolution_runbook.md)
 
 ## Contributing
 Pull requests are welcome. Keep changes calm-by-default, ethically aligned, and performance-aware.
 
-## License
-MIT — free to use and modify.
+## License & Distribution Status
+Copyright © Futol Ethical Technology Ecosystems. All rights reserved for current private prelaunch builds.
+
+No public redistribution, repackaging, or mirrored hosting is permitted until the official licensing and channel policy is published.
 
 **Ohverlay & ZenFish**: calm your workspace, ethically.
 
 
-Official site: https://ohverlay.com
+Official site: https://ohverlay.com (prelaunch, controlled rollout)

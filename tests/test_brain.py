@@ -140,3 +140,16 @@ def test_brain_pellet_lingers_about_two_minutes_then_expires():
     assert len(brain._pellets) == 1
     brain._update_pellets(0.2)
     assert len(brain._pellets) == 0
+
+
+def test_brain_old_pellet_does_not_lock_navigation_attraction():
+    brain = BehavioralReactor()
+    brain.set_bounds(0, 0, 600, 400)
+    brain.position = np.array([500.0, 300.0])
+    brain.velocity = np.array([8.0, -2.0])
+    brain.drop_pellet(80, 90, count=1)
+    brain._pellets[0]["age"] = 100.0
+    before = brain.velocity.copy()
+    brain._apply_pellet_attraction(0.033)
+    # Very old pellets should not apply strong lock-in attraction.
+    assert np.linalg.norm(brain.velocity - before) < 0.5

@@ -18,6 +18,9 @@ DEFAULT_CONFIG = {
         "color_mode": "gradient",
         "color_shift_speed": 0.3,
         "enable_glow": True,
+        "silhouette_strength": 1.0,
+        "eye_tracking_strength": 0.75,
+        "eye_tracking_damping": 0.18,
         "motion_profile": "realistic_v2"
     },
     "sanctuary": {
@@ -50,6 +53,12 @@ DEFAULT_CONFIG = {
         "rss_feeds": [],
         "check_interval_minutes": 30
     },
+    "ambient": {
+        "falling_leaves_enabled": True,
+        "falling_leaves_interval_seconds": 300,
+        "falling_leaves_burst_min": 6,
+        "falling_leaves_burst_max": 8
+    },
     "bubbles": {
         "enabled": True,
         "max_visible": 5,
@@ -64,6 +73,8 @@ DEFAULT_CONFIG = {
     "app": {
         "version": "1.0.0",
         "support_email": "support@ohverlay.com",
+        "public_website_enabled": False,
+        "website_release_stage": "private_prelaunch",
         "auto_update_enabled": True,
         "update_check_hours": 6,
         "update_manifest_url": "https://ohverlay.com/updates/manifest.json",
