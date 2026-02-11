@@ -31,6 +31,8 @@ class SchoolFish:
         # Per-fish variation
         self._speed_mult = 0.85 + np.random.random() * 0.3
         self._phase_offset = np.random.uniform(0, math.pi * 2)
+        self._lane_bias = np.random.uniform(-1.0, 1.0)
+        self._school_role = np.random.uniform(0.75, 1.25)
 
         # State
         self.state = "SCHOOLING"
@@ -52,17 +54,17 @@ class SchoolFish:
 # Species behavior profiles
 SPECIES_PARAMS = {
     "neon_tetra": {
-        "max_speed": 100,
-        "cruise_speed": 45,
-        "separation_radius": 25,
-        "alignment_radius": 80,
-        "cohesion_radius": 120,
-        "separation_weight": 2.5,
-        "alignment_weight": 1.2,
-        "cohesion_weight": 0.8,
-        "turn_speed": 3.0,      # radians/sec - how fast they can turn
-        "wander_strength": 8,
-        "school_tight": True,   # tetras school tightly
+        "max_speed": 106,
+        "cruise_speed": 52,
+        "separation_radius": 34,
+        "alignment_radius": 110,
+        "cohesion_radius": 150,
+        "separation_weight": 3.1,
+        "alignment_weight": 1.5,
+        "cohesion_weight": 0.55,
+        "turn_speed": 3.25,      # radians/sec - fast but smooth
+        "wander_strength": 9,
+        "school_tight": True,
     },
     "discus": {
         "max_speed": 65,
@@ -124,9 +126,13 @@ class FishSchool:
 
         self.fish = []
         for i in range(count):
-            # Spawn in a cluster near center
-            px = cx + np.random.uniform(-150, 150)
-            py = cy + np.random.uniform(-100, 100)
+            # Spawn with wider spread for neon tetra to avoid dense clumps.
+            if self.species == "neon_tetra":
+                px = cx + np.random.uniform(-260, 260)
+                py = cy + np.random.uniform(-170, 170)
+            else:
+                px = cx + np.random.uniform(-150, 150)
+                py = cy + np.random.uniform(-100, 100)
             px = np.clip(px, x_min + 60, x_min + w - 60)
             py = np.clip(py, y_min + 60, y_min + h - 60)
 
@@ -188,6 +194,8 @@ class FishSchool:
         positions = np.array([f.position for f in self.fish])
         velocities = np.array([f.velocity for f in self.fish])
         n = len(self.fish)
+        school_center = positions.mean(axis=0)
+        school_density_scale = min(1.0, n / 10.0)
 
         for i, fish in enumerate(self.fish):
             # --- Boids forces ---
@@ -237,6 +245,25 @@ class FishSchool:
                 toward_center = center - fish.position
                 force += toward_center * params["cohesion_weight"] * 0.01
 
+            if self.species == "neon_tetra":
+                # Prevent pathological clustering: gently push out from overly dense core.
+                to_core = fish.position - school_center
+                d_core = np.linalg.norm(to_core)
+                desired_ring = 70.0 + fish._school_role * 35.0 + school_density_scale * 40.0
+                if d_core < desired_ring:
+                    core_dir = to_core / (d_core + 1e-6)
+                    force += core_dir * (desired_ring - d_core) * 0.11
+
+                # Ribbon-school look: lane bias perpendicular to travel axis.
+                axis = self._school_target - school_center
+                axis_norm = np.linalg.norm(axis)
+                if axis_norm > 1e-6:
+                    axis /= axis_norm
+                    lane_vec = np.array([-axis[1], axis[0]])
+                    lane_offset = fish._lane_bias * (22.0 + school_density_scale * 18.0)
+                    projected = np.dot(fish.position - school_center, lane_vec)
+                    force += lane_vec * (lane_offset - projected) * 0.085
+
             # Wander force (prevents fish from getting stuck)
             wander_angle = fish._phase_offset + now * 0.5
             wander = np.array([
@@ -249,7 +276,7 @@ class FishSchool:
             to_target = self._school_target - fish.position
             d_target = np.linalg.norm(to_target)
             if d_target > 1.0:
-                force += (to_target / d_target) * (8.0 if params["school_tight"] else 5.0)
+                force += (to_target / d_target) * (6.5 if self.species == "neon_tetra" else (8.0 if params["school_tight"] else 5.0))
             if d_target < 120:
                 # Gradually pick a fresh area once school reaches current target.
                 self._school_target_changed_at -= dt * 4.0

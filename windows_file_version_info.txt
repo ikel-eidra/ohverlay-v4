@@ -16,12 +16,12 @@ VSVersionInfo(
         '040904B0',
         [
           StringStruct('CompanyName', 'Futol Ethical Technology Ecosystems'),
-          StringStruct('FileDescription', 'ZenFish Overlay'),
+          StringStruct('FileDescription', 'OHVERLAY'),
           StringStruct('FileVersion', '1.0.0.0'),
-          StringStruct('InternalName', 'ZenFish'),
+          StringStruct('InternalName', 'OHVERLAY'),
           StringStruct('LegalCopyright', '© Futol Ethical Technology Ecosystems, Sta. Magdalena, Sorsogon'),
-          StringStruct('OriginalFilename', 'ZenFish.exe'),
-          StringStruct('ProductName', 'ZenFish Overlay'),
+          StringStruct('OriginalFilename', 'OHVERLAY.exe'),
+          StringStruct('ProductName', 'OHVERLAY'),
           StringStruct('ProductVersion', '1.0.0.0')
         ]
       )
