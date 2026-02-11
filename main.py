@@ -1,5 +1,5 @@
 """
-ZenFish Overlay - Main entry point.
+OHVERLAY - Main entry point.
 A transparent desktop companion: a lifelike Betta fish that swims natively
 across your 2-3 monitors with no aquarium background. The monitors ARE the tank.
 
@@ -14,7 +14,7 @@ import sys
 import signal
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTimer, QBuffer, QByteArray
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QCursor
 
 from engine.brain import BehavioralReactor
 from engine.aquarium import MonitorManager, AquariumSector
@@ -42,7 +42,7 @@ class ZenFishApp:
 
     def __init__(self):
         self.app = QApplication(sys.argv)
-        self.app.setApplicationName("ZenFish Overlay")
+        self.app.setApplicationName("OHVERLAY")
         self.app.setOrganizationName("Futol Ethical Technology Ecosystems")
         self.app.setOrganizationDomain("futol-ethical-technology-ecosystems.local")
         self.app.setQuitOnLastWindowClosed(False)
@@ -70,7 +70,7 @@ class ZenFishApp:
         # Update tray status
         self._update_tray_status()
 
-        logger.info("ZenFish Overlay fully initialized. Your betta is swimming!")
+        logger.info("OHVERLAY fully initialized. Your betta is swimming!")
 
     def _init_monitors(self):
         """Detect monitors - they form the fish's entire world."""
@@ -302,7 +302,7 @@ class ZenFishApp:
         targets = result.get("targets") or []
 
         if action == "feed":
-            self.brain.feed()
+            self._on_feed_fish()
             if msg:
                 self.bubble_system.queue_message(msg, "ambient")
             elif targets:
@@ -435,8 +435,9 @@ class ZenFishApp:
             logger.info(f"Module '{module_key}' {'enabled' if enabled else 'disabled'}")
 
     def _on_feed_fish(self):
-        self.brain.feed()
-        self.bubble_system.queue_message("Yum! Thank you!", "ambient")
+        cursor = QCursor.pos()
+        self.brain.drop_pellet(cursor.x(), cursor.y(), count=4)
+        self.bubble_system.queue_message("Pellets poured from the surface. Breathe and watch Uno forage.", "ambient")
 
     def _on_toggle_visibility(self):
         for sector in self.sectors:
@@ -517,7 +518,7 @@ class ZenFishApp:
 
 
 def main():
-    logger.info("Starting ZenFish Overlay...")
+    logger.info("Starting OHVERLAY...")
     app = ZenFishApp()
     sys.exit(app.run())
 
