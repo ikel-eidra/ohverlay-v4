@@ -21,11 +21,11 @@ def test_brain_hunger_is_non_urgent_cosmetic_signal():
     assert brain.hunger <= 10.0
 
 
-def test_brain_pellets_do_not_force_feeding_state():
+def test_brain_feeding_state_when_pellets_present():
     brain = BehavioralReactor()
     brain.drop_pellet(120, 120, count=1)
     brain.update()
-    assert brain.state != "FEEDING"
+    assert brain.state == "FEEDING"
 
 
 def test_brain_boundary_check():
@@ -43,7 +43,7 @@ def test_brain_feed_is_symbolic_pellet_drop():
     brain.mood = 60.0
     prev_state = brain.state
     brain.feed()
-    assert brain.state == prev_state
+    assert brain.state == "FEEDING"
     assert len(brain._pellets) >= 1
     # no hard dependency on hunger drain anymore
     assert brain.hunger <= 50.0
