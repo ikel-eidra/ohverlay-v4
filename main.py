@@ -437,7 +437,7 @@ class ZenFishApp:
     def _on_feed_fish(self):
         cursor = QCursor.pos()
         self.brain.drop_pellet(cursor.x(), cursor.y(), count=4)
-        self.bubble_system.queue_message("Pellets dropped. Breathe and watch the flow.", "ambient")
+        self.bubble_system.queue_message("Pellets poured from the surface. Breathe and watch Uno forage.", "ambient")
 
     def _on_toggle_visibility(self):
         for sector in self.sectors:

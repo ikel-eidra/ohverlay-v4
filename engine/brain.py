@@ -56,6 +56,11 @@ class BehavioralReactor:
         self._rest_timer = 0.0
         self._patrol_pause_timer = 0.0
         self._reverse_timer = 0.0
+        self._rest_anchor = None
+
+        # -- World exploration cadence (use full multi-monitor world) --
+        self._explore_timer = 0.0
+        self._explore_interval = np.random.uniform(9.0, 18.0)
 
         # -- Surface breathing cadence --
         self._surface_breath_interval = np.random.uniform(30.0, 60.0)
@@ -99,7 +104,7 @@ class BehavioralReactor:
         self._turn_intensity = 0.0
         self._swim_cadence = 0.0
         self._yaw_damping = 0.0
-        self._behavior_variety = 1.0
+        self._behavior_variety = np.random.uniform(0.85, 1.15)
         self._load_motion_profile(config)
 
         logger.info("Neural Brain (Behavioral Reactor) initialized.")
@@ -138,22 +143,26 @@ class BehavioralReactor:
         self.drop_pellet(float(drop_pos[0]), float(drop_pos[1]), count=3)
 
     def drop_pellet(self, x, y, count=3):
-        """Drop visible pellets. Fish will swim to the drop point and nibble naturally."""
+        """Drop pellets from the surface; clicked position defines where to pour them."""
         x_min, y_min, w, h = self.bounds
-        px = float(np.clip(x, x_min + 30, x_min + w - 30))
-        py = float(np.clip(y, y_min + 30, y_min + h - 30))
+        pour_x = float(np.clip(x, x_min + 30, x_min + w - 30))
+        pour_y = float(np.clip(y, y_min + 35, y_min + h - 28))
+        spawn_y = y_min + 8.0
         for _ in range(max(1, int(count))):
-            spread = np.random.uniform(-12.0, 12.0, size=2)
+            spread_x = float(np.random.uniform(-10.0, 10.0))
+            target_depth = float(np.clip(pour_y + np.random.uniform(-18.0, 18.0), y_min + 55.0, y_min + h - 30.0))
             self._pellets.append({
-                "pos": np.array([px, py]) + spread,
-                "vy": np.random.uniform(18.0, 34.0),
+                "pos": np.array([pour_x + spread_x, spawn_y], dtype=float),
+                "vy": np.random.uniform(16.0, 22.0),
+                "settle_vy": np.random.uniform(3.2, 6.8),
+                "target_depth": target_depth,
                 "age": 0.0,
+                "life_seconds": 120.0,
             })
-        self.state = "FEEDING"
         self._feed_nibble_timer = 0.0
         self._pellet_last_drop = time.time()
         self.mood = min(100.0, self.mood + 4.0)
-        logger.info(f"Symbolic feed: dropped {count} pellet(s) at ({px:.1f}, {py:.1f}).")
+        logger.info(f"Symbolic feed: dropped {count} pellet(s) at x={pour_x:.1f}, target y={pour_y:.1f} (surface start).")
 
     def update(self):
         now = time.time()
@@ -165,7 +174,8 @@ class BehavioralReactor:
         self.hunger = max(0.0, min(100.0, self.hunger - 0.2 * dt))
 
         # Calm mood recovery baseline.
-        self.mood = min(100.0, self.mood + 0.12 * dt)
+        self.mood = min(100.0, self.mood + 0.12 * dt * self._behavior_variety)
+        self._surface_breath_elapsed += dt
 
         self._update_pellets(dt)
 
@@ -180,23 +190,27 @@ class BehavioralReactor:
             self.bubble_system.update(dt, self.position[0], self.position[1])
 
     def _update_pellets(self, dt):
-        """Pellets sink with slight drift and expire gracefully."""
+        """Pellets fall from the surface, settle slowly, and linger ~2 minutes."""
         if not self._pellets:
             return
 
         x_min, y_min, w, h = self.bounds
+        max_y = y_min + h - 22
         kept = []
         for pellet in self._pellets:
             pellet["age"] += dt
-            sway = math.sin((pellet["age"] * 2.3) + pellet["pos"][0] * 0.03) * 5.5
+            sway = math.sin((pellet["age"] * 2.0) + pellet["pos"][0] * 0.03) * 4.0
             pellet["pos"][0] += sway * dt
-            pellet["pos"][1] += pellet["vy"] * dt
 
-            # settle near bottom and expire after a short idle time
-            max_y = y_min + h - 22
+            target_depth = pellet.get("target_depth", y_min + h * 0.55)
+            if pellet["pos"][1] < target_depth:
+                pellet["pos"][1] += pellet.get("vy", 18.0) * dt
+            else:
+                pellet["pos"][1] += pellet.get("settle_vy", 4.5) * dt
+
             pellet["pos"][0] = float(np.clip(pellet["pos"][0], x_min + 15, x_min + w - 15))
             pellet["pos"][1] = float(min(pellet["pos"][1], max_y))
-            if pellet["age"] < 9.0:
+            if pellet["age"] < pellet.get("life_seconds", 120.0):
                 kept.append(pellet)
         self._pellets = kept
 
@@ -204,13 +218,26 @@ class BehavioralReactor:
         """State machine with natural transitions."""
         if self.state == "IDLE":
             self._idle_timer += dt
+            self._explore_timer += dt
             self._hover_phase += dt * 1.8
 
-            # Pellets trigger focused feeding search.
-            if self._pellets:
-                self.state = "FEEDING"
-                self._feed_nibble_timer = 0.0
-                self._idle_timer = 0.0
+            # Labyrinth breathing: periodic quick rise to surface and gulp.
+            if self._surface_breath_elapsed >= self._surface_breath_interval:
+                x_min, y_min, w, _ = self.bounds
+                sx = float(np.clip(self.position[0] + np.random.uniform(-80, 80), x_min + 40, x_min + w - 40))
+                sy = y_min + 35
+                self._surface_target = np.array([sx, sy], dtype=float)
+                self.state = "SURFACE_BREATH"
+                self._surface_breath_elapsed = 0.0
+                self._surface_breath_interval = np.random.uniform(30.0, 60.0)
+                return
+
+            if self._explore_timer >= self._explore_interval and not self._pellets:
+                self._explore_timer = 0.0
+                self._explore_interval = np.random.uniform(9.0, 18.0)
+                destination = self._find_valid_target()
+                self._build_path_to(destination)
+                self.state = "SEARCHING"
                 return
 
             # Occasional behaviors
@@ -243,6 +270,7 @@ class BehavioralReactor:
                     self.state = "RESTING"
                     self._rest_timer = 0.0
                     self._patrol_pause_timer = np.random.uniform(5.0, 10.0)
+                    self._rest_anchor = self.position.copy()
                     return
 
                 if roll < dart_chance + 0.10:
@@ -267,21 +295,8 @@ class BehavioralReactor:
                 self.state = "IDLE"
 
         elif self.state == "FEEDING":
-            self._feed_nibble_timer += dt
-            if not self._pellets:
-                self.state = "IDLE"
-                self._feed_nibble_timer = 0.0
-                return
-
-            nearest_idx = min(
-                range(len(self._pellets)),
-                key=lambda i: np.linalg.norm(self._pellets[i]["pos"] - self.position)
-            )
-            nearest = self._pellets[nearest_idx]
-            if np.linalg.norm(nearest["pos"] - self.position) < 18.0:
-                self._pellets.pop(nearest_idx)
-                self.mood = min(100.0, self.mood + 1.6)
-                self.hunger = max(0.0, self.hunger - 3.0)
+            # Legacy compatibility: feeding is now symbolic and non-blocking.
+            self.state = "IDLE"
 
         elif self.state == "RESTING":
             self._rest_timer += dt
@@ -291,6 +306,7 @@ class BehavioralReactor:
                 self.state = "IDLE"
                 self._idle_timer = 0.0
                 self._patrol_pause_timer = 0.0
+                self._rest_anchor = None
 
         elif self.state == "DARTING":
             self._dart_timer += dt
@@ -383,6 +399,44 @@ class BehavioralReactor:
 
         self._idle_drift_target = candidate
 
+    def _apply_pellet_attraction(self, dt):
+        """Non-blocking pellet attraction so fish keeps swimming while interacting."""
+        if not self._pellets:
+            return
+
+        self._feed_nibble_timer += dt
+        nearest_idx = min(
+            range(len(self._pellets)),
+            key=lambda i: np.linalg.norm(self._pellets[i]["pos"] - self.position)
+        )
+        nearest = self._pellets[nearest_idx]
+        dist = np.linalg.norm(nearest["pos"] - self.position)
+
+        # Consume when close enough.
+        if dist < 16.0:
+            self._pellets.pop(nearest_idx)
+            self.mood = min(100.0, self.mood + 1.6)
+            self.hunger = max(0.0, self.hunger - 3.0)
+            return
+
+        # Apply gentle steering force without overriding current behavior.
+        direction = nearest["pos"] - self.position
+        if dist > 1e-6:
+            direction = direction / dist
+            desired_speed = min(self._max_speed * 0.50, self._idle_speed + 38.0 + dist * 0.18)
+            desired = direction * desired_speed
+            steering = desired - self.velocity
+            sn = np.linalg.norm(steering)
+            max_accel = 90.0
+            if sn > max_accel:
+                steering = steering / sn * max_accel
+            self.velocity += steering * dt * 0.85
+
+            # tiny nibble oscillation while approaching pellets + lateral assess zig-zag.
+            self.velocity += np.array([0.0, math.sin(self._feed_nibble_timer * 8.0) * 0.6])
+            lateral = np.array([-direction[1], direction[0]])
+            self.velocity += lateral * (math.sin(self._feed_nibble_timer * 3.0) * 0.9)
+
     def _steer_towards(self, target, max_accel=130.0, drag=0.06, desired_speed=None):
         direction = target - self.position
         dist = np.linalg.norm(direction)
@@ -400,6 +454,7 @@ class BehavioralReactor:
             steering = steering / steer_norm * max_accel
 
         self.velocity += steering * 0.033
+        self._yaw_damping = min(1.0, np.linalg.norm(steering) / max(max_accel, 1e-6))
         self.velocity *= (1.0 - drag)
 
     def _move(self, dt):
@@ -411,21 +466,26 @@ class BehavioralReactor:
                 wp = self._waypoints[self._waypoint_idx]
                 self._steer_towards(wp, max_accel=120.0, drag=0.045)
 
+        elif self.state == "SURFACE_BREATH":
+            if self._surface_target is not None:
+                self._steer_towards(self._surface_target, max_accel=95.0, drag=0.035, desired_speed=min(65.0, self._max_speed * 0.55))
+
         elif self.state == "FEEDING":
-            if self._pellets:
-                nearest = min(self._pellets, key=lambda p: np.linalg.norm(p["pos"] - self.position))
-                desired = min(self._max_speed * 0.55, 75.0 + np.linalg.norm(nearest["pos"] - self.position) * 0.25)
-                self._steer_towards(nearest["pos"], max_accel=145.0, drag=0.07, desired_speed=desired)
-                nibble_freq = math.sin(self._feed_nibble_timer * 7.0)
-                self.velocity += np.array([0.0, nibble_freq * 1.0])
-            else:
-                self.velocity *= 0.92
+            # Backward-compat fallback; feeding no longer blocks swimming flow.
+            self.state = "IDLE"
+            self.velocity *= 0.96
 
         elif self.state == "RESTING":
-            self.velocity *= 0.97
-            sink_rate = 3.0 * math.sin(self._rest_timer * 0.5) + 2.0
+            self.velocity *= 0.965
+            if self._rest_anchor is not None:
+                anchor_delta = self._rest_anchor - self.position
+                dist_anchor = np.linalg.norm(anchor_delta)
+                if dist_anchor > 1e-6:
+                    anchor_pull = anchor_delta / dist_anchor * min(35.0, dist_anchor * 0.8)
+                    self.velocity += anchor_pull * dt
+            sink_rate = 1.6 * math.sin(self._rest_timer * 0.5) + 0.8
             self.velocity[1] += sink_rate * dt
-            self.velocity[0] += math.sin(self._rest_timer * 0.8) * 1.0 * dt
+            self.velocity[0] += math.sin(self._rest_timer * 0.8) * 0.7 * dt
 
         elif self.state == "DARTING":
             self._steer_towards(self.target, max_accel=220.0, drag=0.015, desired_speed=self._dart_speed)
@@ -452,6 +512,14 @@ class BehavioralReactor:
                 hover_y = math.sin(self._hover_phase * 0.7 + 0.5) * 0.5
                 self._hover_offset = np.array([hover_x, hover_y])
                 self.velocity = self.velocity * 0.97 + self._hover_offset * 0.3
+
+            if self._reverse_timer > 0.0:
+                self._reverse_timer = max(0.0, self._reverse_timer - dt)
+                facing = np.array([math.cos(self.facing_angle), math.sin(self.facing_angle)])
+                self.velocity += -facing * 12.0 * dt
+
+        # Keep pellet response non-blocking across all states.
+        self._apply_pellet_attraction(dt)
 
         self.position += self.velocity * dt
 
@@ -593,5 +661,6 @@ class BehavioralReactor:
             "tail_amp_factor": self._tail_amp_factor,
             "tail_freq_factor": self._tail_freq_factor,
             "turn_intensity": self._turn_intensity,
+            "swim_cadence": self._swim_cadence,
             "pellets": [p["pos"].tolist() for p in self._pellets],
         }

@@ -21,11 +21,11 @@ def test_brain_hunger_is_non_urgent_cosmetic_signal():
     assert brain.hunger <= 10.0
 
 
-def test_brain_feeding_state_when_pellets_present():
+def test_brain_pellets_do_not_force_feeding_state():
     brain = BehavioralReactor()
     brain.drop_pellet(120, 120, count=1)
     brain.update()
-    assert brain.state == "FEEDING"
+    assert brain.state != "FEEDING"
 
 
 def test_brain_boundary_check():
@@ -43,7 +43,7 @@ def test_brain_feed_is_symbolic_pellet_drop():
     brain.mood = 60.0
     prev_state = brain.state
     brain.feed()
-    assert brain.state == "FEEDING"
+    assert brain.state == prev_state
     assert len(brain._pellets) >= 1
     # no hard dependency on hunger drain anymore
     assert brain.hunger <= 50.0
@@ -117,4 +117,26 @@ def test_brain_drop_pellet_targeted_and_consumed():
         brain.update()
         if len(brain._pellets) == 0:
             break
+    assert len(brain._pellets) == 0
+
+
+def test_brain_drop_pellet_starts_from_surface_and_respects_pour_column():
+    brain = BehavioralReactor()
+    brain.set_bounds(0, 0, 500, 300)
+    brain.drop_pellet(250, 220, count=1)
+    pellet = brain._pellets[0]
+    assert 240 <= pellet["pos"][0] <= 260
+    assert pellet["pos"][1] <= 12.0
+    assert pellet["target_depth"] >= 55
+
+
+def test_brain_pellet_lingers_about_two_minutes_then_expires():
+    brain = BehavioralReactor()
+    brain.set_bounds(0, 0, 500, 300)
+    brain.drop_pellet(220, 180, count=1)
+    pellet = brain._pellets[0]
+    pellet["age"] = 119.5
+    brain._update_pellets(0.4)
+    assert len(brain._pellets) == 1
+    brain._update_pellets(0.2)
     assert len(brain._pellets) == 0

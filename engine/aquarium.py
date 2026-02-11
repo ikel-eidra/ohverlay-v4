@@ -6,7 +6,10 @@ Renders fish (single or school) and bubbles with proper coordinate translation.
 
 from PySide6.QtWidgets import QMainWindow
 from PySide6.QtCore import Qt, QRect
-from PySide6.QtGui import QGuiApplication, QPainter, QColor, QRadialGradient, QBrush
+from PySide6.QtGui import QGuiApplication, QPainter, QColor, QRadialGradient, QBrush, QPainterPath, QPen, QLinearGradient
+import time
+import math
+import random
 from utils.logger import logger
 from ui.skin import FishSkin
 from ui.bubbles import BubbleSystem
@@ -56,6 +59,12 @@ class AquariumSector(QMainWindow):
         self.school_states = []     # List of fish states
         self.school_local = []      # List of (local_pos, should_render) tuples
         self.school_mode = False
+
+        # Procedural plant bed (8h growth to top, then trim back to 3/5 height).
+        self._plant_cycle_start = time.time()
+        self._plant_grow_seconds = 8 * 60 * 60
+        self._plant_trim_ratio = 0.60
+        self._plant_stems = self._build_plant_layout()
 
         self.setWindowFlags(
             Qt.FramelessWindowHint |
@@ -119,6 +128,60 @@ class AquariumSector(QMainWindow):
             self.update()
 
 
+    def _build_plant_layout(self):
+        stems = []
+        width = max(200, self.screen_geometry.width())
+        count = max(7, min(18, width // 150))
+        for _ in range(int(count)):
+            stems.append({
+                "x": random.uniform(20, max(21, self.screen_geometry.width() - 20)),
+                "phase": random.uniform(0.0, math.pi * 2),
+                "sway": random.uniform(7.0, 16.0),
+                "thickness": random.uniform(2.2, 4.2),
+                "h_mult": random.uniform(0.82, 1.08),
+            })
+        return stems
+
+    def _plant_height_ratio(self):
+        elapsed = max(0.0, time.time() - self._plant_cycle_start)
+        if elapsed >= self._plant_grow_seconds:
+            self._plant_cycle_start = time.time()
+            elapsed = 0.0
+        grow_t = min(1.0, elapsed / self._plant_grow_seconds)
+        return self._plant_trim_ratio + (1.0 - self._plant_trim_ratio) * grow_t
+
+    def _draw_plants(self, painter):
+        if not self._plant_stems:
+            return
+        h = self.screen_geometry.height()
+        waterline = 8
+        bottom = h + 5
+        growth_ratio = self._plant_height_ratio()
+        t = time.time()
+
+        for stem in self._plant_stems:
+            stem_h = h * 0.92 * growth_ratio * stem["h_mult"]
+            top_y = max(waterline, bottom - stem_h)
+            x = stem["x"]
+            sway = math.sin(t * 0.42 + stem["phase"]) * stem["sway"]
+
+            path = QPainterPath()
+            path.moveTo(x, bottom)
+            path.cubicTo(
+                x + sway * 0.3, bottom - stem_h * 0.32,
+                x - sway * 0.8, bottom - stem_h * 0.66,
+                x + sway, top_y
+            )
+
+            grad = QLinearGradient(x, bottom, x, top_y)
+            grad.setColorAt(0.0, QColor(36, 104, 70, 130))
+            grad.setColorAt(0.55, QColor(68, 166, 98, 118))
+            grad.setColorAt(1.0, QColor(120, 210, 148, 80))
+            pen = QPen(QBrush(grad), stem["thickness"])
+            pen.setCapStyle(Qt.RoundCap)
+            painter.setPen(pen)
+            painter.drawPath(path)
+
     def _draw_pellets(self, painter, pellets):
         if not pellets:
             return
@@ -148,6 +211,9 @@ class AquariumSector(QMainWindow):
         painter.setCompositionMode(QPainter.CompositionMode_Clear)
         painter.fillRect(self.rect(), Qt.transparent)
         painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+
+        # Render plant bed (ambient background realism)
+        self._draw_plants(painter)
 
         # Render bubbles
         if self.bubble_system:
