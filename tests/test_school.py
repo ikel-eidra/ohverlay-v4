@@ -144,3 +144,16 @@ def test_school_sanctuary_awareness():
     # Just verify it doesn't crash - sanctuary avoidance is a soft force
     states = school.get_all_states()
     assert len(states) == 6
+
+
+def test_neon_tetra_school_not_pathologically_clumped():
+    school = FishSchool((0, 0, 1920, 1080), species="neon_tetra", count=10)
+    for _ in range(120):
+        school.last_update -= 0.033
+        school.update()
+
+    positions = np.array([f.position for f in school.fish])
+    center = positions.mean(axis=0)
+    dists = np.linalg.norm(positions - center, axis=1)
+    # Expect school spread ring, not all fish collapsed into a tiny center cluster.
+    assert float(dists.mean()) > 30.0

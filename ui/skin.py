@@ -25,6 +25,17 @@ from engine.perlin import PerlinNoise
 class FishSkin:
     """Photorealistic Betta fish with procedurally animated flowing fins."""
 
+
+    FAMOUS_BETTA_PALETTES = {
+        "nemo_galaxy": ([255, 118, 54], [35, 84, 170], [255, 240, 235]),
+        "mustard_gas": ([26, 95, 195], [244, 190, 52], [255, 244, 184]),
+        "koi_candy": ([240, 78, 62], [248, 244, 236], [35, 38, 42]),
+        "black_orchid": ([34, 30, 56], [94, 70, 180], [210, 152, 255]),
+        "copper_dragon": ([130, 82, 30], [212, 150, 67], [255, 229, 162]),
+        "lavender_halfmoon": ([141, 95, 226], [230, 184, 255], [255, 238, 255]),
+        "turquoise_butterfly": ([42, 176, 204], [18, 87, 154], [233, 247, 255]),
+    }
+
     def __init__(self, config=None):
         self.perlin = PerlinNoise(seed=42)
         self.perlin2 = PerlinNoise(seed=137)  # Second noise for variety
@@ -50,6 +61,8 @@ class FishSkin:
         self.tail_amp_factor = 1.0
         self.tail_freq_factor = 1.0
         self.turn_intensity = 0.0
+        self.swim_cadence = 0.0
+        self._facing_left = False
 
         if config:
             self.apply_config(config)
@@ -59,6 +72,11 @@ class FishSkin:
         if not fish_cfg:
             return
         if isinstance(fish_cfg, dict):
+            palette_name = str(fish_cfg.get("betta_palette", "")).lower().strip()
+            if palette_name in self.FAMOUS_BETTA_PALETTES:
+                p, s2, a = self.FAMOUS_BETTA_PALETTES[palette_name]
+                self.primary, self.secondary, self.accent = list(p), list(s2), list(a)
+
             self.primary = fish_cfg.get("primary_color", self.primary)
             self.secondary = fish_cfg.get("secondary_color", self.secondary)
             self.accent = fish_cfg.get("accent_color", self.accent)
@@ -78,7 +96,7 @@ class FishSkin:
 
     def _shifted_color(self, base, phase_offset=0.0):
         t = (math.sin(self.color_shift_phase + phase_offset) + 1.0) / 2.0
-        shifted = self._lerp_color(base, self.secondary, t * 0.35)
+        shifted = self._lerp_color(base, self.secondary, t * (0.25 + self.turn_intensity * 0.18 + self.swim_cadence * 0.08))
         return shifted
 
     def _make_color(self, rgb, alpha=255):
@@ -102,6 +120,7 @@ class FishSkin:
         hunger = fish_state.get("hunger", 0)
         mood = fish_state.get("mood", 100)
         state = fish_state.get("state", "IDLE")
+        state_boost = 1.15 if state in {"DARTING", "FLARING"} else 1.0
 
         # Animation timing
         dt = 0.033
@@ -109,17 +128,20 @@ class FishSkin:
         self.tail_amp_factor = fish_state.get("tail_amp_factor", 1.0)
         self.tail_freq_factor = fish_state.get("tail_freq_factor", 1.0)
         self.turn_intensity = fish_state.get("turn_intensity", 0.0)
+        self.swim_cadence = fish_state.get("swim_cadence", speed_factor)
+        self._state_boost = state_boost
 
         self.time += dt
+        turn_boost = 1.0 + self.turn_intensity * 0.38
         self.tail_phase += ((0.08 + 0.06 * speed_factor) * (1.0 + speed_factor * 0.8)
-                            * self.tail_freq_factor)
+                            * self.tail_freq_factor * turn_boost)
         self.glow_phase += 0.05
         self.color_shift_phase += self.color_shift_speed * dt
         self.breath_phase += 0.035
         self.pectoral_phase += 0.15 + speed_factor * 0.1
 
         # Body S-curve flex
-        self.body_flex_target = math.sin(self.tail_phase * 0.4) * (3.0 + speed_factor * 5.0) * (0.8 + self.tail_amp_factor * 0.35)
+        self.body_flex_target = math.sin(self.tail_phase * 0.4) * (3.0 + speed_factor * 5.0 + self.turn_intensity * 2.2) * (0.8 + self.tail_amp_factor * 0.35)
         self.body_flex += (self.body_flex_target - self.body_flex) * 0.12
 
         sc = self.size_scale
@@ -152,7 +174,9 @@ class FishSkin:
         self._draw_gill_plate(painter)
         self._draw_eye(painter, mood, hunger)
         self._draw_scales(painter, speed_factor)
+        self._draw_cheek_iridescence(painter)
         self._draw_body_highlight(painter)
+        self._draw_silhouette_rim(painter, speed_factor)
 
         painter.restore()
 
@@ -160,9 +184,9 @@ class FishSkin:
     def _draw_glow(self, painter, mood):
         if not self.enable_glow:
             return
-        glow_size = 65 + math.sin(self.glow_phase) * 10
+        glow_size = 62 + math.sin(self.glow_phase) * 9
         breath = math.sin(self.breath_phase) * 0.25 + 0.75
-        glow_alpha = int(28 * breath * (mood / 100.0))
+        glow_alpha = int(22 * breath * (mood / 100.0))
         col = self._shifted_color(self.primary, 0.5)
 
         gradient = QRadialGradient(0, 0, glow_size)
@@ -186,27 +210,27 @@ class FishSkin:
         body_path.moveTo(32, 0)  # Mouth tip
         # Upper contour
         body_path.cubicTo(
-            28, -6 + flex * 0.3,
-            16, -15 + flex * 0.5,
-            0, -16 + flex * 0.7
+            29, -5 + flex * 0.3,
+            17, -16 + flex * 0.5,
+            0, -17 + flex * 0.72
         )
         body_path.cubicTo(
-            -12, -16 + flex * 0.6,
-            -24, -12 + flex * 0.3,
-            -30, -5 + flex * 0.1
+            -13, -17 + flex * 0.62,
+            -25, -12 + flex * 0.3,
+            -31, -5 + flex * 0.1
         )
         # Caudal peduncle (narrow tail base)
-        body_path.cubicTo(-33, -3, -35, -2, -36, 0)
+        body_path.cubicTo(-34, -3, -37, -2, -38, 0)
         # Lower contour
-        body_path.cubicTo(-35, 2, -33, 3, -30, 5 - flex * 0.1)
+        body_path.cubicTo(-37, 2, -34, 3, -31, 5 - flex * 0.1)
         body_path.cubicTo(
-            -24, 12 - flex * 0.3,
-            -12, 16 - flex * 0.6,
-            0, 16 - flex * 0.7
+            -25, 12 - flex * 0.3,
+            -13, 17 - flex * 0.62,
+            0, 17 - flex * 0.72
         )
         body_path.cubicTo(
-            16, 15 - flex * 0.5,
-            28, 6 - flex * 0.3,
+            17, 16 - flex * 0.5,
+            29, 5 - flex * 0.3,
             32, 0
         )
 
@@ -249,12 +273,38 @@ class FishSkin:
         painter.setBrush(QBrush(h_grad))
         painter.drawPath(highlight)
 
+    def _draw_cheek_iridescence(self, painter):
+        """Subtle gill-cheek iridescence patch for real betta face depth."""
+        grad = QRadialGradient(15.5, -2.5, 8.0)
+        grad.setColorAt(0.0, self._make_color(self._lerp_color(self.accent, [220, 255, 255], 0.45), 58))
+        grad.setColorAt(0.55, self._make_color(self._lerp_color(self.primary, self.accent, 0.35), 32))
+        grad.setColorAt(1.0, QColor(0, 0, 0, 0))
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QBrush(grad))
+        painter.drawEllipse(QPointF(15.2, -2.0), 7.4, 5.6)
+
     # ---- CAUDAL (TAIL) FIN ----
+    def _draw_silhouette_rim(self, painter, speed_factor):
+        """Crisp rim light to improve Uno outline readability on mixed desktops."""
+        rim = QPainterPath()
+        flex = self.body_flex
+        rim.moveTo(31.5, -0.3)
+        rim.cubicTo(27.0, -7 + flex * 0.2, 10, -14 + flex * 0.3, -24, -11 + flex * 0.2)
+        rim.cubicTo(-31, -6 + flex * 0.1, -37, -2, -38, 0)
+        rim.cubicTo(-37, 2, -31, 6 - flex * 0.1, -24, 11 - flex * 0.2)
+        rim.cubicTo(10, 14 - flex * 0.3, 27, 7 - flex * 0.2, 31.5, 0.3)
+
+        rim_alpha = int(32 + 16 * min(1.0, speed_factor * 0.55 + self.turn_intensity * 0.6))
+        rim_col = self._lerp_color(self.accent, [255, 255, 255], 0.45)
+        painter.setPen(QPen(self._make_color(rim_col, rim_alpha), 0.9))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawPath(rim)
+
     def _draw_caudal_fin(self, painter, speed_factor):
         """Massive halfmoon caudal fin with translucent membrane and ray structure."""
-        num_rays = 28
-        fin_length = 65
-        fin_spread = 55  # Halfmoon = wide spread
+        num_rays = 32
+        fin_length = 68 + self.swim_cadence * 3.0
+        fin_spread = 58 + self.turn_intensity * 4.0  # Halfmoon = wide spread
 
         col_top = self._shifted_color(self.accent, 1.0)
         col_mid = self._shifted_color(self.primary, 1.5)
@@ -275,7 +325,7 @@ class FishSkin:
             noise_c = self.perlin2.noise2d(t * 3.0, self.time * 1.0) * 8 * t
 
             # Primary wave: large sweeping motion
-            wave = math.sin(self.tail_phase - t * 2.8) * (8 + t * 22) * (0.5 + speed_factor * 0.5) * self.tail_amp_factor
+            wave = math.sin(self.tail_phase - t * 2.8) * (8 + t * 24) * (0.5 + speed_factor * 0.52) * self.tail_amp_factor * self._state_boost
             # Secondary wave: smaller, faster
             wave2 = math.sin(self.tail_phase * 1.7 - t * 4.0) * (3 + t * 8)
 
@@ -349,6 +399,14 @@ class FishSkin:
             edge_path2.lineTo(p)
         painter.drawPath(edge_path2)
 
+        # Trailing filament tips for premium halfmoon silhouette.
+        painter.setPen(QPen(self._make_color(self._lerp_color(col_top, [255, 255, 255], 0.5), 20), 0.55))
+        for idx in range(max(4, num_rays - 7), num_rays + 1, 2):
+            p_up = upper_points[idx]
+            p_lo = lower_points[idx]
+            painter.drawLine(p_up, QPointF(p_up.x() - 4.0, p_up.y() - 2.0))
+            painter.drawLine(p_lo, QPointF(p_lo.x() - 4.0, p_lo.y() + 2.0))
+
     # ---- DORSAL FIN ----
     def _draw_dorsal_fin(self, painter, speed_factor):
         """Tall flowing dorsal fin with membrane transparency and ray branching."""
@@ -365,10 +423,10 @@ class FishSkin:
 
             # Taller peak envelope, asymmetric (higher toward front)
             envelope = math.sin(t * math.pi) ** 0.6 * (1.0 - t * 0.2)
-            base_height = 38 * envelope
+            base_height = (40 + self.swim_cadence * 4.0) * envelope
 
             noise = self.perlin.octave_noise(t * 5.0 + 5.0, self.time * 1.0, octaves=3) * 6 * envelope
-            wave = math.sin(self.tail_phase * 0.6 - t * 2.5) * (3 + 7 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.25)
+            wave = math.sin(self.tail_phase * 0.6 - t * 2.5) * (3 + 7.6 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.28) * self._state_boost
             wave2 = math.sin(self.tail_phase * 1.3 - t * 3.5) * 2 * envelope
 
             points.append(QPointF(bx, -13 - base_height + wave + wave2 + noise))
@@ -428,10 +486,10 @@ class FishSkin:
             bx = base_start_x + (base_end_x - base_start_x) * t
 
             envelope = math.sin(t * math.pi) ** 0.7
-            base_depth = 28 * envelope
+            base_depth = (30 + self.swim_cadence * 2.6) * envelope
 
             noise = self.perlin.octave_noise(t * 4.0 + 20.0, self.time * 1.1, octaves=3) * 5 * envelope
-            wave = math.sin(self.tail_phase * 0.7 - t * 2.4) * (3 + 6 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.22)
+            wave = math.sin(self.tail_phase * 0.7 - t * 2.4) * (3 + 6.8 * speed_factor) * envelope * (0.9 + self.tail_amp_factor * 0.24) * self._state_boost
 
             points.append(QPointF(bx, 12 + base_depth + wave + noise))
 
@@ -590,8 +648,8 @@ class FishSkin:
     # ---- EYE ----
     def _draw_eye(self, painter, mood, hunger):
         """Photorealistic eye with corneal reflection and depth."""
-        eye_x, eye_y = 22, -4
-        eye_r = 4.8
+        eye_x, eye_y = 22.8, -4.2
+        eye_r = 5.05
 
         # Dark ring around eye
         painter.setPen(Qt.NoPen)
@@ -609,7 +667,7 @@ class FishSkin:
         painter.drawEllipse(QPointF(eye_x, eye_y), eye_r, eye_r * 0.88)
 
         # Iris - deep complex coloring
-        stress = hunger / 100.0
+        stress = min(1.0, 0.65 * (hunger / 100.0) + 0.35 * (1.0 - mood / 100.0))
         iris_calm = [20, 35, 90]
         iris_stressed = [170, 55, 25]
         iris_col = self._lerp_color(iris_calm, iris_stressed, stress)
@@ -665,7 +723,7 @@ class FishSkin:
     # ---- SCALES ----
     def _draw_scales(self, painter, speed_factor):
         """Iridescent scale pattern that shimmers with angle."""
-        shimmer_base = 12 + 8 * math.sin(self.time * 1.5)
+        shimmer_base = 12 + 8 * math.sin(self.time * 1.5) + self.swim_cadence * 6 + self.turn_intensity * 5
         painter.setPen(Qt.NoPen)
 
         # Scale rows following body contour
