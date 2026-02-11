@@ -56,6 +56,8 @@ class FishSkin:
         self.accent = [255, 100, 200]
         self.color_shift_speed = 0.3
         self.enable_glow = True
+        self.silhouette_strength = 1.0
+        self.eye_tracking_strength = 0.75
         self.size_scale = 1.0
         self.opacity = 0.92
         self.tail_amp_factor = 1.0
@@ -82,6 +84,8 @@ class FishSkin:
             self.accent = fish_cfg.get("accent_color", self.accent)
             self.color_shift_speed = fish_cfg.get("color_shift_speed", self.color_shift_speed)
             self.enable_glow = fish_cfg.get("enable_glow", self.enable_glow)
+            self.silhouette_strength = max(0.45, min(1.9, float(fish_cfg.get("silhouette_strength", self.silhouette_strength))))
+            self.eye_tracking_strength = max(0.0, min(1.0, float(fish_cfg.get("eye_tracking_strength", self.eye_tracking_strength))))
             self.size_scale = fish_cfg.get("size_scale", self.size_scale)
             self.opacity = fish_cfg.get("opacity", self.opacity)
 
@@ -171,7 +175,7 @@ class FishSkin:
         self._draw_dorsal_fin(painter, speed_factor)
         self._draw_pectoral_fins(painter, speed_factor)
         self._draw_gill_plate(painter)
-        self._draw_eye(painter, mood, hunger)
+        self._draw_eye(painter, mood, hunger, vx, vy)
         self._draw_scales(painter, speed_factor)
         self._draw_cheek_iridescence(painter)
         self._draw_body_highlight(painter)
@@ -663,7 +667,7 @@ class FishSkin:
         painter.drawLine(QPointF(30.2, -0.7), QPointF(28.9 + pout * 0.25, -0.34))
 
     # ---- EYE ----
-    def _draw_eye(self, painter, mood, hunger):
+    def _draw_eye(self, painter, mood, hunger, vx=0.0, vy=0.0):
         """Photorealistic eye with corneal reflection and depth."""
         eye_x, eye_y = 22.8, -4.2
         eye_r = 5.05
@@ -697,7 +701,7 @@ class FishSkin:
         iris_col = self._lerp_color(iris_calm, iris_stressed, stress)
 
         iris_r = eye_r * 0.72
-        iris_grad = QRadialGradient(eye_x - 0.3, eye_y - 0.3, iris_r)
+        iris_grad = QRadialGradient(iris_x - 0.3, iris_y - 0.3, iris_r)
         iris_grad.setColorAt(0.0, QColor(
             min(255, iris_col[0] + 40),
             min(255, iris_col[1] + 30),
@@ -711,7 +715,7 @@ class FishSkin:
 
         painter.setPen(Qt.NoPen)
         painter.setBrush(QBrush(iris_grad))
-        painter.drawEllipse(QPointF(eye_x, eye_y), iris_r, iris_r * 0.95)
+        painter.drawEllipse(QPointF(iris_x, iris_y), iris_r, iris_r * 0.95)
 
         # Iris texture (radial lines)
         painter.setPen(QPen(QColor(
@@ -723,18 +727,18 @@ class FishSkin:
             inner_r = iris_r * 0.3
             outer_r = iris_r * 0.9
             painter.drawLine(
-                QPointF(eye_x + math.cos(rad) * inner_r, eye_y + math.sin(rad) * inner_r * 0.95),
-                QPointF(eye_x + math.cos(rad) * outer_r, eye_y + math.sin(rad) * outer_r * 0.95)
+                QPointF(iris_x + math.cos(rad) * inner_r, iris_y + math.sin(rad) * inner_r * 0.95),
+                QPointF(iris_x + math.cos(rad) * outer_r, iris_y + math.sin(rad) * outer_r * 0.95)
             )
 
         # Pupil with depth
         pupil_size = eye_r * (0.3 + 0.1 * (1.0 - mood / 100.0))
-        pupil_grad = QRadialGradient(eye_x, eye_y, pupil_size)
+        pupil_grad = QRadialGradient(iris_x, iris_y, pupil_size)
         pupil_grad.setColorAt(0.0, QColor(2, 2, 2, 250))
         pupil_grad.setColorAt(0.7, QColor(8, 5, 3, 245))
         pupil_grad.setColorAt(1.0, QColor(15, 10, 8, 235))
         painter.setBrush(QBrush(pupil_grad))
-        painter.drawEllipse(QPointF(eye_x, eye_y), pupil_size, pupil_size * 0.92)
+        painter.drawEllipse(QPointF(iris_x, iris_y), pupil_size, pupil_size * 0.92)
 
         # Primary specular highlight (corneal reflection)
         painter.setBrush(QColor(255, 255, 255, 215))
