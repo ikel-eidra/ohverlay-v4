@@ -368,6 +368,31 @@ class ZenFishApp:
             self.bubble_system.queue_message("Solo betta mode.", "ambient")
             return
 
+        # Special duo mode: two independent bettas with unique colors.
+        if species == "betta" and count == 2:
+            self.school = FishSchool(self.total_bounds, species="betta", count=2)
+            self.school.set_sanctuary(self.sanctuary)
+
+            pref = self.config.get("fish", "betta_palette") if self.config else "nemo_galaxy"
+            palettes = FishSkin.independent_palette_set(count=2, preferred=pref)
+            self.school_skins = []
+            for idx, (primary, secondary, accent) in enumerate(palettes):
+                skin = FishSkin(config=self.config)
+                skin.set_colors(primary, secondary, accent)
+                skin.color_shift_phase = idx * 1.7
+                skin.tail_phase = idx * 0.9
+                self.school_skins.append(skin)
+
+            for sector in self.sectors:
+                sector.set_school_skins(self.school_skins)
+
+            self.school_mode = True
+            self.config.set("fish", "species", "betta")
+            self.config.set("fish", "school_count", 2)
+            logger.info("Dual Betta mode active (max 2, independent colors).")
+            self.bubble_system.queue_message("Dual Betta mode: 2 independent Uno-style swimmers.", "ambient")
+            return
+
         # Create school with appropriate skins
         if species == "discus":
             logger.info("Discus temporarily disabled; using Neon Tetra school mode.")

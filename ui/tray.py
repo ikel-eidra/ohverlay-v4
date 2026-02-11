@@ -160,6 +160,11 @@ class SystemTray(QSystemTrayIcon):
             lambda: self.signals.species_changed.emit("betta", 1)
         )
 
+        duo_betta_action = species_menu.addAction("Dual Betta x2 (independent)")
+        duo_betta_action.triggered.connect(
+            lambda: self.signals.species_changed.emit("betta", 2)
+        )
+
         species_menu.addSeparator()
         species_menu.addAction("--- School Mode ---").setEnabled(False)
 

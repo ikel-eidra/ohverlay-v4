@@ -13,6 +13,7 @@ Renders a photorealistic betta with:
 """
 
 import math
+import random
 import numpy as np
 from PySide6.QtGui import (
     QPainter, QColor, QPolygonF, QPen, QRadialGradient,
