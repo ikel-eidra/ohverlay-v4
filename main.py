@@ -92,6 +92,13 @@ class ZenFishApp:
             self.use_realistic_skin = False
             self.skin = FishSkin(config=self.config)
             logger.info(f"Using optimized BASIC Betta skin - {ram_gb:.1f}GB RAM detected (32GB+ recommended for ultra-realistic)")
+        
+        self.bubble_system = BubbleSystem(config=self.config)
+        
+        # School mode state (None = solo betta mode)
+        self.school = None
+        self.school_skins = []
+        self.school_mode = False
     
     def _get_system_ram_gb(self):
         """Get total system RAM in GB."""
