@@ -369,7 +369,7 @@ class ZenFishApp:
             dt = 0.033  # ~30 FPS
             self.non_bio_skin.update_state(dt, cursor.x(), cursor.y())
             # Only return early for true non-bio widgets
-            if self.creature_type in ["geometric", "energy_orbs", "holographic", "airplane", "train", "submarine"]:
+            if self.creature_type in ["geometric", "energy_orbs", "holographic", "airplane", "train", "submarine", "balloon"]:
                 return  # Skip jellyfish update for widget-based creatures
         
         # Deep sea creatures mode (jellyfish variants)
