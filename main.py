@@ -23,6 +23,7 @@ from engine.school import FishSchool
 from engine.llm_brain import LLMBrain
 from ui.skin import FishSkin
 from ui.skin_realistic import RealisticBettaSkin
+from ui.jellyfish_skin import BioluminescentJellyfishSkin
 from ui.tetra_skin import NeonTetraSkin
 from ui.bubbles import BubbleSystem
 from ui.tray import SystemTray
@@ -83,8 +84,15 @@ class ZenFishApp:
         # Check system RAM to determine rendering quality
         ram_gb = self._get_system_ram_gb()
         
-        # 32GB+ RAM = Ultra-realistic, Lower = Basic efficient
-        if ram_gb >= 28:  # Some systems report slightly less than 32
+        # Get creature type from config (betta or jellyfish)
+        creature_type = self.config.get("creature_type", "betta") if hasattr(self.config, "get") else "betta"
+        self.creature_type = creature_type.lower()
+        
+        if self.creature_type == "jellyfish":
+            # Jellyfish works well on all RAM levels
+            self.skin = BioluminescentJellyfishSkin(config=self.config)
+            logger.info(f"Using BIOLUMINESCENT JELLYFISH - Deep sea variant with glowing lights!")
+        elif ram_gb >= 28:  # 32GB+ RAM for ultra-realistic Betta
             self.use_realistic_skin = True
             self.skin = RealisticBettaSkin(config=self.config)
             logger.info(f"Using ULTRA-REALISTIC Betta skin (v2.0) - {ram_gb:.1f}GB RAM detected")
@@ -250,16 +258,20 @@ class ZenFishApp:
             def on_visibility():
                 QTimer.singleShot(0, self._on_toggle_visibility)
 
+            def on_creature_toggle():
+                QTimer.singleShot(0, self._on_toggle_creature)
+
             hotkeys = {
                 '<ctrl>+<alt>+f': on_feed,
                 '<ctrl>+<alt>+s': on_sanctuary,
                 '<ctrl>+<alt>+h': on_visibility,
+                '<ctrl>+<alt>+j': on_creature_toggle,  # Toggle jellyfish/betta
             }
 
             self._hotkey_listener = keyboard.GlobalHotKeys(hotkeys)
             self._hotkey_listener.daemon = True
             self._hotkey_listener.start()
-            logger.info("Global hotkeys registered (Ctrl+Alt+F/S/H).")
+            logger.info("Global hotkeys registered (Ctrl+Alt+F=Feed/Flash, S=Sanctuary, H=Hide, J=Toggle Creature).")
         except ImportError:
             logger.warning("pynput not available - global hotkeys disabled. Install with: pip install pynput")
         except Exception as e:
@@ -535,13 +547,45 @@ class ZenFishApp:
             logger.info(f"Module '{module_key}' {'enabled' if enabled else 'disabled'}")
 
     def _on_feed_fish(self):
-        cursor = QCursor.pos()
-        self.brain.drop_pellet(cursor.x(), cursor.y(), count=4)
-        self.bubble_system.queue_message("Pellets poured from the surface. Breathe and watch Uno forage.", "ambient")
+        if self.creature_type == "jellyfish":
+            # Trigger bioluminescent flash for jellyfish
+            if hasattr(self.skin, 'trigger_flash'):
+                self.skin.trigger_flash()
+            self.bubble_system.queue_message("✨ Bioluminescent display triggered! Beautiful blue light show!", "ambient")
+        else:
+            cursor = QCursor.pos()
+            self.brain.drop_pellet(cursor.x(), cursor.y(), count=4)
+            self.bubble_system.queue_message("Pellets poured from the surface. Breathe and watch Uno forage.", "ambient")
 
     def _on_toggle_visibility(self):
         for sector in self.sectors:
             sector.set_visible(not sector.visible)
+
+    def _on_toggle_creature(self):
+        """Toggle between Betta and Jellyfish."""
+        if self.creature_type == "betta":
+            self.creature_type = "jellyfish"
+            self.skin = BioluminescentJellyfishSkin(config=self.config)
+            # Update sectors with new skin
+            for sector in self.sectors:
+                sector.skin = self.skin
+            self.bubble_system.queue_message("🎆 Switched to BIOLUMINESCENT JELLYFISH! Press Ctrl+Alt+F to trigger light show!", "ambient")
+            logger.info("Switched to Jellyfish mode")
+        else:
+            self.creature_type = "betta"
+            # Restore betta based on RAM
+            ram_gb = self._get_system_ram_gb()
+            if ram_gb >= 28:
+                self.skin = RealisticBettaSkin(config=self.config)
+            else:
+                self.skin = FishSkin(config=self.config)
+            for sector in self.sectors:
+                sector.skin = self.skin
+            self.bubble_system.queue_message("🐟 Switched back to BETTA FISH!", "ambient")
+            logger.info("Switched to Betta mode")
+        
+        # Save preference
+        self.config.set("creature_type", self.creature_type)
 
     def _on_love_notes_path(self, path):
         self.love_notes_module.set_source_path(path)
