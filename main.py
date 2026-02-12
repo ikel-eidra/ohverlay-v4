@@ -102,7 +102,8 @@ class OhverlayApp:
         """Create the creature renderer - Assistant's Division (Deep Sea + Non-Bio only)."""
         # Get creature type from config (default: jellyfish - Lumex owns Betta now)
         try:
-            creature_type = self.config.get("creature_type", "jellyfish")
+            # Access creature_type directly from root config (not via get() which expects section)
+            creature_type = self.config._config.get("creature_type", "jellyfish")
             if not creature_type or creature_type in ["betta", "discus", "neon_tetra"]:
                 # Betta/Tetra/Discus moved to LUMEX - default to jellyfish
                 creature_type = "jellyfish"

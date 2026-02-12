@@ -8,6 +8,7 @@ import os
 from utils.logger import logger
 
 DEFAULT_CONFIG = {
+    "creature_type": "jellyfish",
     "fish": {
         "primary_color": [255, 118, 54],
         "secondary_color": [35, 84, 170],
