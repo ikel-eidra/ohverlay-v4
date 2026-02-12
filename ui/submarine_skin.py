@@ -1,6 +1,7 @@
 """
-Realistic Submarine v1.0 - Non-Biological Object
+Realistic Submarine v2.0 - Non-Biological Object with Health Reminder
 Fires torpedoes that travel to end of monitors
+AUTONOMOUS TORPEDO: Fires every 20 minutes for 20-20-20 eye rest rule
 """
 
 import math
@@ -88,6 +89,15 @@ class RealisticSubmarine(QWidget):
         self.light_blink_timer = 0.0
         self.light_on = True
         
+        # 20-20-20 Eye Rest Reminder System
+        # Every 20 minutes: fire torpedo to remind user to rest eyes
+        self.eye_rest_timer = 0.0  # Counts up to 20 minutes (1200 seconds)
+        self.eye_rest_interval = 20 * 60  # 20 minutes in seconds
+        self.eye_rest_message = "20-20-20 EYE REST! Look 20 feet away for 20 seconds!"
+        self.show_reminder = False
+        self.reminder_duration = 10.0  # Show message for 10 seconds
+        self.reminder_timer = 0.0
+        
         self.resize(250, 150)
         self.move(int(self.x - 125), int(self.y - 75))
     
@@ -171,9 +181,24 @@ class RealisticSubmarine(QWidget):
         if self.torpedo_cooldown > 0:
             self.torpedo_cooldown -= dt
         
-        # Random torpedo fire chance (when moving fast)
-        if self.speed > 1.5 and random.random() < 0.005:
-            self.fire_torpedo()
+        # 20-20-20 Eye Rest Reminder - Autonomous firing every 20 minutes
+        self.eye_rest_timer += dt
+        if self.eye_rest_timer >= self.eye_rest_interval:
+            self.eye_rest_timer = 0.0  # Reset timer
+            self.fire_torpedo()  # Fire torpedo as reminder
+            self.show_reminder = True
+            self.reminder_timer = self.reminder_duration
+            print("🔔 20-20-20 EYE REST! Look 20 feet away for 20 seconds!")
+        
+        # Show reminder countdown
+        if self.show_reminder:
+            self.reminder_timer -= dt
+            if self.reminder_timer <= 0:
+                self.show_reminder = False
+        
+        # Random torpedo fire chance (when moving fast) - disabled, only autonomous firing
+        # if self.speed > 1.5 and random.random() < 0.005:
+        #     self.fire_torpedo()
         
         # Update torpedoes
         self._update_torpedoes(dt)
@@ -239,6 +264,10 @@ class RealisticSubmarine(QWidget):
         
         # Fill background with transparent
         painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
+        
+        # Draw 20-20-20 Eye Rest Reminder
+        if self.show_reminder:
+            self._draw_eye_rest_reminder(painter)
         
         center_x = 125
         center_y = 75
@@ -590,6 +619,36 @@ class RealisticSubmarine(QWidget):
                     # Only draw if within reasonable range
                     if abs(x1 - 125) < 1000 and abs(y1 - 75) < 600:
                         painter.drawLine(int(x1), int(y1), int(x2), int(y2))
+    
+    def _draw_eye_rest_reminder(self, painter: QPainter):
+        """Draw 20-20-20 eye rest reminder text"""
+        # Draw semi-transparent background
+        bg_rect = QRectF(10, 10, 230, 60)
+        painter.fillRect(bg_rect, QColor(0, 50, 100, 180))
+        
+        # Draw border
+        painter.setPen(QPen(QColor(100, 200, 255, 200), 2))
+        painter.drawRect(bg_rect)
+        
+        # Draw text
+        painter.setPen(QColor(255, 255, 255))
+        font = QFont("Arial", 10, QFont.Weight.Bold)
+        painter.setFont(font)
+        
+        # Main message
+        painter.drawText(15, 30, "🔔 20-20-20 EYE REST!")
+        
+        # Sub message
+        font2 = QFont("Arial", 9)
+        painter.setFont(font2)
+        painter.drawText(15, 50, "Look 20 feet away for 20 seconds")
+        
+        # Countdown
+        countdown = int(self.reminder_timer)
+        painter.setPen(QColor(255, 255, 0))
+        font3 = QFont("Arial", 12, QFont.Weight.Bold)
+        painter.setFont(font3)
+        painter.drawText(200, 40, f"{countdown}s")
     
     def _draw_bubbles(self, painter: QPainter):
         """Draw bubble particles"""
