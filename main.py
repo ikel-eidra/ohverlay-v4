@@ -171,12 +171,6 @@ class ZenFishApp:
                 pass
             # Default to basic if can't detect
             return 16.0
-        self.bubble_system = BubbleSystem(config=self.config)
-
-        # School mode state (None = solo betta mode)
-        self.school = None
-        self.school_skins = []
-        self.school_mode = False
 
     def _init_llm_brain(self):
         """Initialize the LLM Brain for intelligent orchestration."""
@@ -350,20 +344,6 @@ class ZenFishApp:
             species = "neon_tetra"
         self._on_species_changed(species, max(1, count))
 
-    @staticmethod
-    def _school_speed_scale_for(speed_key):
-        scale_map = {
-            "super_slow": 0.55,
-            "slow": 0.80,
-            "normal": 1.00,
-            "fast": 1.25,
-        }
-        return scale_map.get(speed_key, 1.00)
-
-    def _apply_school_speed(self, speed_key):
-        if self.school and hasattr(self.school, "set_speed_scale"):
-            self.school.set_speed_scale(self._school_speed_scale_for(speed_key))
-
     def _init_main_loop(self):
         """Set up the 30 FPS update loop."""
         self.timer = QTimer()
@@ -371,31 +351,24 @@ class ZenFishApp:
         self.timer.start(33)  # ~30 FPS
 
     def _tick(self):
-        """Main loop: update brain AI, then push state to all screen sectors."""
+        """Main loop: update creatures and render to screen sectors."""
         # Update non-biological widget-based objects (Assistant's division)
         # These are: geometric, energy_orbs, holographic, airplane, train, submarine
-        # (NOT jellyfish/iridescent_jellyfish/betta which use sector rendering)
+        # (Jellyfish use sector rendering like the original betta)
         if self.non_bio_skin:
             cursor = QCursor.pos()
             dt = 0.033  # ~30 FPS
             self.non_bio_skin.update_state(dt, cursor.x(), cursor.y())
             # Only return early for true non-bio widgets
-            # Jellyfish/betta still need sector updates
             if self.creature_type in ["geometric", "energy_orbs", "holographic", "airplane", "train", "submarine"]:
-                return  # Skip fish update for widget-based creatures
+                return  # Skip jellyfish update for widget-based creatures
         
-        if self.school_mode and self.school:
-            # School mode: update all fish via Boids engine
-            self.school.update()
-            school_states = self.school.get_all_states()
-            for sector in self.sectors:
-                sector.update_school_states(school_states)
-        else:
-            # Solo betta mode
-            self.brain.update()
-            fish_state = self.brain.get_state()
-            for sector in self.sectors:
-                sector.update_fish_state(fish_state)
+        # Deep sea creatures mode (jellyfish variants)
+        # Uses brain for movement AI, renders via sectors
+        self.brain.update()
+        fish_state = self.brain.get_state()
+        for sector in self.sectors:
+            sector.update_fish_state(fish_state)
 
     def _init_vision_foraging(self):
         """Optional OpenAI vision loop: hourly screenshot analysis for playful auto-feeding."""
@@ -410,7 +383,7 @@ class ZenFishApp:
         logger.info(f"Vision foraging enabled (every {interval_min} min).")
 
     def _run_vision_foraging(self):
-        if not self.llm_brain.can_use_vision_foraging or self.school_mode:
+        if not self.llm_brain.can_use_vision_foraging:
             return
 
         screen = QGuiApplication.primaryScreen()
@@ -474,11 +447,8 @@ class ZenFishApp:
 
     def _on_size_changed(self, scale):
         self.skin.size_scale = scale
-        for school_skin in self.school_skins:
-            if hasattr(school_skin, "size_scale"):
-                school_skin.size_scale = scale
         self.config.set("fish", "size_scale", scale)
-        logger.info(f"Fish size set to: {scale}x")
+        logger.info(f"Creature size set to: {scale}x")
 
     def _on_speed_changed(self, speed_key):
         """Adjust fish swimming speed."""
@@ -493,7 +463,6 @@ class ZenFishApp:
         self.brain._cruise_speed = preset["cruise"]
         self.brain._idle_speed = preset["idle"]
         self.brain._dart_speed = preset["dart"]
-        self._apply_school_speed(speed_key)
         self.config.set("fish", "speed", speed_key)
         logger.info(f"Swimming speed set to: {preset['label']}")
 
