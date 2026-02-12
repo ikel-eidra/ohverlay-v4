@@ -531,6 +531,13 @@ class AquariumSector(QMainWindow):
                 if should_render and idx < len(self.school_skins):
                     self.school_skins[idx].render(painter, local_pos, state)
         elif self.fish_state and self.should_render_fish:
+            # Debug: print skin type once per second
+            if hasattr(self, '_debug_timer'):
+                self._debug_timer += 1
+            else:
+                self._debug_timer = 0
+            if self._debug_timer % 30 == 0:  # ~1 second
+                print(f"DEBUG: Rendering with skin: {type(self.skin).__name__}")
             self.skin.render(painter, self.fish_local_pos, self.fish_state)
 
         painter.end()

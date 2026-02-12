@@ -372,13 +372,17 @@ class ZenFishApp:
 
     def _tick(self):
         """Main loop: update brain AI, then push state to all screen sectors."""
-        # Update non-biological objects (Assistant's division)
+        # Update non-biological widget-based objects (Assistant's division)
+        # These are: geometric, energy_orbs, holographic, airplane, train, submarine
+        # (NOT jellyfish/iridescent_jellyfish/betta which use sector rendering)
         if self.non_bio_skin:
-            # Use cursor position as target for non-bio objects
             cursor = QCursor.pos()
             dt = 0.033  # ~30 FPS
             self.non_bio_skin.update_state(dt, cursor.x(), cursor.y())
-            return  # Skip fish update when non-bio is active
+            # Only return early for true non-bio widgets
+            # Jellyfish/betta still need sector updates
+            if self.creature_type in ["geometric", "energy_orbs", "holographic", "airplane", "train", "submarine"]:
+                return  # Skip fish update for widget-based creatures
         
         if self.school_mode and self.school:
             # School mode: update all fish via Boids engine
@@ -663,7 +667,8 @@ class ZenFishApp:
             for sector in self.sectors:
                 sector.skin = self.skin
             self.bubble_system.queue_message("🎆 Switched to BIOLUMINESCENT JELLYFISH! Press Ctrl+Alt+F to trigger light show!", "ambient")
-            logger.info("Switched to Jellyfish mode")
+            logger.info(f"Switched to Jellyfish mode - Skin type: {type(self.skin).__name__}")
+            print(f"DEBUG: Switched to Jellyfish - Skin: {type(self.skin).__name__}")  # Debug output
             
         elif next_creature == "iridescent_jellyfish":
             self.creature_type = "iridescent_jellyfish"
