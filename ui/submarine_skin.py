@@ -1,19 +1,18 @@
 """
-Realistic Submarine v2.0 - Non-Biological Object with Health Reminder
-Fires torpedoes that travel to end of monitors
-AUTONOMOUS TORPEDO: Fires every 20 minutes for 20-20-20 eye rest rule
+Realistic Submarine v3.0 - Autonomous Screen Patrol
+Roams across desktop, fires torpedoes every 20 minutes for eye rest
 """
 
 import math
 import random
-from typing import List, Tuple, Optional
-from PySide6.QtCore import QPointF, QRectF, Qt
+from typing import List, Tuple
+from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QPainter, QPainterPath, QColor, QLinearGradient, 
     QRadialGradient, QPen, QBrush, QFont
 )
 from PySide6.QtWidgets import QWidget
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -21,27 +20,23 @@ class Torpedo:
     """Active torpedo projectile"""
     x: float
     y: float
-    angle: float  # Direction in radians
-    speed: float = 8.0
-    life: float = 5.0  # Seconds before detonation
-    wake_points: List[Tuple[float, float]] = None
-    
-    def __post_init__(self):
-        if self.wake_points is None:
-            self.wake_points = []
+    angle: float
+    speed: float = 10.0
+    life: float = 8.0
+    wake_points: List[Tuple[float, float]] = field(default_factory=list)
 
 
 class RealisticSubmarine(QWidget):
     """
-    Realistic nuclear submarine with torpedo firing capability
-    Designed for dual/triple monitor setups (up to 3840x1080)
+    Autonomous nuclear submarine that patrols the desktop
+    Fires torpedoes every 20 minutes for 20-20-20 eye rest reminder
     """
     
     def __init__(self, config, parent=None):
         super().__init__(parent)
         self.config = config
         
-        # Window setup - transparent, frameless, always on top
+        # Window setup
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
@@ -51,154 +46,159 @@ class RealisticSubmarine(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         
-        # Submarine state
-        self.x = 1920.0  # Center of dual monitors
-        self.y = 540.0   # Middle height
-        self.angle = 0.0  # Facing direction
-        self.target_angle = 0.0
+        # Screen bounds (dual monitor support)
+        self.bounds = [0, 0, 3840, 1080]
+        
+        # Position - start at center
+        self.x = 1920.0
+        self.y = 540.0
+        self.angle = 0.0
+        self.target_x = self.x
+        self.target_y = self.y
+        
+        # Movement
         self.speed = 0.0
-        self.max_speed = 3.0
+        self.max_speed = 2.5
+        self.cruise_speed = 1.5
         
-        # Visual states
-        self.depth = 0.0  # 0 = surface, 1 = deep
-        self.target_depth = 0.0
-        self.propeller_angle = 0.0
-        self.periscope_extended = 0.0  # 0-1 extension
+        # Patrol system
+        self.patrol_points = []
+        self.current_patrol_idx = 0
+        self._generate_patrol_route()
+        self.idle_timer = 0.0
         
-        # Animation timing
+        # Visual
         self.time = 0.0
-        self.bubble_timer = 0.0
+        self.propeller_angle = 0.0
+        self.depth = 0.0
+        
+        # Torpedoes
+        self.torpedoes: List[Torpedo] = []
         self.torpedo_cooldown = 0.0
         
-        # Collections
-        self.torpedoes: List[Torpedo] = []
+        # Bubbles
         self.bubbles: List[dict] = []
         
-        # Dimensions (scaled for visibility across monitors)
-        self.sub_length = 180
-        self.sub_width = 28
-        
-        # Color scheme - military grey with rust/wear
-        self.hull_color = QColor(80, 85, 90)  # Military grey
-        self.hull_highlight = QColor(110, 115, 120)
-        self.hull_shadow = QColor(50, 53, 56)
-        self.rust_color = QColor(120, 80, 50, 80)  # Subtle rust
-        
-        # Light effects
-        self.running_lights = True
-        self.light_blink_timer = 0.0
-        self.light_on = True
-        
-        # 20-20-20 Eye Rest Reminder System
-        # Every 20 minutes: fire torpedo to remind user to rest eyes
-        self.eye_rest_timer = 0.0  # Counts up to 20 minutes (1200 seconds)
-        self.eye_rest_interval = 20 * 60  # 20 minutes in seconds
-        self.eye_rest_message = "20-20-20 EYE REST! Look 20 feet away for 20 seconds!"
+        # 20-20-20 Eye Rest
+        self.eye_rest_timer = 0.0
+        self.eye_rest_interval = 20 * 60  # 20 minutes
         self.show_reminder = False
-        self.reminder_duration = 10.0  # Show message for 10 seconds
         self.reminder_timer = 0.0
         
-        self.resize(250, 150)
-        self.move(int(self.x - 125), int(self.y - 75))
+        # Colors
+        self.hull_color = QColor(80, 85, 90)
+        self.hull_highlight = QColor(110, 115, 120)
+        self.hull_shadow = QColor(50, 53, 56)
+        
+        self.resize(300, 200)
+        self.move(int(self.x - 150), int(self.y - 100))
+    
+    def _generate_patrol_route(self):
+        """Generate patrol waypoints across the screen"""
+        # Create a patrol route that covers the screen
+        margin = 200
+        width = self.bounds[2] - margin * 2
+        height = self.bounds[3] - margin * 2
+        
+        # Generate random patrol points
+        num_points = 6
+        self.patrol_points = []
+        for i in range(num_points):
+            px = margin + (width * i / (num_points - 1))
+            py = margin + random.uniform(0, height * 0.8)
+            self.patrol_points.append((px, py))
+        
+        # Shuffle for interesting route
+        random.shuffle(self.patrol_points)
+        self.current_patrol_idx = 0
+        self.target_x, self.target_y = self.patrol_points[0]
     
     def fire_torpedo(self):
-        """Fire a torpedo from the bow"""
+        """Fire a torpedo"""
         if self.torpedo_cooldown > 0:
             return
         
-        # Calculate bow position (front of submarine)
-        bow_offset = self.sub_length * 0.45
+        bow_offset = 80
         torpedo_x = self.x + math.cos(self.angle) * bow_offset
         torpedo_y = self.y + math.sin(self.angle) * bow_offset
         
-        # Create torpedo
         torpedo = Torpedo(
             x=torpedo_x,
             y=torpedo_y,
             angle=self.angle,
             speed=12.0,
-            life=8.0,
-            wake_points=[(torpedo_x, torpedo_y)]
+            life=10.0
         )
         
         self.torpedoes.append(torpedo)
-        self.torpedo_cooldown = 2.0  # 2 second cooldown
+        self.torpedo_cooldown = 3.0
         
-        # Add bubble burst at firing
-        for _ in range(10):
+        # Bubble burst
+        for _ in range(8):
             self.bubbles.append({
                 'x': torpedo_x + random.uniform(-5, 5),
                 'y': torpedo_y + random.uniform(-5, 5),
-                'size': random.uniform(2, 6),
+                'size': random.uniform(2, 5),
                 'life': 1.0,
-                'rise_speed': random.uniform(1.0, 2.5)
+                'rise': random.uniform(1.0, 2.0)
             })
     
-    def update_state(self, dt: float, target_x: float, target_y: float):
-        """Update submarine state"""
+    def update_state(self, dt: float, cursor_x: float, cursor_y: float):
+        """Update submarine - follows patrol route with occasional cursor interest"""
         self.time += dt
         
-        # Calculate angle to target
-        dx = target_x - self.x
-        dy = target_y - self.y
-        distance = math.sqrt(dx * dx + dy * dy)
+        # Update patrol target
+        dx = self.target_x - self.x
+        dy = self.target_y - self.y
+        distance = math.sqrt(dx*dx + dy*dy)
         
-        if distance > 10:
-            self.target_angle = math.atan2(dy, dx)
-            
-            # Smooth rotation
-            angle_diff = self.target_angle - self.angle
-            while angle_diff > math.pi:
-                angle_diff -= 2 * math.pi
-            while angle_diff < -math.pi:
-                angle_diff += 2 * math.pi
-            
-            self.angle += angle_diff * 2.0 * dt
-            
-            # Speed based on distance
-            target_speed = min(self.max_speed, distance * 0.5)
-            self.speed += (target_speed - self.speed) * 2.0 * dt
+        # Occasionally get interested in cursor (20% chance when close)
+        cursor_dx = cursor_x - self.x
+        cursor_dy = cursor_y - self.y
+        cursor_dist = math.sqrt(cursor_dx*cursor_dx + cursor_dy*cursor_dy)
+        
+        if cursor_dist < 300 and random.random() < 0.02:
+            # Temporarily interested in cursor
+            self.target_angle = math.atan2(cursor_dy, cursor_dx)
+            target_speed = self.cruise_speed * 0.5
         else:
-            self.speed *= 0.9
+            # Normal patrol behavior
+            if distance < 50:
+                # Reached waypoint, go to next
+                self.current_patrol_idx = (self.current_patrol_idx + 1) % len(self.patrol_points)
+                self.target_x, self.target_y = self.patrol_points[self.current_patrol_idx]
+                # Sometimes idle at waypoint
+                self.idle_timer = random.uniform(0, 2.0)
+            
+            if self.idle_timer > 0:
+                self.idle_timer -= dt
+                target_speed = 0.0
+            else:
+                self.target_angle = math.atan2(dy, dx)
+                target_speed = self.cruise_speed
         
-        # Move submarine
+        # Smooth rotation
+        angle_diff = self.target_angle - self.angle
+        while angle_diff > math.pi:
+            angle_diff -= 2 * math.pi
+        while angle_diff < -math.pi:
+            angle_diff += 2 * math.pi
+        self.angle += angle_diff * 2.0 * dt
+        
+        # Smooth speed change
+        self.speed += (target_speed - self.speed) * 2.0 * dt
+        
+        # Move
         self.x += math.cos(self.angle) * self.speed
         self.y += math.sin(self.angle) * self.speed
         
         # Keep in bounds
-        self.x = max(100, min(3740, self.x))
-        self.y = max(100, min(980, self.y))
+        margin = 100
+        self.x = max(margin, min(self.bounds[2] - margin, self.x))
+        self.y = max(margin, min(self.bounds[3] - margin, self.y))
         
-        # Update propeller
-        self.propeller_angle += self.speed * 0.5 * dt
-        
-        # Periscope extension based on depth
-        self.target_depth = 0.0 if random.random() > 0.7 else 0.3
-        self.depth += (self.target_depth - self.depth) * 0.5 * dt
-        self.periscope_extended = 1.0 - self.depth
-        
-        # Update torpedo cooldown
-        if self.torpedo_cooldown > 0:
-            self.torpedo_cooldown -= dt
-        
-        # 20-20-20 Eye Rest Reminder - Autonomous firing every 20 minutes
-        self.eye_rest_timer += dt
-        if self.eye_rest_timer >= self.eye_rest_interval:
-            self.eye_rest_timer = 0.0  # Reset timer
-            self.fire_torpedo()  # Fire torpedo as reminder
-            self.show_reminder = True
-            self.reminder_timer = self.reminder_duration
-            print("🔔 20-20-20 EYE REST! Look 20 feet away for 20 seconds!")
-        
-        # Show reminder countdown
-        if self.show_reminder:
-            self.reminder_timer -= dt
-            if self.reminder_timer <= 0:
-                self.show_reminder = False
-        
-        # Random torpedo fire chance (when moving fast) - disabled, only autonomous firing
-        # if self.speed > 1.5 and random.random() < 0.005:
-        #     self.fire_torpedo()
+        # Propeller animation
+        self.propeller_angle += self.speed * 0.3
         
         # Update torpedoes
         self._update_torpedoes(dt)
@@ -206,361 +206,183 @@ class RealisticSubmarine(QWidget):
         # Update bubbles
         self._update_bubbles(dt)
         
-        # Running lights blink
-        self.light_blink_timer += dt
-        if self.light_blink_timer > 1.0:
-            self.light_blink_timer = 0.0
-            self.light_on = not self.light_on
+        # Torpedo cooldown
+        if self.torpedo_cooldown > 0:
+            self.torpedo_cooldown -= dt
+        
+        # 20-20-20 Eye Rest
+        self.eye_rest_timer += dt
+        if self.eye_rest_timer >= self.eye_rest_interval:
+            self.eye_rest_timer = 0.0
+            self.fire_torpedo()
+            self.show_reminder = True
+            self.reminder_timer = 10.0
+        
+        if self.show_reminder:
+            self.reminder_timer -= dt
+            if self.reminder_timer <= 0:
+                self.show_reminder = False
         
         # Update window position
-        self.move(int(self.x - 125), int(self.y - 75))
+        self.move(int(self.x - 150), int(self.y - 100))
         self.update()
     
     def _update_torpedoes(self, dt: float):
-        """Update all active torpedoes"""
+        """Update torpedo positions"""
         for torpedo in self.torpedoes[:]:
-            # Move torpedo
             torpedo.x += math.cos(torpedo.angle) * torpedo.speed
             torpedo.y += math.sin(torpedo.angle) * torpedo.speed
-            
-            # Update life
             torpedo.life -= dt
             
-            # Add wake point
+            # Trail
             torpedo.wake_points.append((torpedo.x, torpedo.y))
             if len(torpedo.wake_points) > 20:
                 torpedo.wake_points.pop(0)
             
-            # Create bubble trail
-            if random.random() < 0.3:
-                self.bubbles.append({
-                    'x': torpedo.x + random.uniform(-3, 3),
-                    'y': torpedo.y + random.uniform(-3, 3),
-                    'size': random.uniform(1, 3),
-                    'life': 0.8,
-                    'rise_speed': random.uniform(0.5, 1.5)
-                })
-            
             # Remove if out of bounds or expired
             if (torpedo.life <= 0 or 
-                torpedo.x < -100 or torpedo.x > 3940 or
-                torpedo.y < -100 or torpedo.y > 1180):
+                torpedo.x < -100 or torpedo.x > self.bounds[2] + 100 or
+                torpedo.y < -100 or torpedo.y > self.bounds[3] + 100):
                 self.torpedoes.remove(torpedo)
     
     def _update_bubbles(self, dt: float):
         """Update bubble particles"""
         for bubble in self.bubbles[:]:
-            bubble['life'] -= dt
-            bubble['y'] -= bubble['rise_speed']
-            bubble['x'] += math.sin(self.time * 3 + bubble['y'] * 0.1) * 0.5
-            
+            bubble['life'] -= dt * 0.5
+            bubble['y'] -= bubble['rise']
             if bubble['life'] <= 0:
                 self.bubbles.remove(bubble)
     
     def paintEvent(self, event):
-        """Render submarine and torpedoes"""
+        """Render submarine"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        # Fill background with transparent
         painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
         
-        # Draw 20-20-20 Eye Rest Reminder
+        cx = 150
+        cy = 100
+        
+        # Eye rest reminder
         if self.show_reminder:
-            self._draw_eye_rest_reminder(painter)
+            self._draw_reminder(painter)
         
-        center_x = 125
-        center_y = 75
+        # Draw torpedoes
+        self._draw_torpedoes(painter)
         
-        # Save painter state
+        # Draw submarine
         painter.save()
-        painter.translate(center_x, center_y)
+        painter.translate(cx, cy)
         painter.rotate(math.degrees(self.angle))
         
-        # Draw submarine shadow
-        self._draw_shadow(painter)
+        self._draw_submarine_body(painter)
         
-        # Draw hull
-        self._draw_hull(painter)
-        
-        # Draw conning tower
-        self._draw_conning_tower(painter)
-        
-        # Draw propeller
-        self._draw_propeller(painter)
-        
-        # Draw running lights
-        self._draw_running_lights(painter)
-        
-        # Restore for torpedoes (world space)
         painter.restore()
-        
-        # Draw torpedoes (in screen space)
-        self._draw_torpedoes(painter)
         
         # Draw bubbles
         self._draw_bubbles(painter)
     
-    def _draw_shadow(self, painter: QPainter):
-        """Draw submarine shadow on seafloor"""
-        shadow_offset = 15 + self.depth * 30
-        shadow_color = QColor(0, 20, 40, 60)
+    def _draw_reminder(self, painter: QPainter):
+        """Draw 20-20-20 reminder"""
+        bg = QRectF(20, 20, 260, 50)
+        painter.fillRect(bg, QColor(0, 50, 100, 180))
+        painter.setPen(QPen(QColor(100, 200, 255), 2))
+        painter.drawRect(bg)
         
-        painter.save()
-        painter.translate(shadow_offset, shadow_offset * 0.5)
-        
-        path = QPainterPath()
-        path.addEllipse(
-            -self.sub_length * 0.45,
-            -self.sub_width * 0.4,
-            self.sub_length * 0.9,
-            self.sub_width * 0.8
-        )
-        
-        # Conning tower shadow
-        path.addRect(
-            -self.sub_length * 0.1,
-            -self.sub_width * 0.6 - self.periscope_extended * 20,
-            self.sub_length * 0.25,
-            self.sub_width * 0.5 + self.periscope_extended * 20
-        )
-        
-        painter.fillPath(path, QBrush(shadow_color))
-        painter.restore()
+        painter.setPen(QColor(255, 255, 255))
+        font = QFont("Arial", 10, QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.drawText(25, 40, "20-20-20 EYE REST!")
+        painter.drawText(25, 60, f"Look away! {int(self.reminder_timer)}s")
     
-    def _draw_hull(self, painter: QPainter):
-        """Draw main submarine hull"""
-        # Hull gradient
-        gradient = QLinearGradient(0, -self.sub_width * 0.5, 0, self.sub_width * 0.5)
-        gradient.setColorAt(0.0, self.hull_highlight)
-        gradient.setColorAt(0.3, self.hull_color)
-        gradient.setColorAt(0.7, self.hull_color)
-        gradient.setColorAt(1.0, self.hull_shadow)
-        
-        # Main hull shape - teardrop/cylinder hybrid
-        hull_path = QPainterPath()
-        
-        # Bow (front) - rounded
-        bow_x = self.sub_length * 0.45
-        bow_curve = self.sub_width * 0.3
-        
-        # Stern (back) - tapered
-        stern_x = -self.sub_length * 0.45
-        
-        # Top curve
-        hull_path.moveTo(stern_x, 0)
-        hull_path.cubicTo(
-            stern_x + self.sub_length * 0.2, -self.sub_width * 0.45,
-            bow_x - self.sub_length * 0.3, -self.sub_width * 0.5,
-            bow_x, 0
-        )
-        
-        # Bottom curve
-        hull_path.cubicTo(
-            bow_x - self.sub_length * 0.3, self.sub_width * 0.5,
-            stern_x + self.sub_length * 0.2, self.sub_width * 0.45,
-            stern_x, 0
-        )
-        
-        hull_path.closeSubpath()
-        
-        # Fill hull
-        painter.fillPath(hull_path, QBrush(gradient))
-        
-        # Hull outline
-        pen = QPen(QColor(40, 43, 46), 1.5)
-        painter.setPen(pen)
-        painter.drawPath(hull_path)
-        
-        # Hull details - rivet lines
-        painter.setPen(QPen(QColor(60, 63, 66), 1.0))
-        for i in range(4):
-            y_offset = -self.sub_width * 0.3 + i * self.sub_width * 0.2
-            painter.drawLine(
-                int(stern_x + 10), int(y_offset),
-                int(bow_x - 10), int(y_offset)
-            )
-        
-        # Rust patches (subtle weathering)
+    def _draw_submarine_body(self, painter: QPainter):
+        """Draw the submarine"""
+        # Shadow
+        painter.setBrush(QBrush(QColor(0, 20, 40, 60)))
         painter.setPen(Qt.PenStyle.NoPen)
-        for i in range(5):
-            rust_x = stern_x + self.sub_length * (0.2 + i * 0.15)
-            rust_y = -self.sub_width * 0.2 + random.uniform(-3, 3)
-            painter.setBrush(QBrush(self.rust_color))
-            painter.drawEllipse(
-                int(rust_x - 8), int(rust_y - 4),
-                16, 8
-            )
+        painter.drawEllipse(-70, 20, 140, 30)
         
-        # Bow sonar dome
-        sonar_gradient = QRadialGradient(
-            bow_x - 5, 0, self.sub_width * 0.4
-        )
-        sonar_gradient.setColorAt(0.0, QColor(100, 105, 110))
-        sonar_gradient.setColorAt(1.0, self.hull_color)
+        # Hull
+        hull_grad = QLinearGradient(0, -15, 0, 15)
+        hull_grad.setColorAt(0.0, self.hull_highlight)
+        hull_grad.setColorAt(0.5, self.hull_color)
+        hull_grad.setColorAt(1.0, self.hull_shadow)
         
-        painter.setBrush(QBrush(sonar_gradient))
-        painter.setPen(QPen(QColor(50, 53, 56), 1.0))
-        painter.drawEllipse(
-            int(bow_x - self.sub_width * 0.35),
-            int(-self.sub_width * 0.35),
-            int(self.sub_width * 0.7),
-            int(self.sub_width * 0.7)
-        )
-    
-    def _draw_conning_tower(self, painter: QPainter):
-        """Draw conning tower (sail) with periscope"""
-        tower_width = self.sub_width * 0.7
-        tower_length = self.sub_length * 0.25
-        tower_x = -self.sub_length * 0.05
-        tower_y = -self.sub_width * 0.5
+        painter.setBrush(QBrush(hull_grad))
+        painter.setPen(QPen(QColor(40, 43, 46), 2))
         
-        # Tower gradient
-        tower_gradient = QLinearGradient(0, tower_y - 15, 0, tower_y)
-        tower_gradient.setColorAt(0.0, self.hull_highlight)
-        tower_gradient.setColorAt(1.0, self.hull_shadow)
+        # Main hull
+        hull = QPainterPath()
+        hull.moveTo(80, 0)
+        hull.cubicTo(80, 12, 40, 15, -60, 12)
+        hull.lineTo(-70, 8)
+        hull.lineTo(-70, -8)
+        hull.lineTo(-60, -12)
+        hull.cubicTo(40, -15, 80, -12, 80, 0)
+        hull.closeSubpath()
+        painter.drawPath(hull)
         
-        # Tower shape
-        tower_path = QPainterPath()
-        tower_path.moveTo(tower_x - tower_length * 0.3, tower_y)
-        tower_path.lineTo(tower_x + tower_length * 0.7, tower_y)
-        tower_path.lineTo(tower_x + tower_length * 0.6, tower_y - 20)
-        tower_path.lineTo(tower_x - tower_length * 0.2, tower_y - 20)
-        tower_path.closeSubpath()
+        # Conning tower
+        tower_grad = QLinearGradient(0, -25, 0, -5)
+        tower_grad.setColorAt(0.0, self.hull_highlight)
+        tower_grad.setColorAt(1.0, self.hull_shadow)
+        painter.setBrush(QBrush(tower_grad))
         
-        painter.fillPath(tower_path, QBrush(tower_gradient))
-        painter.setPen(QPen(QColor(40, 43, 46), 1.5))
-        painter.drawPath(tower_path)
+        tower = QPainterPath()
+        tower.moveTo(20, -12)
+        tower.lineTo(40, -12)
+        tower.lineTo(35, -30)
+        tower.lineTo(5, -30)
+        tower.closeSubpath()
+        painter.drawPath(tower)
         
         # Periscope
-        scope_height = 25 + self.periscope_extended * 20
-        scope_x = tower_x + tower_length * 0.3
-        
-        # Periscope shaft
         painter.setBrush(QBrush(QColor(70, 73, 76)))
-        painter.setPen(QPen(QColor(40, 43, 46), 1.0))
-        painter.drawRect(
-            int(scope_x - 3), int(tower_y - scope_height),
-            6, int(scope_height)
-        )
+        painter.drawRect(10, -45, 6, 20)
+        painter.drawEllipse(8, -48, 10, 6)
         
-        # Periscope head (rotated based on angle)
-        head_y = tower_y - scope_height
-        painter.setBrush(QBrush(QColor(90, 93, 96)))
-        painter.drawEllipse(
-            int(scope_x - 5), int(head_y - 4),
-            10, 8
-        )
-        
-        # Periscope lens (blue reflection)
-        lens_gradient = QRadialGradient(scope_x + 2, head_y, 3)
-        lens_gradient.setColorAt(0.0, QColor(150, 200, 255))
-        lens_gradient.setColorAt(1.0, QColor(50, 100, 150))
-        painter.setBrush(QBrush(lens_gradient))
-        painter.drawEllipse(
-            int(scope_x + 1), int(head_y - 2),
-            4, 4
-        )
-        
-        # Dive planes on tower
-        painter.setBrush(QBrush(self.hull_color))
-        painter.setPen(QPen(QColor(40, 43, 46), 1.0))
-        # Front dive plane
-        painter.drawRect(
-            int(tower_x + tower_length * 0.5), int(tower_y - 5),
-            20, 4
-        )
-    
-    def _draw_propeller(self, painter: QPainter):
-        """Draw rotating propeller at stern"""
-        stern_x = -self.sub_length * 0.45
-        
-        # Propeller hub
-        painter.setBrush(QBrush(QColor(60, 63, 66)))
-        painter.setPen(QPen(QColor(30, 33, 36), 1.0))
-        painter.drawEllipse(
-            int(stern_x - 6), int(-6),
-            12, 12
-        )
-        
-        # Propeller blades (rotating)
+        # Propeller
         painter.save()
-        painter.translate(stern_x - 3, 0)
+        painter.translate(-70, 0)
         painter.rotate(math.degrees(self.propeller_angle))
-        
         painter.setBrush(QBrush(QColor(100, 103, 106)))
-        painter.setPen(QPen(QColor(50, 53, 56), 1.0))
-        
-        # 5 blades
         for i in range(5):
             painter.save()
             painter.rotate(i * 72)
-            
-            # Blade shape
-            blade = QPainterPath()
-            blade.moveTo(0, 0)
-            blade.quadTo(5, -8, 8, -15)
-            blade.lineTo(10, -14)
-            blade.quadTo(8, -6, 3, 0)
-            blade.closeSubpath()
-            
-            painter.fillPath(blade, QBrush(QColor(120, 123, 126)))
-            painter.drawPath(blade)
-            
+            painter.drawRect(-2, -15, 4, 15)
             painter.restore()
-        
         painter.restore()
         
-        # Propeller blur effect when spinning fast
-        if abs(self.speed) > 1.0:
-            blur_alpha = min(100, int(abs(self.speed) * 30))
-            blur_color = QColor(150, 155, 160, blur_alpha)
-            painter.setBrush(QBrush(blur_color))
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(
-                int(stern_x - 15), int(-15),
-                30, 30
-            )
-    
-    def _draw_running_lights(self, painter: QPainter):
-        """Draw navigation lights (blink)"""
-        if not self.light_on:
-            return
-        
-        # Port (left) - red
-        port_gradient = QRadialGradient(-self.sub_length * 0.3, -self.sub_width * 0.3, 8)
-        port_gradient.setColorAt(0.0, QColor(255, 50, 50, 200))
-        port_gradient.setColorAt(1.0, QColor(255, 0, 0, 0))
-        painter.setBrush(QBrush(port_gradient))
+        # Lights
+        # Red port light
+        red_glow = QRadialGradient(-40, -8, 8)
+        red_glow.setColorAt(0.0, QColor(255, 50, 50, 150))
+        red_glow.setColorAt(1.0, QColor(255, 0, 0, 0))
+        painter.setBrush(QBrush(red_glow))
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(
-            int(-self.sub_length * 0.3 - 8), int(-self.sub_width * 0.3 - 8),
-            16, 16
-        )
+        painter.drawEllipse(-48, -16, 16, 16)
         
-        # Starboard (right) - green
-        star_gradient = QRadialGradient(-self.sub_length * 0.3, self.sub_width * 0.3, 8)
-        star_gradient.setColorAt(0.0, QColor(50, 255, 50, 200))
-        star_gradient.setColorAt(1.0, QColor(0, 255, 0, 0))
-        painter.setBrush(QBrush(star_gradient))
-        painter.drawEllipse(
-            int(-self.sub_length * 0.3 - 8), int(self.sub_width * 0.3 - 8),
-            16, 16
-        )
+        # Green starboard light
+        green_glow = QRadialGradient(-40, 8, 8)
+        green_glow.setColorAt(0.0, QColor(50, 255, 50, 150))
+        green_glow.setColorAt(1.0, QColor(0, 255, 0, 0))
+        painter.setBrush(QBrush(green_glow))
+        painter.drawEllipse(-48, 0, 16, 16)
+        
+        # White stern light
+        white_glow = QRadialGradient(-65, 0, 10)
+        white_glow.setColorAt(0.0, QColor(255, 255, 255, 200))
+        white_glow.setColorAt(1.0, QColor(255, 255, 255, 0))
+        painter.setBrush(QBrush(white_glow))
+        painter.drawEllipse(-75, -10, 20, 20)
     
     def _draw_torpedoes(self, painter: QPainter):
         """Draw active torpedoes"""
-        # Transform from world to screen coordinates
-        sub_screen_x = self.x - self.pos().x()
-        sub_screen_y = self.y - self.pos().y()
-        
         for torpedo in self.torpedoes:
-            # Calculate screen position relative to submarine widget
-            tx = torpedo.x - self.pos().x()
-            ty = torpedo.y - self.pos().y()
+            # Transform to screen space
+            tx = torpedo.x - self.x + 150
+            ty = torpedo.y - self.y + 100
             
-            # Skip if too far
-            if abs(tx - 125) > 2000 or abs(ty - 75) > 1000:
+            if not (0 <= tx <= 300 and 0 <= ty <= 200):
                 continue
             
             painter.save()
@@ -568,206 +390,43 @@ class RealisticSubmarine(QWidget):
             painter.rotate(math.degrees(torpedo.angle))
             
             # Torpedo body
-            torp_gradient = QLinearGradient(-15, 0, 15, 0)
-            torp_gradient.setColorAt(0.0, QColor(80, 83, 86))
-            torp_gradient.setColorAt(0.5, QColor(120, 123, 126))
-            torp_gradient.setColorAt(1.0, QColor(60, 63, 66))
+            body = QPainterPath()
+            body.moveTo(15, 0)
+            body.lineTo(-10, -3)
+            body.lineTo(-12, 0)
+            body.lineTo(-10, 3)
+            body.closeSubpath()
             
-            body_path = QPainterPath()
-            body_path.moveTo(18, 0)
-            body_path.lineTo(-12, -4)
-            body_path.lineTo(-15, 0)
-            body_path.lineTo(-12, 4)
-            body_path.closeSubpath()
+            painter.setBrush(QBrush(QColor(80, 83, 86)))
+            painter.setPen(QPen(QColor(40, 43, 46), 1))
+            painter.drawPath(body)
             
-            painter.fillPath(body_path, QBrush(torp_gradient))
-            painter.setPen(QPen(QColor(40, 43, 46), 1.0))
-            painter.drawPath(body_path)
-            
-            # Propeller glow at rear
-            glow_gradient = QRadialGradient(-15, 0, 6)
-            glow_gradient.setColorAt(0.0, QColor(255, 200, 100, 180))
-            glow_gradient.setColorAt(1.0, QColor(255, 150, 50, 0))
-            painter.setBrush(QBrush(glow_gradient))
+            # Glow
+            glow = QRadialGradient(-10, 0, 8)
+            glow.setColorAt(0.0, QColor(255, 200, 100, 150))
+            glow.setColorAt(1.0, QColor(255, 150, 50, 0))
+            painter.setBrush(QBrush(glow))
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(
-                int(-18), int(-6),
-                12, 12
-            )
-            
-            # Propeller blur
-            painter.setBrush(QBrush(QColor(200, 200, 200, 100)))
-            painter.drawEllipse(
-                int(-16), int(-5),
-                4, 10
-            )
+            painter.drawEllipse(-14, -6, 12, 12)
             
             painter.restore()
-            
-            # Draw wake trail
-            if len(torpedo.wake_points) > 1:
-                wake_color = QColor(200, 220, 255, 60)
-                painter.setPen(QPen(wake_color, 2.0))
-                for i in range(len(torpedo.wake_points) - 1):
-                    p1 = torpedo.wake_points[i]
-                    p2 = torpedo.wake_points[i + 1]
-                    x1 = p1[0] - self.pos().x()
-                    y1 = p1[1] - self.pos().y()
-                    x2 = p2[0] - self.pos().x()
-                    y2 = p2[1] - self.pos().y()
-                    
-                    # Only draw if within reasonable range
-                    if abs(x1 - 125) < 1000 and abs(y1 - 75) < 600:
-                        painter.drawLine(int(x1), int(y1), int(x2), int(y2))
-    
-    def _draw_eye_rest_reminder(self, painter: QPainter):
-        """Draw 20-20-20 eye rest reminder text"""
-        # Draw semi-transparent background
-        bg_rect = QRectF(10, 10, 230, 60)
-        painter.fillRect(bg_rect, QColor(0, 50, 100, 180))
-        
-        # Draw border
-        painter.setPen(QPen(QColor(100, 200, 255, 200), 2))
-        painter.drawRect(bg_rect)
-        
-        # Draw text
-        painter.setPen(QColor(255, 255, 255))
-        font = QFont("Arial", 10, QFont.Weight.Bold)
-        painter.setFont(font)
-        
-        # Main message
-        painter.drawText(15, 30, "🔔 20-20-20 EYE REST!")
-        
-        # Sub message
-        font2 = QFont("Arial", 9)
-        painter.setFont(font2)
-        painter.drawText(15, 50, "Look 20 feet away for 20 seconds")
-        
-        # Countdown
-        countdown = int(self.reminder_timer)
-        painter.setPen(QColor(255, 255, 0))
-        font3 = QFont("Arial", 12, QFont.Weight.Bold)
-        painter.setFont(font3)
-        painter.drawText(200, 40, f"{countdown}s")
     
     def _draw_bubbles(self, painter: QPainter):
-        """Draw bubble particles"""
+        """Draw bubbles"""
         for bubble in self.bubbles:
-            bx = bubble['x'] - self.pos().x()
-            by = bubble['y'] - self.pos().y()
+            bx = bubble['x'] - self.x + 150
+            by = bubble['y'] - self.y + 100
             
-            # Skip if too far
-            if abs(bx - 125) > 1000 or abs(by - 75) > 600:
+            if not (0 <= bx <= 300 and 0 <= by <= 200):
                 continue
             
-            alpha = int(150 * bubble['life'])
             size = bubble['size'] * bubble['life']
+            alpha = int(150 * bubble['life'])
             
-            bubble_gradient = QRadialGradient(bx - size*0.3, by - size*0.3, size)
-            bubble_gradient.setColorAt(0.0, QColor(255, 255, 255, alpha))
-            bubble_gradient.setColorAt(0.7, QColor(200, 220, 255, alpha * 0.5))
-            bubble_gradient.setColorAt(1.0, QColor(150, 180, 220, 0))
+            grad = QRadialGradient(bx, by, size)
+            grad.setColorAt(0.0, QColor(255, 255, 255, alpha))
+            grad.setColorAt(1.0, QColor(200, 220, 255, 0))
             
-            painter.setBrush(QBrush(bubble_gradient))
-            painter.setPen(QPen(QColor(255, 255, 255, alpha * 0.5), 0.5))
-            painter.drawEllipse(
-                int(bx - size), int(by - size),
-                int(size * 2), int(size * 2)
-            )
-
-
-class SubmarineTorpedoOverlay(QWidget):
-    """
-    Separate overlay for torpedoes that travel across entire monitor space
-    This allows torpedoes to continue even when submarine turns
-    """
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool |
-            Qt.WindowType.WindowTransparentForInput
-        )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        
-        self.torpedoes: List[Torpedo] = []
-        self.setGeometry(0, 0, 3840, 1080)
-    
-    def add_torpedo(self, torpedo: Torpedo):
-        """Add a torpedo to the overlay"""
-        self.torpedoes.append(torpedo)
-    
-    def update_torpedoes(self, dt: float):
-        """Update all torpedoes"""
-        for torpedo in self.torpedoes[:]:
-            torpedo.x += math.cos(torpedo.angle) * torpedo.speed
-            torpedo.y += math.sin(torpedo.angle) * torpedo.speed
-            torpedo.life -= dt
-            
-            # Add wake point
-            torpedo.wake_points.append((torpedo.x, torpedo.y))
-            if len(torpedo.wake_points) > 30:
-                torpedo.wake_points.pop(0)
-            
-            # Remove if out of bounds or expired
-            if (torpedo.life <= 0 or 
-                torpedo.x < -200 or torpedo.x > 4040 or
-                torpedo.y < -200 or torpedo.y > 1280):
-                self.torpedoes.remove(torpedo)
-        
-        self.update()
-    
-    def paintEvent(self, event):
-        """Render torpedoes across full monitor space"""
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
-        
-        for torpedo in self.torpedoes:
-            painter.save()
-            painter.translate(torpedo.x, torpedo.y)
-            painter.rotate(math.degrees(torpedo.angle))
-            
-            # Torpedo body
-            torp_gradient = QLinearGradient(-15, 0, 15, 0)
-            torp_gradient.setColorAt(0.0, QColor(80, 83, 86))
-            torp_gradient.setColorAt(0.5, QColor(120, 123, 126))
-            torp_gradient.setColorAt(1.0, QColor(60, 63, 66))
-            
-            body_path = QPainterPath()
-            body_path.moveTo(20, 0)
-            body_path.quadTo(10, -5, -10, -5)
-            body_path.lineTo(-18, 0)
-            body_path.lineTo(-10, 5)
-            body_path.quadTo(10, 5, 20, 0)
-            body_path.closeSubpath()
-            
-            painter.fillPath(body_path, QBrush(torp_gradient))
-            painter.setPen(QPen(QColor(40, 43, 46), 1.0))
-            painter.drawPath(body_path)
-            
-            # Propeller glow
-            glow_gradient = QRadialGradient(-18, 0, 8)
-            glow_gradient.setColorAt(0.0, QColor(255, 200, 100, 200))
-            glow_gradient.setColorAt(0.5, QColor(255, 100, 50, 100))
-            glow_gradient.setColorAt(1.0, QColor(255, 50, 0, 0))
-            painter.setBrush(QBrush(glow_gradient))
+            painter.setBrush(QBrush(grad))
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(
-                int(-22), int(-8),
-                16, 16
-            )
-            
-            painter.restore()
-            
-            # Wake trail
-            if len(torpedo.wake_points) > 1:
-                for i in range(len(torpedo.wake_points) - 1):
-                    p1 = torpedo.wake_points[i]
-                    p2 = torpedo.wake_points[i + 1]
-                    alpha = int(100 * (i / len(torpedo.wake_points)) * (torpedo.life / 8.0))
-                    painter.setPen(QPen(QColor(200, 220, 255, alpha), 3.0 - i * 0.08))
-                    painter.drawLine(int(p1[0]), int(p1[1]), int(p2[0]), int(p2[1]))
+            painter.drawEllipse(int(bx - size), int(by - size), int(size * 2), int(size * 2))
