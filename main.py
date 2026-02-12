@@ -41,6 +41,7 @@ from ui.holographic_skin import HolographicInterface
 from ui.airplane_skin import Airplane
 from ui.train_skin import VintageSteamTrain
 from ui.submarine_skin import RealisticSubmarine
+from ui.balloon_skin import HotAirBalloon
 
 # LUMEX owns: Betta fish, Discus, Neon Tetra, Plants
 # ASSISTANT owns: Jellyfish, Geometric, Energy Orbs, Holographic, Airplane, Train, Submarine
@@ -144,6 +145,10 @@ class ZenFishApp:
             self.non_bio_skin = RealisticSubmarine(config=self.config)
             self.skin = None
             logger.info("Using SUBMARINE - Torpedo-firing underwater vessel!")
+        elif self.creature_type == "balloon":
+            self.non_bio_skin = HotAirBalloon(config=self.config)
+            self.skin = None
+            logger.info("Using HOT AIR BALLOON - Colorful floating adventure!")
         else:
             # Default to jellyfish
             self.creature_type = "jellyfish"
@@ -549,14 +554,15 @@ class ZenFishApp:
         # Creature cycle (ASSISTANT'S DIVISION only - Lumex owns Betta/Plants)
         # Deep sea creatures + Non-biological objects
         creature_cycle = [
-            "jellyfish",           # Deep sea - Lumex approved
-            "iridescent_jellyfish", # Deep sea rainbow - Lumex approved
+            "jellyfish",            # Deep sea
+            "iridescent_jellyfish", # Deep sea rainbow
             "geometric",            # Non-bio
             "energy_orbs",          # Non-bio
             "holographic",          # Non-bio
             "airplane",             # Non-bio
-            "train",                # Non-bio
-            "submarine"             # Non-bio
+            "train",                # Non-bio - Vintage steam
+            "submarine",            # Non-bio - With eye rest reminder
+            "balloon"               # Non-bio - Hot air balloon
         ]
         
         # Get next creature in cycle
@@ -649,6 +655,16 @@ class ZenFishApp:
             self.non_bio_skin.show()
             self.bubble_system.queue_message("🚢 Switched to SUBMARINE - Torpedo-firing vessel!", "ambient")
             logger.info("Switched to Submarine mode")
+            
+        elif next_creature == "balloon":
+            self.creature_type = "balloon"
+            self.skin = None
+            self.non_bio_skin = HotAirBalloon(config=self.config)
+            for sector in self.sectors:
+                sector.skin = None
+            self.non_bio_skin.show()
+            self.bubble_system.queue_message("🎈 Switched to HOT AIR BALLOON - Floating in the clouds!", "ambient")
+            logger.info("Switched to Hot Air Balloon mode")
         
         # Save preference
         self.config.set("creature_type", self.creature_type)
