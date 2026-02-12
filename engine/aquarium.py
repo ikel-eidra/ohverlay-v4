@@ -62,11 +62,11 @@ class AquariumSector(QMainWindow):
         self.school_mode = False
 
         # Procedural plant bed (grows over 3 days, then resets - daily growth cycle).
+        self._taskbar_height = 40  # Standard Windows taskbar height - MUST be before _build_plant_layout
         self._plant_cycle_start = time.time()
         self._plant_grow_days = 3  # Full growth over 3 days
         self._plant_grow_seconds = self._plant_grow_days * 24 * 60 * 60
         self._plant_stems = self._build_plant_layout()
-        self._taskbar_height = 40  # Standard Windows taskbar height
 
         # Ambient leaf drift cycle (lightweight): configurable burst cadence.
         ambient_cfg = self.config.get("ambient") if self.config and hasattr(self.config, "get") else {}
