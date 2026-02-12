@@ -309,7 +309,7 @@ class RealisticBettaSkin:
         # Gill plate edge highlight
         painter.setPen(QPen(self._make_color([255,255,255], 50), 0.8))
         painter.setBrush(Qt.NoBrush)
-        painter.drawArc(QPointF(8, -5), 8, 10, 90 * 16, 90 * 16)
+        painter.drawArc(4, -10, 8, 10, 90 * 16, 90 * 16)
 
     def _draw_eye_realistic(self, painter, mood):
         """
