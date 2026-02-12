@@ -22,6 +22,7 @@ from engine.sanctuary import SanctuaryEngine
 from engine.school import FishSchool
 from engine.llm_brain import LLMBrain
 from ui.skin import FishSkin
+from ui.skin_realistic import RealisticBettaSkin
 from ui.tetra_skin import NeonTetraSkin
 from ui.bubbles import BubbleSystem
 from ui.tray import SystemTray
@@ -79,7 +80,13 @@ class ZenFishApp:
 
     def _init_rendering(self):
         """Create the fish skin renderer and bubble system."""
-        self.skin = FishSkin(config=self.config)
+        # Use realistic skin by default (can toggle back to original)
+        self.use_realistic_skin = True
+        if self.use_realistic_skin:
+            self.skin = RealisticBettaSkin(config=self.config)
+            logger.info("Using ULTRA-REALISTIC Betta skin (v2.0)")
+        else:
+            self.skin = FishSkin(config=self.config)
         self.bubble_system = BubbleSystem(config=self.config)
 
         # School mode state (None = solo betta mode)
