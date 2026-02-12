@@ -98,7 +98,7 @@ class ZenFishApp:
         # Get creature type from config (default: jellyfish - Lumex owns Betta now)
         try:
             creature_type = self.config.get("creature_type", "jellyfish")
-            if creature_type in ["betta", "discus", "neon_tetra"]:
+            if not creature_type or creature_type in ["betta", "discus", "neon_tetra"]:
                 # Betta/Tetra/Discus moved to LUMEX - default to jellyfish
                 creature_type = "jellyfish"
         except:
