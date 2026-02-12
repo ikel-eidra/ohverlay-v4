@@ -124,30 +124,37 @@ class ZenFishApp:
         elif self.creature_type == "geometric":
             self.non_bio_skin = GeometricShapes(config=self.config)
             self.skin = None
+            self.non_bio_skin.show()
             logger.info("Using GEOMETRIC SHAPES - Floating crystalline formations!")
         elif self.creature_type == "energy_orbs":
             self.non_bio_skin = EnergyOrbSystem(config=self.config)
             self.skin = None
+            self.non_bio_skin.show()
             logger.info("Using ENERGY ORBS - Glowing orbs with light trails!")
         elif self.creature_type == "holographic":
             self.non_bio_skin = HolographicInterface(config=self.config)
             self.skin = None
+            self.non_bio_skin.show()
             logger.info("Using HOLOGRAPHIC INTERFACE - Sci-fi data display!")
         elif self.creature_type == "airplane":
             self.non_bio_skin = Airplane(config=self.config)
             self.skin = None
+            self.non_bio_skin.show()
             logger.info("Using AIRPLANE - Jet aircraft with contrails!")
         elif self.creature_type == "train":
             self.non_bio_skin = VintageSteamTrain(config=self.config)
             self.skin = None
+            self.non_bio_skin.show()
             logger.info("Using TRAIN - Steam locomotive on desktop edges!")
         elif self.creature_type == "submarine":
             self.non_bio_skin = RealisticSubmarine(config=self.config)
             self.skin = None
+            self.non_bio_skin.show()
             logger.info("Using SUBMARINE - Torpedo-firing underwater vessel!")
         elif self.creature_type == "balloon":
             self.non_bio_skin = HotAirBalloon(config=self.config)
             self.skin = None
+            self.non_bio_skin.show()
             logger.info("Using HOT AIR BALLOON - Colorful floating adventure!")
         else:
             # Default to jellyfish
