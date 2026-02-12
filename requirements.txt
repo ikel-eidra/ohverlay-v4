@@ -46,7 +46,7 @@ annotated-types>=0.6.0
 # Image processing (for vision features)
 Pillow>=10.0.0
 
-# System integration
+# System integration (for RAM detection)
 psutil>=5.9.6
 
 # Type hints

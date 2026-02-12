@@ -80,13 +80,37 @@ class ZenFishApp:
 
     def _init_rendering(self):
         """Create the fish skin renderer and bubble system."""
-        # Use realistic skin by default (can toggle back to original)
-        self.use_realistic_skin = True
-        if self.use_realistic_skin:
+        # Check system RAM to determine rendering quality
+        ram_gb = self._get_system_ram_gb()
+        
+        # 32GB+ RAM = Ultra-realistic, Lower = Basic efficient
+        if ram_gb >= 28:  # Some systems report slightly less than 32
+            self.use_realistic_skin = True
             self.skin = RealisticBettaSkin(config=self.config)
-            logger.info("Using ULTRA-REALISTIC Betta skin (v2.0)")
+            logger.info(f"Using ULTRA-REALISTIC Betta skin (v2.0) - {ram_gb:.1f}GB RAM detected")
         else:
+            self.use_realistic_skin = False
             self.skin = FishSkin(config=self.config)
+            logger.info(f"Using optimized BASIC Betta skin - {ram_gb:.1f}GB RAM detected (32GB+ recommended for ultra-realistic)")
+    
+    def _get_system_ram_gb(self):
+        """Get total system RAM in GB."""
+        try:
+            import psutil
+            return psutil.virtual_memory().total / (1024**3)
+        except ImportError:
+            # Fallback: try reading from Windows WMI
+            try:
+                import subprocess
+                result = subprocess.run(['wmic', 'computersystem', 'get', 'totalphysicalmemory'], 
+                                      capture_output=True, text=True)
+                lines = [line.strip() for line in result.stdout.split('\n') if line.strip().isdigit()]
+                if lines:
+                    return int(lines[0]) / (1024**3)
+            except:
+                pass
+            # Default to basic if can't detect
+            return 16.0
         self.bubble_system = BubbleSystem(config=self.config)
 
         # School mode state (None = solo betta mode)

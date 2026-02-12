@@ -146,37 +146,37 @@ class AquariumSector(QMainWindow):
 
     def _build_plant_layout(self):
         """
-        Build a compact plant cluster near the taskbar (bottom right where time/date is).
-        Like a real aquarium, plants are grouped together, not spread across the whole tank.
+        Build a realistic plant cluster near the taskbar (bottom right where time/date is).
+        Mix of Java Fern, Anubias, and Cryptocoryne for authentic aquascape look.
         """
         stems = []
         width = max(240, self.screen_geometry.width())
-        height = max(200, self.screen_geometry.height())
         
-        # Place plants near bottom right (taskbar area with time/date)
-        # In a 1920x1080 screen: taskbar is ~bottom 40px, time is right side
-        taskbar_area_width = min(400, width * 0.25)  # Rightmost 25% or 400px
-        taskbar_x_start = width - taskbar_area_width - 20  # Start from right side
+        # Place plants near bottom right (taskbar area)
+        taskbar_area_width = min(450, width * 0.28)
+        taskbar_x_start = width - taskbar_area_width - 30
         
-        # 5-6 stems clustered together
-        count = 5 if width < 1500 else 6
+        # 6-8 plants in natural cluster
+        count = 6 if width < 1500 else 8
         cluster_center_x = taskbar_x_start + taskbar_area_width * 0.5
-        cluster_spread = min(120, taskbar_area_width * 0.4)  # Tight cluster
+        cluster_spread = min(140, taskbar_area_width * 0.45)
+        
+        # Plant types for variety
+        plant_types = ["java_fern", "anubias", "crypt", "java_fern", "crypt", "anubias"]
         
         for i in range(count):
-            # Cluster around center point with small variation
             offset_x = random.uniform(-cluster_spread, cluster_spread)
-            # Taller stems in back, shorter in front for depth
-            height_bias = (i / max(1, count - 1)) - 0.5  # -0.5 to 0.5
-            x_pos = cluster_center_x + offset_x + height_bias * 30
+            # Back plants taller, front plants shorter
+            depth_factor = random.uniform(0.7, 1.15)
+            x_pos = cluster_center_x + offset_x
             
             stems.append({
                 "x": float(x_pos),
                 "phase": random.uniform(0.0, math.pi * 2),
-                "sway": random.uniform(6.0, 14.0),
-                "thickness": random.uniform(2.4, 4.8),
-                "h_mult": random.uniform(0.86, 1.10),
-                "style": "broadleaf" if i % 2 == 0 else "feathery",
+                "sway": random.uniform(4.0, 10.0),
+                "thickness": random.uniform(2.0, 4.0),
+                "h_mult": depth_factor,
+                "plant_type": plant_types[i % len(plant_types)],
             })
         return stems
 
@@ -189,57 +189,295 @@ class AquariumSector(QMainWindow):
         return self._plant_trim_ratio + (1.0 - self._plant_trim_ratio) * grow_t
 
     def _draw_plants(self, painter):
+        """
+        Draw realistic aquatic plants (Java Fern, Anubias, Cryptocoryne style).
+        Features:
+        - Rhizome/base structure
+        - Individual leaves with proper shapes
+        - Leaf veins and midribs
+        - Gentle swaying motion
+        - Multiple plant types in cluster
+        """
         if not self._plant_stems:
             return
         h = self.screen_geometry.height()
-        waterline = 8
         bottom = h + 5
         growth_ratio = self._plant_height_ratio()
         t = time.time()
 
         for stem in self._plant_stems:
-            stem_h = h * 0.90 * growth_ratio * stem["h_mult"]
-            top_y = max(waterline, bottom - stem_h)
-            x = stem["x"]
-            sway = math.sin(t * 0.42 + stem["phase"]) * stem["sway"]
-
-            path = QPainterPath()
-            path.moveTo(x, bottom)
-            path.cubicTo(
-                x + sway * 0.28, bottom - stem_h * 0.33,
-                x - sway * 0.75, bottom - stem_h * 0.68,
-                x + sway, top_y
-            )
-
-            grad = QLinearGradient(x, bottom, x, top_y)
-            grad.setColorAt(0.0, QColor(28, 108, 66, 190))
-            grad.setColorAt(0.55, QColor(78, 194, 118, 175))
-            grad.setColorAt(1.0, QColor(174, 250, 192, 136))
-            pen = QPen(QBrush(grad), stem["thickness"])
-            pen.setCapStyle(Qt.RoundCap)
-            painter.setPen(pen)
-            painter.drawPath(path)
-
-            painter.setPen(Qt.NoPen)
-            if stem.get("style") == "broadleaf":
-                # Alternate broad leaves like stem plants in real aquariums.
-                for i in range(1, 7):
-                    fy = bottom - stem_h * (0.18 + i * 0.115)
-                    side = -1 if i % 2 == 0 else 1
-                    fx = x + side * (5.5 + i * 0.6) + math.sin(t * 0.8 + i + stem["phase"]) * 1.6
-                    leaf_w = 10 + i * 0.8
-                    leaf_h = 4.8 + i * 0.35
-                    painter.setBrush(QColor(138, 236, 156, 105))
-                    painter.drawEllipse(QPointF(fx, fy), leaf_w * 0.45, leaf_h)
+            plant_height = h * 0.75 * growth_ratio * stem["h_mult"]
+            base_x = stem["x"]
+            
+            # Plant sway based on current
+            sway = math.sin(t * 0.35 + stem["phase"]) * stem["sway"] * 0.5
+            
+            # Draw based on plant type
+            plant_type = stem.get("plant_type", "java_fern")
+            
+            if plant_type == "java_fern":
+                self._draw_java_fern(painter, base_x, bottom, plant_height, sway, t, stem)
+            elif plant_type == "anubias":
+                self._draw_anubias(painter, base_x, bottom, plant_height, sway, t, stem)
+            elif plant_type == "crypt":
+                self._draw_cryptocoryne(painter, base_x, bottom, plant_height, sway, t, stem)
             else:
-                # Feather-like tufts for texture variety.
-                painter.setPen(QPen(QColor(146, 235, 164, 88), 0.9))
-                for i in range(1, 9):
-                    fy = bottom - stem_h * (0.10 + i * 0.09)
-                    reach = 5 + i * 1.4
-                    bend = math.sin(stem["phase"] + i * 0.8 + t * 0.7) * 2.4
-                    painter.drawLine(QPointF(x, fy), QPointF(x + reach + bend, fy - 2.0))
-                    painter.drawLine(QPointF(x, fy), QPointF(x - reach + bend * 0.2, fy - 1.6))
+                self._draw_java_fern(painter, base_x, bottom, plant_height, sway, t, stem)
+
+    def _draw_java_fern(self, painter, base_x, bottom, height, sway, t, stem):
+        """
+        Java Fern style - long stem with pointed, serrated leaves.
+        Leaves grow from rhizome with irregular spacing.
+        """
+        # Rhizome (horizontal base)
+        rhizome_y = bottom - 15
+        rhizome_path = QPainterPath()
+        rhizome_path.moveTo(base_x - 20, rhizome_y)
+        rhizome_path.quadTo(base_x, rhizome_y - 5, base_x + 20, rhizome_y)
+        
+        painter.setPen(QPen(QColor(45, 95, 45, 180), 3))
+        painter.drawPath(rhizome_path)
+        
+        # Draw 5-7 leaves per plant
+        num_leaves = 5 + int(stem["h_mult"] * 2)
+        for i in range(num_leaves):
+            # Leaf attachment point on rhizome
+            attach_t = (i / max(1, num_leaves - 1)) * 2 - 1  # -1 to 1
+            attach_x = base_x + attach_t * 18
+            attach_y = rhizome_y - 3
+            
+            # Leaf growth direction
+            angle = -90 + attach_t * 45 + math.sin(t * 0.5 + i + stem["phase"]) * 5
+            angle_rad = math.radians(angle)
+            
+            # Leaf dimensions
+            leaf_length = (height * 0.4) * (0.7 + 0.3 * math.sin(i * 1.3))
+            leaf_width = 12 + 6 * math.sin(i * 0.7)
+            
+            # Calculate leaf tip with sway
+            tip_x = attach_x + math.cos(angle_rad) * leaf_length + sway * (1 + i * 0.2)
+            tip_y = attach_y + math.sin(angle_rad) * leaf_length
+            
+            # Leaf shape - pointed with serrated edges
+            leaf_path = QPainterPath()
+            leaf_path.moveTo(attach_x, attach_y)
+            
+            # Left side with serrations
+            for j in range(1, 8):
+                seg_t = j / 8
+                lx = attach_x + (tip_x - attach_x) * seg_t
+                ly = attach_y + (tip_y - attach_y) * seg_t
+                # Serrated edge
+                serration = math.sin(j * 2.5) * 2 * (1 - seg_t)
+                offset_x = -math.sin(angle_rad) * (leaf_width * 0.5 * (1 - seg_t * 0.3) + serration)
+                offset_y = math.cos(angle_rad) * (leaf_width * 0.5 * (1 - seg_t * 0.3) + serration)
+                if j == 1:
+                    leaf_path.lineTo(lx + offset_x, ly + offset_y)
+                else:
+                    leaf_path.quadTo(lx + offset_x * 0.5, ly + offset_y * 0.5, lx + offset_x, ly + offset_y)
+            
+            # Tip
+            leaf_path.lineTo(tip_x, tip_y)
+            
+            # Right side
+            for j in range(7, 0, -1):
+                seg_t = j / 8
+                lx = attach_x + (tip_x - attach_x) * seg_t
+                ly = attach_y + (tip_y - attach_y) * seg_t
+                serration = math.sin(j * 2.5 + math.pi) * 2 * (1 - seg_t)
+                offset_x = math.sin(angle_rad) * (leaf_width * 0.5 * (1 - seg_t * 0.3) + serration)
+                offset_y = -math.cos(angle_rad) * (leaf_width * 0.5 * (1 - seg_t * 0.3) + serration)
+                leaf_path.quadTo(lx + offset_x * 0.5, ly + offset_y * 0.5, lx + offset_x, ly + offset_y)
+            
+            leaf_path.closeSubpath()
+            
+            # Leaf gradient
+            leaf_grad = QLinearGradient(attach_x, attach_y, tip_x, tip_y)
+            leaf_grad.setColorAt(0.0, QColor(35, 85, 35, 200))
+            leaf_grad.setColorAt(0.5, QColor(55, 130, 55, 180))
+            leaf_grad.setColorAt(1.0, QColor(75, 160, 75, 160))
+            
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QBrush(leaf_grad))
+            painter.drawPath(leaf_path)
+            
+            # Central vein (midrib)
+            painter.setPen(QPen(QColor(25, 70, 25, 120), 1.2))
+            painter.drawLine(int(attach_x), int(attach_y), int(tip_x), int(tip_y))
+
+    def _draw_anubias(self, painter, base_x, bottom, height, sway, t, stem):
+        """
+        Anubias style - broad, oval leaves on long petioles.
+        Dark green, thick, waxy appearance.
+        """
+        # Rhizome
+        rhizome_y = bottom - 12
+        painter.setPen(QPen(QColor(35, 75, 35, 200), 4))
+        painter.drawLine(int(base_x - 15), int(rhizome_y), int(base_x + 15), int(rhizome_y))
+        
+        # Draw 4-6 broad leaves
+        num_leaves = 4 + int(stem["h_mult"] * 2)
+        for i in range(num_leaves):
+            # Petiole (leaf stem)
+            attach_t = (i / max(1, num_leaves - 1)) * 1.6 - 0.8
+            attach_x = base_x + attach_t * 12
+            
+            # Petiole angle
+            angle = -80 + attach_t * 30 + math.sin(t * 0.4 + i * 1.2) * 3
+            angle_rad = math.radians(angle)
+            
+            petiole_length = height * 0.35
+            leaf_base_x = attach_x + math.cos(angle_rad) * petiole_length + sway * 0.5
+            leaf_base_y = rhizome_y + math.sin(angle_rad) * petiole_length
+            
+            # Draw petiole
+            painter.setPen(QPen(QColor(40, 90, 40, 160), 2))
+            painter.drawLine(int(attach_x), int(rhizome_y - 3), int(leaf_base_x), int(leaf_base_y))
+            
+            # Leaf blade - oval shape
+            leaf_length = height * 0.35
+            leaf_width = height * 0.22
+            
+            # Leaf points
+            tip_x = leaf_base_x + math.cos(angle_rad) * leaf_length
+            tip_y = leaf_base_y + math.sin(angle_rad) * leaf_length
+            
+            # Create oval leaf shape
+            leaf_path = QPainterPath()
+            leaf_path.moveTo(leaf_base_x, leaf_base_y)
+            
+            # Left curve
+            ctrl1_x = leaf_base_x - math.sin(angle_rad) * leaf_width * 0.6
+            ctrl1_y = leaf_base_y + math.cos(angle_rad) * leaf_width * 0.6
+            ctrl2_x = tip_x - math.sin(angle_rad) * leaf_width * 0.3
+            ctrl2_y = tip_y + math.cos(angle_rad) * leaf_width * 0.3
+            leaf_path.cubicTo(ctrl1_x, ctrl1_y, ctrl2_x, ctrl2_y, tip_x, tip_y)
+            
+            # Right curve
+            ctrl3_x = tip_x + math.sin(angle_rad) * leaf_width * 0.3
+            ctrl3_y = tip_y - math.cos(angle_rad) * leaf_width * 0.3
+            ctrl4_x = leaf_base_x + math.sin(angle_rad) * leaf_width * 0.6
+            ctrl4_y = leaf_base_y - math.cos(angle_rad) * leaf_width * 0.6
+            leaf_path.cubicTo(ctrl3_x, ctrl3_y, ctrl4_x, ctrl4_y, leaf_base_x, leaf_base_y)
+            
+            # Dark green waxy gradient
+            leaf_grad = QRadialGradient(leaf_base_x + (tip_x - leaf_base_x) * 0.4, 
+                                       leaf_base_y + (tip_y - leaf_base_y) * 0.4, 
+                                       leaf_length * 0.6)
+            leaf_grad.setColorAt(0.0, QColor(45, 105, 45, 220))
+            leaf_grad.setColorAt(0.6, QColor(35, 85, 35, 200))
+            leaf_grad.setColorAt(1.0, QColor(25, 65, 25, 180))
+            
+            painter.setPen(QPen(QColor(20, 60, 20, 100), 0.8))
+            painter.setBrush(QBrush(leaf_grad))
+            painter.drawPath(leaf_path)
+            
+            # Midrib and veins
+            painter.setPen(QPen(QColor(60, 130, 60, 150), 1.5))
+            painter.drawLine(int(leaf_base_x), int(leaf_base_y), int(tip_x), int(tip_y))
+            
+            # Lateral veins
+            for v in range(3, 8):
+                vt = v / 10
+                vx = leaf_base_x + (tip_x - leaf_base_x) * vt
+                vy = leaf_base_y + (tip_y - leaf_base_y) * vt
+                vein_len = leaf_width * 0.4 * (1 - abs(vt - 0.5))
+                painter.setPen(QPen(QColor(50, 110, 50, 100), 0.6))
+                painter.drawLine(int(vx), int(vy), int(vx - math.sin(angle_rad) * vein_len), 
+                               int(vy + math.cos(angle_rad) * vein_len))
+                painter.drawLine(int(vx), int(vy), int(vx + math.sin(angle_rad) * vein_len), 
+                               int(vy - math.cos(angle_rad) * vein_len))
+
+    def _draw_cryptocoryne(self, painter, base_x, bottom, height, sway, t, stem):
+        """
+        Cryptocoryne style - rosette of ruffled, textured leaves.
+        Shorter, bushier growth form.
+        """
+        # Crown/base
+        crown_y = bottom - 10
+        crown_size = 8 + stem["h_mult"] * 4
+        
+        painter.setPen(Qt.NoPen)
+        crown_grad = QRadialGradient(base_x, crown_y, crown_size)
+        crown_grad.setColorAt(0.0, QColor(55, 120, 55, 200))
+        crown_grad.setColorAt(1.0, QColor(35, 80, 35, 150))
+        painter.setBrush(QBrush(crown_grad))
+        painter.drawEllipse(QPointF(base_x, crown_y), crown_size, crown_size * 0.6)
+        
+        # Rosette of 6-10 leaves
+        num_leaves = 6 + int(stem["h_mult"] * 3)
+        for i in range(num_leaves):
+            # Leaves arranged in spiral/rosette
+            angle = (i / num_leaves) * 360 + math.sin(t * 0.3 + i) * 5
+            angle_rad = math.radians(angle)
+            
+            # Varying leaf sizes (inner smaller, outer larger)
+            size_factor = 0.5 + (i / num_leaves) * 0.5
+            leaf_length = height * 0.3 * size_factor
+            leaf_width = height * 0.18 * size_factor
+            
+            # Leaf base
+            leaf_base_x = base_x + math.cos(angle_rad) * 5
+            leaf_base_y = crown_y + math.sin(angle_rad) * 3
+            
+            # Leaf tip with sway
+            tip_x = leaf_base_x + math.cos(angle_rad) * leaf_length + sway * 0.3
+            tip_y = leaf_base_y + math.sin(angle_rad) * leaf_length
+            
+            # Ruffled leaf shape (crypts have wavy edges)
+            leaf_path = QPainterPath()
+            leaf_path.moveTo(leaf_base_x, leaf_base_y)
+            
+            # Left side with ruffles
+            points_left = []
+            for j in range(6):
+                seg_t = (j + 1) / 6
+                lx = leaf_base_x + (tip_x - leaf_base_x) * seg_t
+                ly = leaf_base_y + (tip_y - leaf_base_y) * seg_t
+                # Ruffle effect
+                ruffle = math.sin(j * 1.8 + t * 0.5) * 3 * (1 - seg_t * 0.5)
+                offset_x = -math.sin(angle_rad) * (leaf_width * 0.5 * math.sin(seg_t * math.pi) + ruffle)
+                offset_y = math.cos(angle_rad) * (leaf_width * 0.5 * math.sin(seg_t * math.pi) + ruffle)
+                points_left.append((lx + offset_x, ly + offset_y))
+            
+            for px, py in points_left:
+                leaf_path.lineTo(px, py)
+            
+            # Tip
+            leaf_path.lineTo(tip_x, tip_y)
+            
+            # Right side
+            for j in range(5, -1, -1):
+                seg_t = (j + 1) / 6
+                lx = leaf_base_x + (tip_x - leaf_base_x) * seg_t
+                ly = leaf_base_y + (tip_y - leaf_base_y) * seg_t
+                ruffle = math.sin(j * 1.8 + math.pi + t * 0.5) * 3 * (1 - seg_t * 0.5)
+                offset_x = math.sin(angle_rad) * (leaf_width * 0.5 * math.sin(seg_t * math.pi) + ruffle)
+                offset_y = -math.cos(angle_rad) * (leaf_width * 0.5 * math.sin(seg_t * math.pi) + ruffle)
+                leaf_path.lineTo(lx + offset_x, ly + offset_y)
+            
+            leaf_path.closeSubpath()
+            
+            # Textured green gradient
+            leaf_grad = QLinearGradient(leaf_base_x, leaf_base_y, tip_x, tip_y)
+            leaf_grad.setColorAt(0.0, QColor(50, 115, 50, 210))
+            leaf_grad.setColorAt(0.4, QColor(65, 140, 65, 190))
+            leaf_grad.setColorAt(1.0, QColor(80, 160, 80, 170))
+            
+            painter.setPen(QPen(QColor(30, 80, 30, 80), 0.6))
+            painter.setBrush(QBrush(leaf_grad))
+            painter.drawPath(leaf_path)
+            
+            # Texture lines (crypt veins)
+            painter.setPen(QPen(QColor(70, 130, 70, 100), 0.8))
+            for v in range(2, 5):
+                vt = v / 6
+                vx = leaf_base_x + (tip_x - leaf_base_x) * vt
+                vy = leaf_base_y + (tip_y - leaf_base_y) * vt
+                # Short texture marks
+                mark_len = 4 * (1 - vt)
+                painter.drawLine(int(vx - math.sin(angle_rad) * mark_len), int(vy + math.cos(angle_rad) * mark_len),
+                               int(vx + math.sin(angle_rad) * mark_len), int(vy - math.cos(angle_rad) * mark_len))
 
     def _draw_pellets(self, painter, pellets):
         if not pellets:
