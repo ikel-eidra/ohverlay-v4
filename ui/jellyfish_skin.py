@@ -81,7 +81,12 @@ class BioluminescentJellyfishSkin:
         self.update_and_render(painter, x, y, angle, fish_state)
 
     def update_and_render(self, painter, x, y, angle, fish_state):
-        """Render the bioluminescent jellyfish."""
+        """Render the bioluminescent jellyfish.
+        
+        NOTE: Jellyfish stay UPRIGHT - they don't roll over like fish!
+        Tentacles always hang DOWN due to gravity.
+        Only the bell pulses for propulsion.
+        """
         vx = fish_state.get("velocity", [0, 0])[0]
         vy = fish_state.get("velocity", [0, 0])[1]
         speed = math.hypot(vx, vy)
@@ -94,6 +99,7 @@ class BioluminescentJellyfishSkin:
         self.time += dt
         
         # Bell pulsing for swimming (0.5-1 Hz)
+        # Real jellyfish pulse their bell to push water out for propulsion
         pulse_speed = 0.08 + speed_factor * 0.04
         self.pulse_phase += pulse_speed
         self.bell_contraction = (math.sin(self.pulse_phase) + 1) / 2  # 0 to 1
@@ -112,29 +118,23 @@ class BioluminescentJellyfishSkin:
         # Trailing tentacle animation
         self.trailing_tentacle_phase += 0.05 + speed_factor * 0.02
         
-        # Update tentacle sway
+        # Update tentacle sway (gentle drifting motion)
         for i in range(len(self.tentacle_sway)):
             self.tentacle_sway[i] += 0.03 + i * 0.01
         
-        # Facing direction
-        if vx < -2.0:
-            self._facing_left = True
-        elif vx > 2.0:
-            self._facing_left = False
+        # Jellyfish orientation: ALWAYS UPRIGHT
+        # Unlike fish, jellyfish don't roll over - bell stays up, tentacles stay down
+        # We only use the position (x,y), not the rotation angle
         
         sc = self.size_scale
-        flipped = self._facing_left
         
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.translate(x, y)
         
-        if flipped:
-            painter.rotate(angle + 180)
-            painter.scale(-sc, sc)
-        else:
-            painter.rotate(angle)
-            painter.scale(sc, sc)
+        # Jellyfish stays upright - NO rotation based on movement angle
+        # Only scale for size, no flipping or rotation
+        painter.scale(sc, sc)
         
         # Render back to front
         self._draw_bioluminescent_glow(painter)
