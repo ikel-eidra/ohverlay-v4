@@ -26,6 +26,14 @@ from ui.skin_realistic import RealisticBettaSkin
 from ui.jellyfish_skin import BioluminescentJellyfishSkin
 from ui.tetra_skin import NeonTetraSkin
 from ui.bubbles import BubbleSystem
+
+# Non-biological objects (Assistant's division)
+from ui.geometric_skin import GeometricShapes
+from ui.energy_orb_skin import EnergyOrbSystem
+from ui.holographic_skin import HolographicInterface
+from ui.airplane_skin import Airplane
+from ui.train_skin import DesktopTrain
+from ui.submarine_skin import RealisticSubmarine
 from ui.tray import SystemTray
 from config.settings import Settings
 from modules.health import HealthModule
@@ -84,7 +92,7 @@ class ZenFishApp:
         # Check system RAM to determine rendering quality
         ram_gb = self._get_system_ram_gb()
         
-        # Get creature type from config (betta or jellyfish)
+        # Get creature type from config (betta, jellyfish, or non-biological objects)
         try:
             creature_type = self.config.get("creature_type", "betta")
             if creature_type is None:
@@ -93,10 +101,37 @@ class ZenFishApp:
             creature_type = "betta"
         self.creature_type = creature_type.lower()
         
+        # Initialize non-biological object skins (Assistant's division)
+        self.non_bio_skin = None
+        
         if self.creature_type == "jellyfish":
             # Jellyfish works well on all RAM levels
             self.skin = BioluminescentJellyfishSkin(config=self.config)
             logger.info(f"Using BIOLUMINESCENT JELLYFISH - Deep sea variant with glowing lights!")
+        elif self.creature_type == "geometric":
+            self.non_bio_skin = GeometricShapes(config=self.config)
+            self.skin = None  # No fish skin in non-bio mode
+            logger.info("Using GEOMETRIC SHAPES - Floating crystalline formations!")
+        elif self.creature_type == "energy_orbs":
+            self.non_bio_skin = EnergyOrbSystem(config=self.config)
+            self.skin = None
+            logger.info("Using ENERGY ORBS - Glowing orbs with light trails!")
+        elif self.creature_type == "holographic":
+            self.non_bio_skin = HolographicInterface(config=self.config)
+            self.skin = None
+            logger.info("Using HOLOGRAPHIC INTERFACE - Sci-fi data display!")
+        elif self.creature_type == "airplane":
+            self.non_bio_skin = Airplane(config=self.config)
+            self.skin = None
+            logger.info("Using AIRPLANE - Jet aircraft with contrails!")
+        elif self.creature_type == "train":
+            self.non_bio_skin = DesktopTrain(config=self.config)
+            self.skin = None
+            logger.info("Using TRAIN - Steam locomotive on desktop edges!")
+        elif self.creature_type == "submarine":
+            self.non_bio_skin = RealisticSubmarine(config=self.config)
+            self.skin = None
+            logger.info("Using SUBMARINE - Torpedo-firing underwater vessel!")
         elif ram_gb >= 28:  # 32GB+ RAM for ultra-realistic Betta
             self.use_realistic_skin = True
             self.skin = RealisticBettaSkin(config=self.config)
@@ -332,6 +367,14 @@ class ZenFishApp:
 
     def _tick(self):
         """Main loop: update brain AI, then push state to all screen sectors."""
+        # Update non-biological objects (Assistant's division)
+        if self.non_bio_skin:
+            # Use cursor position as target for non-bio objects
+            cursor = QCursor.pos()
+            dt = 0.033  # ~30 FPS
+            self.non_bio_skin.update_state(dt, cursor.x(), cursor.y())
+            return  # Skip fish update when non-bio is active
+        
         if self.school_mode and self.school:
             # School mode: update all fish via Boids engine
             self.school.update()
@@ -567,18 +610,37 @@ class ZenFishApp:
             sector.set_visible(not sector.visible)
 
     def _on_toggle_creature(self):
-        """Toggle between Betta and Jellyfish."""
-        if self.creature_type == "betta":
-            self.creature_type = "jellyfish"
-            self.skin = BioluminescentJellyfishSkin(config=self.config)
-            # Update sectors with new skin
-            for sector in self.sectors:
-                sector.skin = self.skin
-            self.bubble_system.queue_message("🎆 Switched to BIOLUMINESCENT JELLYFISH! Press Ctrl+Alt+F to trigger light show!", "ambient")
-            logger.info("Switched to Jellyfish mode")
-        else:
+        """Toggle through all creature types: Betta → Jellyfish → Geometric → Energy Orbs → Holographic → Airplane → Train → Submarine → Betta"""
+        
+        # Define the creature cycle
+        creature_cycle = [
+            "betta",
+            "jellyfish", 
+            "geometric",
+            "energy_orbs",
+            "holographic",
+            "airplane",
+            "train",
+            "submarine"
+        ]
+        
+        # Get next creature in cycle
+        try:
+            current_idx = creature_cycle.index(self.creature_type)
+        except ValueError:
+            current_idx = 0
+        
+        next_idx = (current_idx + 1) % len(creature_cycle)
+        next_creature = creature_cycle[next_idx]
+        
+        # Hide previous non-bio skin if exists
+        if self.non_bio_skin:
+            self.non_bio_skin.hide()
+            self.non_bio_skin = None
+        
+        # Initialize new creature
+        if next_creature == "betta":
             self.creature_type = "betta"
-            # Restore betta based on RAM
             ram_gb = self._get_system_ram_gb()
             if ram_gb >= 28:
                 self.skin = RealisticBettaSkin(config=self.config)
@@ -586,8 +648,76 @@ class ZenFishApp:
                 self.skin = FishSkin(config=self.config)
             for sector in self.sectors:
                 sector.skin = self.skin
-            self.bubble_system.queue_message("🐟 Switched back to BETTA FISH!", "ambient")
+            self.bubble_system.queue_message("🐟 Switched to BETTA FISH!", "ambient")
             logger.info("Switched to Betta mode")
+            
+        elif next_creature == "jellyfish":
+            self.creature_type = "jellyfish"
+            self.skin = BioluminescentJellyfishSkin(config=self.config)
+            for sector in self.sectors:
+                sector.skin = self.skin
+            self.bubble_system.queue_message("🎆 Switched to BIOLUMINESCENT JELLYFISH! Press Ctrl+Alt+F to trigger light show!", "ambient")
+            logger.info("Switched to Jellyfish mode")
+            
+        elif next_creature == "geometric":
+            self.creature_type = "geometric"
+            self.skin = None
+            self.non_bio_skin = GeometricShapes(config=self.config)
+            for sector in self.sectors:
+                sector.skin = None  # No fish skin in non-bio mode
+            self.non_bio_skin.show()
+            self.bubble_system.queue_message("🔷 Switched to GEOMETRIC SHAPES - Floating crystals!", "ambient")
+            logger.info("Switched to Geometric Shapes mode")
+            
+        elif next_creature == "energy_orbs":
+            self.creature_type = "energy_orbs"
+            self.skin = None
+            self.non_bio_skin = EnergyOrbSystem(config=self.config)
+            for sector in self.sectors:
+                sector.skin = None
+            self.non_bio_skin.show()
+            self.bubble_system.queue_message("⚡ Switched to ENERGY ORBS - Glowing light trails!", "ambient")
+            logger.info("Switched to Energy Orbs mode")
+            
+        elif next_creature == "holographic":
+            self.creature_type = "holographic"
+            self.skin = None
+            self.non_bio_skin = HolographicInterface(config=self.config)
+            for sector in self.sectors:
+                sector.skin = None
+            self.non_bio_skin.show()
+            self.bubble_system.queue_message("🔮 Switched to HOLOGRAPHIC INTERFACE - Sci-fi display!", "ambient")
+            logger.info("Switched to Holographic mode")
+            
+        elif next_creature == "airplane":
+            self.creature_type = "airplane"
+            self.skin = None
+            self.non_bio_skin = Airplane(config=self.config)
+            for sector in self.sectors:
+                sector.skin = None
+            self.non_bio_skin.show()
+            self.bubble_system.queue_message("✈️ Switched to AIRPLANE - Jet with contrails!", "ambient")
+            logger.info("Switched to Airplane mode")
+            
+        elif next_creature == "train":
+            self.creature_type = "train"
+            self.skin = None
+            self.non_bio_skin = DesktopTrain(config=self.config)
+            for sector in self.sectors:
+                sector.skin = None
+            self.non_bio_skin.show()
+            self.bubble_system.queue_message("🚂 Switched to TRAIN - Steam locomotive!", "ambient")
+            logger.info("Switched to Train mode")
+            
+        elif next_creature == "submarine":
+            self.creature_type = "submarine"
+            self.skin = None
+            self.non_bio_skin = RealisticSubmarine(config=self.config)
+            for sector in self.sectors:
+                sector.skin = None
+            self.non_bio_skin.show()
+            self.bubble_system.queue_message("🚢 Switched to SUBMARINE - Torpedo-firing vessel!", "ambient")
+            logger.info("Switched to Submarine mode")
         
         # Save preference
         self.config.set("creature_type", self.creature_type)
