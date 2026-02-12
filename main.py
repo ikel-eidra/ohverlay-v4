@@ -19,14 +19,16 @@ from PySide6.QtGui import QGuiApplication, QCursor
 from engine.brain import BehavioralReactor
 from engine.aquarium import MonitorManager, AquariumSector
 from engine.sanctuary import SanctuaryEngine
-from engine.school import FishSchool
 from engine.llm_brain import LLMBrain
-from ui.skin import FishSkin
-from ui.skin_realistic import RealisticBettaSkin
 from ui.jellyfish_skin import BioluminescentJellyfishSkin
 from ui.jellyfish_iridescent_skin import IridescentJellyfishSkin
-from ui.tetra_skin import NeonTetraSkin
 from ui.bubbles import BubbleSystem
+
+# MOVED TO LUMEX PACKAGE (Betta, Tetra, Discus, Plants):
+# from engine.school import FishSchool
+# from ui.skin import FishSkin
+# from ui.skin_realistic import RealisticBettaSkin
+# from ui.tetra_skin import NeonTetraSkin
 
 # Non-biological objects (Assistant's division)
 from ui.geometric_skin import GeometricShapes
@@ -35,6 +37,9 @@ from ui.holographic_skin import HolographicInterface
 from ui.airplane_skin import Airplane
 from ui.train_skin import VintageSteamTrain
 from ui.submarine_skin import RealisticSubmarine
+
+# LUMEX owns: Betta fish, Discus, Neon Tetra, Plants
+# ASSISTANT owns: Jellyfish, Geometric, Energy Orbs, Holographic, Airplane, Train, Submarine
 from ui.tray import SystemTray
 from config.settings import Settings
 from modules.health import HealthModule
@@ -89,33 +94,31 @@ class ZenFishApp:
         self.total_bounds = self.monitor_manager.get_total_bounds_tuple()
 
     def _init_rendering(self):
-        """Create the fish skin renderer and bubble system."""
-        # Check system RAM to determine rendering quality
-        ram_gb = self._get_system_ram_gb()
-        
-        # Get creature type from config (betta, jellyfish, or non-biological objects)
+        """Create the creature renderer - Assistant's Division (Deep Sea + Non-Bio only)."""
+        # Get creature type from config (default: jellyfish - Lumex owns Betta now)
         try:
-            creature_type = self.config.get("creature_type", "betta")
-            if creature_type is None:
-                creature_type = "betta"
+            creature_type = self.config.get("creature_type", "jellyfish")
+            if creature_type in ["betta", "discus", "neon_tetra"]:
+                # Betta/Tetra/Discus moved to LUMEX - default to jellyfish
+                creature_type = "jellyfish"
         except:
-            creature_type = "betta"
+            creature_type = "jellyfish"
         self.creature_type = creature_type.lower()
         
         # Initialize non-biological object skins (Assistant's division)
         self.non_bio_skin = None
         
         if self.creature_type == "jellyfish":
-            # Jellyfish works well on all RAM levels
+            # Deep sea bioluminescent jellyfish
             self.skin = BioluminescentJellyfishSkin(config=self.config)
-            logger.info(f"Using BIOLUMINESCENT JELLYFISH - Deep sea variant with glowing lights!")
+            logger.info("Using BIOLUMINESCENT JELLYFISH - Deep sea variant with glowing lights!")
         elif self.creature_type == "iridescent_jellyfish":
-            # NEW: Rainbow iridescent jellyfish
+            # Deep sea rainbow iridescent jellyfish
             self.skin = IridescentJellyfishSkin(config=self.config)
-            logger.info(f"Using IRIDESCENT JELLYFISH - Rainbow bioluminescent deep sea creature!")
+            logger.info("Using IRIDESCENT JELLYFISH - Rainbow bioluminescent deep sea creature!")
         elif self.creature_type == "geometric":
             self.non_bio_skin = GeometricShapes(config=self.config)
-            self.skin = None  # No fish skin in non-bio mode
+            self.skin = None
             logger.info("Using GEOMETRIC SHAPES - Floating crystalline formations!")
         elif self.creature_type == "energy_orbs":
             self.non_bio_skin = EnergyOrbSystem(config=self.config)
@@ -137,18 +140,15 @@ class ZenFishApp:
             self.non_bio_skin = RealisticSubmarine(config=self.config)
             self.skin = None
             logger.info("Using SUBMARINE - Torpedo-firing underwater vessel!")
-        elif ram_gb >= 28:  # 32GB+ RAM for ultra-realistic Betta
-            self.use_realistic_skin = True
-            self.skin = RealisticBettaSkin(config=self.config)
-            logger.info(f"Using ULTRA-REALISTIC Betta skin (v2.0) - {ram_gb:.1f}GB RAM detected")
         else:
-            self.use_realistic_skin = False
-            self.skin = FishSkin(config=self.config)
-            logger.info(f"Using optimized BASIC Betta skin - {ram_gb:.1f}GB RAM detected (32GB+ recommended for ultra-realistic)")
+            # Default to jellyfish
+            self.creature_type = "jellyfish"
+            self.skin = BioluminescentJellyfishSkin(config=self.config)
+            logger.info("Using BIOLUMINESCENT JELLYFISH - Deep sea variant with glowing lights!")
         
         self.bubble_system = BubbleSystem(config=self.config)
         
-        # School mode state (None = solo betta mode)
+        # School mode disabled - Lumex owns school/betta
         self.school = None
         self.school_skins = []
         self.school_mode = False
@@ -498,78 +498,9 @@ class ZenFishApp:
         logger.info(f"Swimming speed set to: {preset['label']}")
 
     def _on_species_changed(self, species, count):
-        """Switch between solo betta and school mode with different species."""
-        if species == "betta" and count <= 1:
-            # Return to solo betta mode
-            self.school_mode = False
-            self.school = None
-            self.school_skins = []
-            for sector in self.sectors:
-                sector.set_school_skins([])
-            logger.info("Switched to solo Betta mode.")
-            self.bubble_system.queue_message("Solo betta mode.", "ambient")
-            return
-
-        # Special duo mode: two independent bettas with unique colors.
-        if species == "betta" and count == 2:
-            self.school = FishSchool(self.total_bounds, species="betta", count=2)
-            self.school.set_sanctuary(self.sanctuary)
-            current_speed = self.config.get("fish", "speed") or "normal"
-            self._apply_school_speed(current_speed)
-
-            pref = self.config.get("fish", "betta_palette") if self.config else "nemo_galaxy"
-            palettes = FishSkin.independent_palette_set(count=2, preferred=pref)
-            self.school_skins = []
-            for idx, (primary, secondary, accent) in enumerate(palettes):
-                skin = FishSkin(config=self.config)
-                skin.set_colors(primary, secondary, accent)
-                skin.color_shift_phase = idx * 1.7
-                skin.tail_phase = idx * 0.9
-                self.school_skins.append(skin)
-
-            for sector in self.sectors:
-                sector.set_school_skins(self.school_skins)
-
-            self.school_mode = True
-            self.config.set("fish", "species", "betta")
-            self.config.set("fish", "school_count", 2)
-            logger.info("Dual Betta mode active (max 2, independent colors).")
-            self.bubble_system.queue_message("Dual Betta mode: 2 independent Uno-style swimmers.", "ambient")
-            return
-
-        # Create school with appropriate skins
-        if species == "discus":
-            logger.info("Discus temporarily disabled; using Neon Tetra school mode.")
-            species = "neon_tetra"
-        if species != "neon_tetra":
-            # Betta-first phase: keep school mode constrained to neon tetra.
-            species = "neon_tetra"
-        count = max(1, min(12, count))
-        self.school = FishSchool(self.total_bounds, species=species, count=count)
-        self.school.set_sanctuary(self.sanctuary)
-        current_speed = self.config.get("fish", "speed") or "normal"
-        self._apply_school_speed(current_speed)
-
-        # Create one skin per fish with unique seeds for variation
-        self.school_skins = []
-        for i in range(count):
-            skin = NeonTetraSkin(seed=42 + i * 17)
-
-            if hasattr(skin, "apply_config"):
-                skin.apply_config(self.config)
-            self.school_skins.append(skin)
-
-        # Push skins to all sectors
-        for sector in self.sectors:
-            sector.set_school_skins(self.school_skins)
-
-        self.school_mode = True
-        self.config.set("fish", "species", species)
-        self.config.set("fish", "school_count", count)
-
-        label = species.replace("_", " ").title()
-        logger.info(f"School mode: {count} {label}")
-        self.bubble_system.queue_message(f"{count} {label} swimming!", "ambient")
+        """School mode disabled - moved to LUMEX division (Betta/Tetra/Discus/Plants)."""
+        self.bubble_system.queue_message("School mode available in LUMEX version only. Use Ctrl+Alt+J to toggle creatures!", "ambient")
+        logger.info("School mode requested but disabled - moved to LUMEX division")
 
     def _on_sanctuary_toggled(self):
         enabled = self.sanctuary.toggle()
@@ -619,19 +550,23 @@ class ZenFishApp:
             sector.set_visible(not sector.visible)
 
     def _on_toggle_creature(self):
-        """Toggle through all creature types: Betta → Jellyfish → Geometric → Energy Orbs → Holographic → Airplane → Train → Submarine → Betta"""
+        """Toggle through Assistant's creatures: Jellyfish → Iridescent → Geometric → Energy Orbs → Holographic → Airplane → Train → Submarine → Jellyfish
+        
+        NOTE: Betta fish, Tetra, Discus, and Plants moved to LUMEX division.
+        """
         
         # Define the creature cycle
+        # Creature cycle (ASSISTANT'S DIVISION only - Lumex owns Betta/Plants)
+        # Deep sea creatures + Non-biological objects
         creature_cycle = [
-            "betta",
-            "jellyfish",
-            "iridescent_jellyfish",
-            "geometric",
-            "energy_orbs",
-            "holographic",
-            "airplane",
-            "train",
-            "submarine"
+            "jellyfish",           # Deep sea - Lumex approved
+            "iridescent_jellyfish", # Deep sea rainbow - Lumex approved
+            "geometric",            # Non-bio
+            "energy_orbs",          # Non-bio
+            "holographic",          # Non-bio
+            "airplane",             # Non-bio
+            "train",                # Non-bio
+            "submarine"             # Non-bio
         ]
         
         # Get next creature in cycle
@@ -648,27 +583,14 @@ class ZenFishApp:
             self.non_bio_skin.hide()
             self.non_bio_skin = None
         
-        # Initialize new creature
-        if next_creature == "betta":
-            self.creature_type = "betta"
-            ram_gb = self._get_system_ram_gb()
-            if ram_gb >= 28:
-                self.skin = RealisticBettaSkin(config=self.config)
-            else:
-                self.skin = FishSkin(config=self.config)
-            for sector in self.sectors:
-                sector.skin = self.skin
-            self.bubble_system.queue_message("🐟 Switched to BETTA FISH!", "ambient")
-            logger.info("Switched to Betta mode")
-            
-        elif next_creature == "jellyfish":
+        # Initialize new creature (Assistant's division only - no Betta/Tetra/Discus/Plants)
+        if next_creature == "jellyfish":
             self.creature_type = "jellyfish"
             self.skin = BioluminescentJellyfishSkin(config=self.config)
             for sector in self.sectors:
                 sector.skin = self.skin
             self.bubble_system.queue_message("🎆 Switched to BIOLUMINESCENT JELLYFISH! Press Ctrl+Alt+F to trigger light show!", "ambient")
-            logger.info(f"Switched to Jellyfish mode - Skin type: {type(self.skin).__name__}")
-            print(f"DEBUG: Switched to Jellyfish - Skin: {type(self.skin).__name__}")  # Debug output
+            logger.info("Switched to Jellyfish mode")
             
         elif next_creature == "iridescent_jellyfish":
             self.creature_type = "iridescent_jellyfish"
