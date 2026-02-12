@@ -1,6 +1,6 @@
 """
-Desktop Train v1.0 - Non-Biological Object
-Tiny train that travels along desktop edges
+VINTAGE Steam Locomotive v2.0 - Non-Biological Object
+Old-timey train with massive steam clouds, travels screen edges like tracks
 """
 
 import math
@@ -10,34 +10,36 @@ from dataclasses import dataclass, field
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QPainter, QPainterPath, QColor, QLinearGradient, 
-    QRadialGradient, QPen, QBrush
+    QRadialGradient, QPen, QBrush, QFont
 )
 from PySide6.QtWidgets import QWidget
 
 
 @dataclass
-class SmokeParticle:
-    """Steam/smoke from chimney"""
+class SteamParticle:
+    """Big puffy steam from chimney"""
     x: float
     y: float
     vx: float
     vy: float
     size: float
     life: float = 1.0
-    gray: int = 200
+    alpha: int = 200
     
     def update(self, dt: float):
         self.x += self.vx * dt
         self.y += self.vy * dt
-        self.size += dt * 5
-        self.life -= dt * 0.4
-        self.gray = min(255, self.gray + int(dt * 30))
+        self.vx *= 0.98  # Air resistance
+        self.vy *= 0.95
+        self.size += dt * 15  # Expand quickly
+        self.life -= dt * 0.35
+        self.alpha = int(200 * self.life)
 
 
-class DesktopTrain(QWidget):
+class VintageSteamTrain(QWidget):
     """
-    Charming desktop train that travels along screen edges
-    Perfect for taskbar area or moving between monitors
+    Old-timey steam locomotive with massive steam clouds
+    Runs along screen edges like railway tracks
     """
     
     def __init__(self, config, parent=None):
@@ -54,334 +56,544 @@ class DesktopTrain(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         
-        # Track system - train follows screen edges
-        self.track_points = [
-            (100, 1000),    # Bottom left area
-            (3740, 1000),   # Bottom right
-            (3740, 80),     # Top right
-            (100, 80),      # Top left
-        ]
-        self.current_segment = 0
-        self.segment_progress = 0.0
+        # Track paths - runs along screen edges like railway
+        # Top edge (y=40) and bottom edge (y=1040 for 1080p - taskbar)
+        self.track_y_positions = [45, 1035]  # Top and bottom "tracks"
+        self.current_track = 0  # 0 = top, 1 = bottom
+        self.direction = 1  # 1 = right, -1 = left
         
-        # Position
-        self.x = self.track_points[0][0]
-        self.y = self.track_points[0][1]
-        self.angle = 0.0
+        # Position - start at left side
+        self.x = -150.0
+        self.y = self.track_y_positions[0]
         
         # Movement
-        self.speed = 80.0
-        self.direction = 1  # 1 or -1
+        self.speed = 120.0
         
         # Visual
-        self.scale = 0.6
+        self.scale = 0.8
         self.wheel_rotation = 0.0
-        self.smoke_particles: List[SmokeParticle] = []
+        self.drive_rod_phase = 0.0
+        self.steam_particles: List[SteamParticle] = []
         self.chuff_timer = 0.0
+        self.chuff_rate = 0.25  # Steam puff every 0.25 seconds
         
-        # Colors - classic steam locomotive
-        self.body_color = QColor(30, 40, 50)  # Black
-        self.boiler_color = QColor(50, 50, 55)
-        self.gold_color = QColor(200, 170, 80)
-        self.red_color = QColor(160, 40, 40)
+        # VINTAGE Colors - brass, copper, black
+        self.black_color = QColor(25, 28, 32)  # Sooty black
+        self.boiler_color = QColor(40, 42, 45)  # Dark boiler
+        self.brass_color = QColor(218, 165, 32)  # Antique brass
+        self.copper_color = QColor(184, 115, 51)  # Aged copper
+        self.red_color = QColor(140, 35, 35)  # Deep cab red
+        self.rust_color = QColor(160, 82, 45, 60)  # Rust patches
         
         # Headlight
         self.headlight_on = True
-        self.headlight_angle = 0.0
+        self.headlight_pulse = 0.0
+        
+        # Whistle steam
+        self.whistle_active = False
+        self.whistle_timer = 0.0
         
         self.time = 0.0
-        self.resize(120, 80)
-        self.move(int(self.x - 60), int(self.y - 40))
+        self.resize(200, 120)
+        self.move(int(self.x), int(self.y - 60))
     
     def update_state(self, dt: float, target_x: float = None, target_y: float = None):
-        """Update train position along track"""
+        """Update train position along edge tracks"""
         self.time += dt
         
-        # Get current segment
-        p1 = self.track_points[self.current_segment]
-        p2 = self.track_points[(self.current_segment + 1) % len(self.track_points)]
+        # Move horizontally
+        self.x += self.speed * self.direction * dt
         
-        # Calculate segment direction
-        dx = p2[0] - p1[0]
-        dy = p2[1] - p1[1]
-        segment_length = math.sqrt(dx*dx + dy*dy)
+        # Switch tracks when reaching screen edges
+        screen_width = 3840  # Dual monitor width
         
-        if segment_length > 0:
-            # Move along segment
-            self.segment_progress += (self.speed * dt) / segment_length
-            
-            # Calculate position
-            self.x = p1[0] + dx * self.segment_progress
-            self.y = p1[1] + dy * self.segment_progress
-            
-            # Calculate angle
-            self.angle = math.atan2(dy, dx)
-            
-            # Update wheels
-            self.wheel_rotation += (self.speed * dt * 0.5)
+        if self.direction == 1 and self.x > screen_width + 100:
+            # Reached right edge, switch to bottom track going left
+            self.direction = -1
+            self.current_track = 1
+            self.x = screen_width + 100
+            self._toot_whistle()
+        elif self.direction == -1 and self.x < -200:
+            # Reached left edge, switch to top track going right
+            self.direction = 1
+            self.current_track = 0
+            self.x = -200
+            self._toot_whistle()
         
-        # Move to next segment
-        if self.segment_progress >= 1.0:
-            self.segment_progress = 0.0
-            self.current_segment = (self.current_segment + 1) % len(self.track_points)
+        self.y = self.track_y_positions[self.current_track]
         
-        # Generate smoke
+        # Update wheels and rods
+        self.wheel_rotation += (self.speed * dt * 0.8)
+        self.drive_rod_phase += (self.speed * dt * 0.8)
+        
+        # Generate steam (chuff chuff!)
         self.chuff_timer += dt
-        if self.chuff_timer > 0.4:
+        if self.chuff_timer >= self.chuff_rate:
             self.chuff_timer = 0.0
-            self._emit_smoke()
+            self._emit_steam_burst()
         
-        # Update smoke
-        for particle in self.smoke_particles[:]:
+        # Whistle steam
+        if self.whistle_active:
+            self.whistle_timer -= dt
+            if self.whistle_timer <= 0:
+                self.whistle_active = False
+            # Extra steam during whistle
+            if random.random() < 0.3:
+                self._emit_whistle_steam()
+        
+        # Update steam particles
+        for particle in self.steam_particles[:]:
             particle.update(dt)
             if particle.life <= 0:
-                self.smoke_particles.remove(particle)
+                self.steam_particles.remove(particle)
         
-        self.move(int(self.x - 60), int(self.y - 40))
+        # Headlight pulse
+        self.headlight_pulse += dt * 4
+        
+        self.move(int(self.x - 100), int(self.y - 60))
         self.update()
     
-    def _emit_smoke(self):
-        """Emit smoke particles from chimney"""
-        # Calculate chimney position based on angle
-        offset_x = math.cos(self.angle) * 25
-        offset_y = math.sin(self.angle) * 25
+    def _toot_whistle(self):
+        """Toot toot! Train whistle"""
+        self.whistle_active = True
+        self.whistle_timer = 1.5
+        # Burst of steam
+        for _ in range(15):
+            self._emit_whistle_steam()
+    
+    def _emit_steam_burst(self):
+        """Emit big steam puff from chimney - CHUFF CHUFF!"""
+        # Chimney position (above boiler)
+        chimney_x = 20
+        chimney_y = -35
         
-        for _ in range(3):
-            particle = SmokeParticle(
-                x=self.x + offset_x,
-                y=self.y + offset_y - 35 * self.scale,
-                vx=random.uniform(-20, 20) - math.cos(self.angle) * 30,
-                vy=random.uniform(-40, -80),
-                size=random.uniform(4, 8)
+        # Multiple particles for big puff
+        for _ in range(8):
+            # Steam goes up and slightly opposite to movement
+            steam_vx = random.uniform(-30, 30) - (self.direction * 20)
+            steam_vy = random.uniform(-80, -150)  # Upward
+            
+            particle = SteamParticle(
+                x=self.x + chimney_x + random.uniform(-5, 5),
+                y=self.y + chimney_y,
+                vx=steam_vx,
+                vy=steam_vy,
+                size=random.uniform(15, 30)
             )
-            self.smoke_particles.append(particle)
+            self.steam_particles.append(particle)
+    
+    def _emit_whistle_steam(self):
+        """Extra steam for whistle effect"""
+        chimney_x = 20
+        chimney_y = -35
+        
+        particle = SteamParticle(
+            x=self.x + chimney_x + random.uniform(-3, 3),
+            y=self.y + chimney_y - 10,
+            vx=random.uniform(-40, 40),
+            vy=random.uniform(-100, -180),
+            size=random.uniform(20, 40)
+        )
+        self.steam_particles.append(particle)
     
     def paintEvent(self, event):
-        """Render train"""
+        """Render vintage steam train"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
         
-        # Draw smoke (behind train)
-        self._draw_smoke(painter)
+        # Draw steam behind train
+        self._draw_steam(painter)
         
-        # Draw train
-        self._draw_train(painter)
+        # Draw the train
+        self._draw_vintage_train(painter)
     
-    def _draw_smoke(self, painter: QPainter):
-        """Draw steam/smoke particles"""
-        for particle in self.smoke_particles:
-            px = particle.x - self.x + 60
-            py = particle.y - self.y + 40
+    def _draw_steam(self, painter: QPainter):
+        """Draw massive white steam clouds"""
+        for particle in self.steam_particles:
+            px = particle.x - self.x + 100
+            py = particle.y - self.y + 60
             
-            alpha = int(150 * particle.life)
-            gray = particle.gray
+            # Skip if out of bounds
+            if px < -50 or px > 250 or py < -50:
+                continue
             
-            smoke_color = QColor(gray, gray, gray, alpha)
-            
-            # Puffy smoke
-            gradient = QRadialGradient(px, py, particle.size)
-            gradient.setColorAt(0.0, smoke_color)
-            gradient.setColorAt(1.0, QColor(gray, gray, gray, 0))
-            
-            painter.setBrush(QBrush(gradient))
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(int(px - particle.size), int(py - particle.size),
-                               int(particle.size * 2), int(particle.size * 2))
+            # Big fluffy steam
+            for i in range(3):  # Multiple overlapping circles for fluffiness
+                offset_x = math.sin(particle.life * 5 + i) * particle.size * 0.3
+                offset_y = math.cos(particle.life * 3 + i) * particle.size * 0.2
+                
+                size_var = particle.size * (1 + i * 0.2)
+                alpha = int(particle.alpha * (1 - i * 0.2))
+                
+                steam_gradient = QRadialGradient(
+                    px + offset_x, py + offset_y, size_var
+                )
+                steam_gradient.setColorAt(0.0, QColor(255, 255, 255, alpha))
+                steam_gradient.setColorAt(0.4, QColor(240, 248, 255, int(alpha * 0.7)))
+                steam_gradient.setColorAt(1.0, QColor(255, 255, 255, 0))
+                
+                painter.setBrush(QBrush(steam_gradient))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(
+                    int(px + offset_x - size_var), 
+                    int(py + offset_y - size_var),
+                    int(size_var * 2), 
+                    int(size_var * 2)
+                )
     
-    def _draw_train(self, painter: QPainter):
-        """Draw steam locomotive"""
-        cx = 60
-        cy = 40
+    def _draw_vintage_train(self, painter: QPainter):
+        """Draw old-timey steam locomotive"""
+        cx = 100
+        cy = 60
         
         painter.save()
         painter.translate(cx, cy)
-        painter.rotate(math.degrees(self.angle))
         painter.scale(self.scale, self.scale)
         
-        # Shadow
-        painter.save()
-        painter.translate(8, 8)
-        painter.setBrush(QBrush(QColor(0, 0, 0, 50)))
+        # Shadow on the "track"
+        painter.setBrush(QBrush(QColor(0, 0, 0, 60)))
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(-50, -20, 100, 40, 5, 5)
-        painter.restore()
+        painter.drawRoundedRect(-90, 28, 180, 15, 7, 7)
         
-        # Main boiler (cylinder)
-        boiler_gradient = QLinearGradient(-30, -15, 30, 15)
-        boiler_gradient.setColorAt(0.0, self.boiler_color.darker(120))
-        boiler_gradient.setColorAt(0.3, self.boiler_color)
-        boiler_gradient.setColorAt(0.7, self.boiler_color.lighter(110))
-        boiler_gradient.setColorAt(1.0, self.boiler_color.darker(130))
+        # === BOILER (main cylinder) ===
+        # Metallic gradient for old boiler
+        boiler_gradient = QLinearGradient(-40, -20, 40, 20)
+        boiler_gradient.setColorAt(0.0, self.boiler_color.darker(130))
+        boiler_gradient.setColorAt(0.2, self.boiler_color)
+        boiler_gradient.setColorAt(0.5, self.boiler_color.lighter(120))
+        boiler_gradient.setColorAt(0.8, self.boiler_color)
+        boiler_gradient.setColorAt(1.0, self.boiler_color.darker(140))
         
         painter.setBrush(QBrush(boiler_gradient))
-        painter.setPen(QPen(QColor(20, 25, 30), 1.5))
-        painter.drawRoundedRect(-40, -15, 70, 30, 8, 8)
+        painter.setPen(QPen(QColor(15, 18, 22), 2.0))
         
-        # Gold boiler bands
-        painter.setPen(QPen(self.gold_color, 2.0))
-        painter.drawLine(-30, -15, -30, 15)
-        painter.drawLine(0, -15, 0, 15)
-        painter.drawLine(25, -15, 25, 15)
+        # Main boiler shape
+        boiler_path = QPainterPath()
+        boiler_path.moveTo(55, -18)
+        boiler_path.cubicTo(65, -15, 65, 15, 55, 18)  # Front curve (smokebox)
+        boiler_path.lineTo(-50, 20)  # Bottom
+        boiler_path.cubicTo(-60, 18, -60, -18, -50, -20)  # Rear curve
+        boiler_path.closeSubpath()
+        painter.drawPath(boiler_path)
         
-        # Chimney/smokestack
-        chimney_gradient = QLinearGradient(15, -35, 20, -15)
-        chimney_gradient.setColorAt(0.0, self.body_color.lighter(120))
-        chimney_gradient.setColorAt(1.0, self.body_color)
+        # Brass bands around boiler
+        painter.setPen(QPen(self.brass_color, 3.0))
+        painter.drawLine(-35, -20, -35, 20)
+        painter.drawLine(-5, -20, -5, 20)
+        painter.drawLine(30, -18, 30, 18)
+        
+        # === SMOKEBOX (front section) ===
+        smokebox_gradient = QLinearGradient(30, -18, 65, 18)
+        smokebox_gradient.setColorAt(0.0, self.black_color.lighter(110))
+        smokebox_gradient.setColorAt(1.0, self.black_color)
+        
+        painter.setBrush(QBrush(smokebox_gradient))
+        painter.setPen(QPen(QColor(10, 12, 15), 2.0))
+        painter.drawRoundedRect(30, -18, 35, 36, 5, 5)
+        
+        # Smokebox door
+        door_gradient = QRadialGradient(55, 0, 12)
+        door_gradient.setColorAt(0.0, self.black_color.lighter(150))
+        door_gradient.setColorAt(1.0, self.black_color)
+        painter.setBrush(QBrush(door_gradient))
+        painter.drawEllipse(48, -10, 20, 20)
+        
+        # === CHIMNEY/SMOKESTACK (tall vintage style) ===
+        chimney_x = 20
+        chimney_base = -20
+        
+        # Chimney shadow
+        painter.setBrush(QBrush(QColor(0, 0, 0, 40)))
+        painter.drawRect(chimney_x - 8, chimney_base - 50, 16, 52)
+        
+        # Chimney stack (tapered)
+        chimney_gradient = QLinearGradient(chimney_x, chimney_base - 55, chimney_x + 10, chimney_base)
+        chimney_gradient.setColorAt(0.0, self.black_color.lighter(140))
+        chimney_gradient.setColorAt(0.5, self.boiler_color)
+        chimney_gradient.setColorAt(1.0, self.black_color)
         
         painter.setBrush(QBrush(chimney_gradient))
-        painter.setPen(QPen(QColor(20, 25, 30), 1.0))
+        painter.setPen(QPen(QColor(15, 18, 22), 1.5))
         
-        # Chimney base
-        painter.drawRect(10, -15, 12, 5)
-        # Chimney stack
-        painter.drawRect(12, -35, 8, 20)
-        # Chimney top
-        painter.drawEllipse(10, -38, 12, 6)
+        # Chimney shape (tall vintage)
+        chimney_path = QPainterPath()
+        chimney_path.moveTo(chimney_x - 6, chimney_base)
+        chimney_path.lineTo(chimney_x - 4, chimney_base - 45)
+        chimney_path.lineTo(chimney_x - 10, chimney_base - 50)
+        chimney_path.lineTo(chimney_x - 10, chimney_base - 58)
+        chimney_path.lineTo(chimney_x + 10, chimney_base - 58)  # Wide top
+        chimney_path.lineTo(chimney_x + 10, chimney_base - 50)
+        chimney_path.lineTo(chimney_x + 4, chimney_base - 45)
+        chimney_path.lineTo(chimney_x + 6, chimney_base)
+        chimney_path.closeSubpath()
+        painter.drawPath(chimney_path)
         
-        # Gold band on chimney
-        painter.setPen(QPen(self.gold_color, 1.5))
-        painter.drawLine(12, -28, 20, -28)
+        # Brass chimney cap
+        painter.setBrush(QBrush(self.brass_color))
+        painter.setPen(QPen(self.copper_color, 1.0))
+        painter.drawRoundedRect(chimney_x - 11, chimney_base - 60, 22, 6, 2, 2)
         
-        # Cab (back section)
-        cab_gradient = QLinearGradient(-50, -25, -40, 20)
+        # === SAND DOME (classic feature) ===
+        dome_gradient = QRadialGradient(-10, -25, 15)
+        dome_gradient.setColorAt(0.0, self.boiler_color.lighter(130))
+        dome_gradient.setColorAt(1.0, self.boiler_color)
+        painter.setBrush(QBrush(dome_gradient))
+        painter.setPen(QPen(QColor(15, 18, 22), 1.5))
+        painter.drawEllipse(-20, -35, 20, 18)
+        
+        # === CAB (rear section) ===
+        cab_gradient = QLinearGradient(-70, -30, -60, 30)
         cab_gradient.setColorAt(0.0, self.red_color.lighter(110))
-        cab_gradient.setColorAt(0.5, self.red_color)
-        cab_gradient.setColorAt(1.0, self.red_color.darker(120))
+        cab_gradient.setColorAt(0.4, self.red_color)
+        cab_gradient.setColorAt(1.0, self.red_color.darker(130))
         
         painter.setBrush(QBrush(cab_gradient))
-        painter.setPen(QPen(QColor(20, 25, 30), 1.5))
+        painter.setPen(QPen(QColor(80, 25, 25), 2.0))
         
         # Cab box
-        painter.drawRect(-55, -20, 20, 40)
+        painter.drawRect(-75, -28, 28, 56)
         
-        # Cab roof
-        painter.setBrush(QBrush(QColor(40, 45, 50)))
-        painter.drawRoundedRect(-58, -25, 26, 8, 3, 3)
+        # Cab roof (curved vintage style)
+        roof_gradient = QLinearGradient(-75, -38, -75, -28)
+        roof_gradient.setColorAt(0.0, self.black_color.lighter(150))
+        roof_gradient.setColorAt(1.0, self.black_color)
+        painter.setBrush(QBrush(roof_gradient))
+        painter.setPen(QPen(QColor(15, 18, 22), 1.5))
         
-        # Window
-        painter.setBrush(QBrush(QColor(200, 220, 240)))
-        painter.setPen(QPen(QColor(30, 35, 40), 1.0))
-        painter.drawRect(-52, -15, 12, 12)
-        # Window reflection
-        painter.setPen(QPen(QColor(255, 255, 255, 150), 1.0))
-        painter.drawLine(-50, -13, -46, -5)
+        roof_path = QPainterPath()
+        roof_path.moveTo(-78, -28)
+        roof_path.quadTo(-61, -42, -44, -28)
+        painter.drawPath(roof_path)
+        painter.drawLine(-78, -28, -44, -28)
         
-        # Cowcatcher (front)
+        # Cab window
+        window_gradient = QLinearGradient(-68, -20, -60, -5)
+        window_gradient.setColorAt(0.0, QColor(200, 220, 240))
+        window_gradient.setColorAt(1.0, QColor(150, 170, 190))
+        painter.setBrush(QBrush(window_gradient))
+        painter.setPen(QPen(QColor(60, 70, 80), 2.0))
+        painter.drawRect(-72, -22, 18, 18)
+        
+        # Window frame
+        painter.setPen(QPen(QColor(40, 50, 60), 1.0))
+        painter.drawLine(-63, -22, -63, -4)
+        painter.drawLine(-72, -13, -54, -13)
+        
+        # Window shine
+        painter.setPen(QPen(QColor(255, 255, 255, 180), 1.5))
+        painter.drawLine(-70, -20, -66, -10)
+        
+        # === COWCATCHER (pilot) - Old style ===
         painter.setBrush(QBrush(QColor(60, 60, 65)))
-        painter.setPen(QPen(QColor(30, 35, 40), 1.0))
+        painter.setPen(QPen(QColor(30, 35, 40), 1.5))
         
         cowcatcher = QPainterPath()
-        cowcatcher.moveTo(35, -12)
-        cowcatcher.lineTo(45, 0)
-        cowcatcher.lineTo(35, 12)
-        cowcatcher.lineTo(30, 12)
-        cowcatcher.lineTo(30, -12)
+        cowcatcher.moveTo(65, -15)
+        cowcatcher.lineTo(85, 0)
+        cowcatcher.lineTo(65, 15)
+        cowcatcher.lineTo(60, 15)
+        cowcatcher.lineTo(60, -15)
         cowcatcher.closeSubpath()
         painter.drawPath(cowcatcher)
         
-        # Cowcatcher bars
-        painter.setPen(QPen(QColor(40, 45, 50), 1.5))
-        for i in range(3):
-            y = -8 + i * 8
-            painter.drawLine(32, int(y), 42, 0)
+        # Cowcatcher bars (wood beam style)
+        painter.setPen(QPen(self.brass_color, 2.5))
+        for i in range(4):
+            y_pos = -10 + i * 7
+            painter.drawLine(62, int(y_pos), 78, 0)
         
-        # Wheels
-        wheel_positions = [(-35, 18), (-15, 18), (15, 18)]
+        # === BIG DRIVING WHEELS (vintage style) ===
+        wheel_centers = [(-45, 22), (-15, 22), (15, 22)]
+        wheel_radius = 18
         
-        for wx, wy in wheel_positions:
+        for i, (wx, wy) in enumerate(wheel_centers):
             painter.save()
             painter.translate(wx, wy)
-            painter.rotate(math.degrees(self.wheel_rotation))
+            painter.rotate(math.degrees(self.wheel_rotation) + i * 15)
             
-            # Wheel rim
-            rim_gradient = QRadialGradient(0, 0, 10)
-            rim_gradient.setColorAt(0.0, QColor(80, 85, 90))
-            rim_gradient.setColorAt(0.7, QColor(50, 55, 60))
-            rim_gradient.setColorAt(1.0, QColor(30, 35, 40))
+            # Wheel tire (outer rim)
+            tire_gradient = QRadialGradient(0, 0, wheel_radius)
+            tire_gradient.setColorAt(0.7, QColor(50, 55, 60))
+            tire_gradient.setColorAt(0.9, self.black_color)
+            tire_gradient.setColorAt(1.0, QColor(30, 35, 40))
             
-            painter.setBrush(QBrush(rim_gradient))
-            painter.setPen(QPen(QColor(20, 25, 30), 1.5))
-            painter.drawEllipse(-10, -10, 20, 20)
+            painter.setBrush(QBrush(tire_gradient))
+            painter.setPen(QPen(QColor(20, 25, 30), 2.0))
+            painter.drawEllipse(-wheel_radius, -wheel_radius, 
+                              wheel_radius * 2, wheel_radius * 2)
             
-            # Inner wheel
-            painter.setBrush(QBrush(QColor(40, 45, 50)))
-            painter.setPen(QPen(QColor(20, 25, 30), 1.0))
-            painter.drawEllipse(-6, -6, 12, 12)
+            # Spokes (thick vintage style)
+            spoke_color = QColor(80, 85, 90)
+            painter.setPen(QPen(spoke_color, 4.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.Round))
             
-            # Spokes
-            painter.setPen(QPen(QColor(100, 105, 110), 2.0))
-            for i in range(4):
-                angle = i * math.pi / 2
-                sx = math.cos(angle) * 8
-                sy = math.sin(angle) * 8
+            for j in range(8):
+                angle = j * math.pi / 4
+                sx = math.cos(angle) * (wheel_radius - 3)
+                sy = math.sin(angle) * (wheel_radius - 3)
                 painter.drawLine(0, 0, int(sx), int(sy))
             
-            # Center hub
-            painter.setBrush(QBrush(self.gold_color))
-            painter.setPen(QPen(QColor(150, 130, 60), 1.0))
-            painter.drawEllipse(-3, -3, 6, 6)
+            # Counterweight (classic steam loco feature)
+            painter.setBrush(QBrush(QColor(70, 75, 80)))
+            painter.setPen(QPen(QColor(40, 45, 50), 1.0))
+            counter_path = QPainterPath()
+            counter_path.moveTo(0, 0)
+            counter_path.arcTo(-12, -12, 24, 24, -45, 90)
+            counter_path.closeSubpath()
+            painter.drawPath(counter_path)
+            
+            # Center hub (brass)
+            hub_gradient = QRadialGradient(0, 0, 6)
+            hub_gradient.setColorAt(0.0, self.brass_color.lighter(150))
+            hub_gradient.setColorAt(1.0, self.brass_color.darker(120))
+            painter.setBrush(QBrush(hub_gradient))
+            painter.setPen(QPen(self.copper_color, 1.0))
+            painter.drawEllipse(-5, -5, 10, 10)
+            
+            # Hub bolt
+            painter.setBrush(QBrush(QColor(40, 45, 50)))
+            painter.drawEllipse(-2, -2, 4, 4)
             
             painter.restore()
         
-        # Connecting rod
-        rod_y = 18 + math.sin(self.wheel_rotation) * 6
-        painter.setBrush(QBrush(QColor(120, 120, 125)))
-        painter.setPen(QPen(QColor(80, 85, 90), 1.0))
-        painter.drawRoundedRect(-35, int(rod_y) - 2, 50, 4, 2, 2)
+        # === DRIVE RODS (connecting the wheels) ===
+        rod_y_offset = math.sin(math.radians(self.drive_rod_phase)) * 8
         
-        # Piston rod
-        piston_x = 25 + math.cos(self.wheel_rotation) * 5
-        painter.drawRect(int(piston_x), 14, 12, 3)
+        # Main side rod
+        painter.setBrush(QBrush(QColor(180, 185, 190)))
+        painter.setPen(QPen(QColor(100, 105, 110), 1.5))
         
-        # Headlight
+        rod_path = QPainterPath()
+        rod_path.moveTo(-45 + 8, 22 + rod_y_offset)
+        rod_path.lineTo(15 + 8, 22 + rod_y_offset)
+        rod_path.lineTo(15 + 12, 22 + rod_y_offset + 5)
+        rod_path.lineTo(-45 + 12, 22 + rod_y_offset + 5)
+        rod_path.closeSubpath()
+        painter.drawPath(rod_path)
+        
+        # Rod bolts (brass)
+        for wx, wy in wheel_centers:
+            painter.setBrush(QBrush(self.brass_color))
+            painter.setPen(QPen(self.copper_color, 1.0))
+            bolt_y = 22 + rod_y_offset + 2.5
+            painter.drawEllipse(int(wx + 8 - 3), int(bolt_y - 3), 6, 6)
+        
+        # === PISTON ROD ===
+        piston_x = 35 + math.cos(math.radians(self.drive_rod_phase)) * 6
+        painter.setBrush(QBrush(QColor(160, 165, 170)))
+        painter.setPen(QPen(QColor(90, 95, 100), 1.0))
+        painter.drawRect(int(piston_x), 18, 20, 8)
+        
+        # Piston cylinder
+        painter.setBrush(QBrush(QColor(60, 65, 70)))
+        painter.setPen(QPen(QColor(30, 35, 40), 1.5))
+        painter.drawRoundedRect(25, 15, 30, 14, 3, 3)
+        
+        # === HEADLIGHT (old brass style) ===
+        light_x = 50
+        light_y = -22
+        
+        # Light glow
         if self.headlight_on:
-            # Light glow
-            light_glow = QRadialGradient(38, -5, 20)
-            light_glow.setColorAt(0.0, QColor(255, 255, 200, 180))
-            light_glow.setColorAt(0.5, QColor(255, 255, 150, 80))
-            light_glow.setColorAt(1.0, QColor(255, 255, 100, 0))
+            pulse = 0.8 + 0.2 * math.sin(self.headlight_pulse)
+            light_alpha = int(150 * pulse)
             
-            painter.setBrush(QBrush(light_glow))
+            glow = QRadialGradient(light_x, light_y, 35)
+            glow.setColorAt(0.0, QColor(255, 255, 200, light_alpha))
+            glow.setColorAt(0.3, QColor(255, 240, 150, int(light_alpha * 0.5)))
+            glow.setColorAt(1.0, QColor(255, 200, 100, 0))
+            
+            painter.setBrush(QBrush(glow))
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(18, -25, 40, 40)
+            painter.drawEllipse(int(light_x - 35), int(light_y - 35), 70, 70)
             
             # Light beam
-            beam_gradient = QLinearGradient(38, -5, 80, 0)
-            beam_gradient.setColorAt(0.0, QColor(255, 255, 200, 60))
+            beam = QPainterPath()
+            beam.moveTo(light_x + 8, light_y - 6)
+            beam.lineTo(light_x + 80, light_y - 20)
+            beam.lineTo(light_x + 80, light_y + 20)
+            beam.lineTo(light_x + 8, light_y + 6)
+            beam.closeSubpath()
+            
+            beam_gradient = QLinearGradient(light_x, light_y, light_x + 80, light_y)
+            beam_gradient.setColorAt(0.0, QColor(255, 255, 200, 40))
             beam_gradient.setColorAt(1.0, QColor(255, 255, 200, 0))
-            
-            beam_path = QPainterPath()
-            beam_path.moveTo(38, -8)
-            beam_path.lineTo(100, -20)
-            beam_path.lineTo(100, 15)
-            beam_path.lineTo(38, -2)
-            beam_path.closeSubpath()
-            
-            painter.fillPath(beam_path, QBrush(beam_gradient))
+            painter.fillPath(beam, QBrush(beam_gradient))
         
-        # Headlight housing
-        painter.setBrush(QBrush(QColor(200, 200, 210)))
-        painter.setPen(QPen(QColor(100, 105, 110), 1.0))
-        painter.drawEllipse(32, -11, 12, 12)
+        # Headlight housing (brass)
+        housing_gradient = QRadialGradient(light_x, light_y, 10)
+        housing_gradient.setColorAt(0.0, self.brass_color.lighter(150))
+        housing_gradient.setColorAt(1.0, self.brass_color.darker(110))
+        
+        painter.setBrush(QBrush(housing_gradient))
+        painter.setPen(QPen(self.copper_color, 1.5))
+        painter.drawEllipse(int(light_x - 10), int(light_y - 10), 20, 20)
         
         # Light lens
-        lens_gradient = QRadialGradient(38, -5, 5)
-        lens_gradient.setColorAt(0.0, QColor(255, 255, 220))
-        lens_gradient.setColorAt(1.0, QColor(255, 255, 180))
-        
+        lens_gradient = QRadialGradient(light_x - 2, light_y - 2, 6)
+        lens_gradient.setColorAt(0.0, QColor(255, 255, 240))
+        lens_gradient.setColorAt(1.0, QColor(255, 255, 200))
         painter.setBrush(QBrush(lens_gradient))
-        painter.drawEllipse(34, -9, 8, 8)
+        painter.drawEllipse(int(light_x - 6), int(light_y - 6), 12, 12)
         
-        # Whistle
-        painter.setBrush(QBrush(QColor(180, 160, 70)))
-        painter.setPen(QPen(QColor(120, 105, 50), 1.0))
-        painter.drawRect(-25, -30, 6, 15)
-        painter.drawEllipse(-27, -33, 10, 6)
+        # === BRASS WHISTLE ===
+        whistle_x = -30
+        whistle_y = -38
         
-        # Bell
-        painter.setBrush(QBrush(QColor(200, 180, 90)))
-        painter.setPen(QPen(QColor(140, 125, 60), 1.0))
-        painter.drawEllipse(-10, -25, 10, 8)
+        painter.setBrush(QBrush(self.brass_color))
+        painter.setPen(QPen(self.copper_color, 1.0))
+        
+        # Whistle base
+        painter.drawRect(whistle_x - 3, whistle_y + 8, 6, 8)
+        # Whistle pipes
+        painter.drawRect(whistle_x - 6, whistle_y, 4, 12)
+        painter.drawRect(whistle_x + 2, whistle_y, 4, 12)
+        # Whistle tops
+        painter.drawEllipse(whistle_x - 7, whistle_y - 3, 6, 5)
+        painter.drawEllipse(whistle_x + 1, whistle_y - 3, 6, 5)
+        
+        # Whistle steam (when active)
+        if self.whistle_active:
+            whistle_glow = QRadialGradient(whistle_x, whistle_y - 10, 20)
+            whistle_glow.setColorAt(0.0, QColor(255, 255, 255, 100))
+            whistle_glow.setColorAt(1.0, QColor(255, 255, 255, 0))
+            painter.setBrush(QBrush(whistle_glow))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(int(whistle_x - 20), int(whistle_y - 30), 40, 40)
+        
+        # === BRASS BELL ===
+        bell_x = -5
+        bell_y = -32
+        
+        bell_gradient = QRadialGradient(bell_x, bell_y, 8)
+        bell_gradient.setColorAt(0.0, self.brass_color.lighter(140))
+        bell_gradient.setColorAt(0.5, self.brass_color)
+        bell_gradient.setColorAt(1.0, self.brass_color.darker(120))
+        
+        painter.setBrush(QBrush(bell_gradient))
+        painter.setPen(QPen(self.copper_color, 1.0))
+        painter.drawEllipse(int(bell_x - 8), int(bell_y - 8), 16, 14)
+        
+        # Bell mount
+        painter.drawRect(bell_x - 2, bell_y + 4, 4, 6)
+        
+        # === RUST PATCHES (weathering) ===
+        painter.setPen(Qt.PenStyle.NoPen)
+        for _ in range(5):
+            rx = random.uniform(-60, 50)
+            ry = random.uniform(-15, 20)
+            painter.setBrush(QBrush(self.rust_color))
+            painter.drawEllipse(int(rx - 5), int(ry - 3), 10, 6)
+        
+        # === NUMBER PLATE ===
+        painter.setBrush(QBrush(self.brass_color))
+        painter.setPen(QPen(self.copper_color, 1.0))
+        painter.drawRect(35, 8, 16, 8)
+        
+        # Number "88"
+        painter.setPen(QPen(QColor(40, 35, 25), 1.5))
+        font = QFont("Arial", 6, QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.drawText(38, 15, "88")
         
         painter.restore()

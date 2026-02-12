@@ -32,7 +32,7 @@ from ui.geometric_skin import GeometricShapes
 from ui.energy_orb_skin import EnergyOrbSystem
 from ui.holographic_skin import HolographicInterface
 from ui.airplane_skin import Airplane
-from ui.train_skin import DesktopTrain
+from ui.train_skin import VintageSteamTrain
 from ui.submarine_skin import RealisticSubmarine
 from ui.tray import SystemTray
 from config.settings import Settings
@@ -125,7 +125,7 @@ class ZenFishApp:
             self.skin = None
             logger.info("Using AIRPLANE - Jet aircraft with contrails!")
         elif self.creature_type == "train":
-            self.non_bio_skin = DesktopTrain(config=self.config)
+            self.non_bio_skin = VintageSteamTrain(config=self.config)
             self.skin = None
             logger.info("Using TRAIN - Steam locomotive on desktop edges!")
         elif self.creature_type == "submarine":
@@ -702,7 +702,7 @@ class ZenFishApp:
         elif next_creature == "train":
             self.creature_type = "train"
             self.skin = None
-            self.non_bio_skin = DesktopTrain(config=self.config)
+            self.non_bio_skin = VintageSteamTrain(config=self.config)
             for sector in self.sectors:
                 sector.skin = None
             self.non_bio_skin.show()
