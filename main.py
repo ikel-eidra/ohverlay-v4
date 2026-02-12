@@ -369,6 +369,19 @@ class ZenFishApp:
         fish_state = self.brain.get_state()
         for sector in self.sectors:
             sector.update_fish_state(fish_state)
+        
+        # Check for submarine eye rest reminder
+        if self.creature_type == "submarine" and self.non_bio_skin:
+            if getattr(self.non_bio_skin, 'show_reminder', False):
+                # Show eye rest bubble message once per reminder
+                if not getattr(self, '_last_eye_rest_shown', False):
+                    self.bubble_system.queue_message(
+                        "🔔 20-20-20 EYE REST! Torpedo fired! Look 20 feet away for 20 seconds!", 
+                        "health"
+                    )
+                    self._last_eye_rest_shown = True
+            else:
+                self._last_eye_rest_shown = False
 
     def _init_vision_foraging(self):
         """Optional OpenAI vision loop: hourly screenshot analysis for playful auto-feeding."""
