@@ -68,7 +68,7 @@ class SystemTray(QSystemTrayIcon):
         self.setToolTip("Ohverlay v4.0")
 
     def _create_icon(self):
-        """Generate a simple fish icon for the tray."""
+        """Generate a simple creature icon for the tray."""
         pixmap = QPixmap(32, 32)
         pixmap.fill(Qt.transparent)
 

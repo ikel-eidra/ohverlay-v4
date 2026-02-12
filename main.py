@@ -1,7 +1,11 @@
 """
-OHVERLAY - Main entry point.
-A transparent desktop companion: a lifelike Betta fish that swims natively
-across your 2-3 monitors with no aquarium background. The monitors ARE the tank.
+OHVERLAY V4.0 - Assistant's Division
+A transparent desktop companion: Deep sea creatures and non-biological objects
+swim across your 2-3 monitors. The monitors ARE the world.
+
+Division Split:
+- Assistant: Jellyfish, Geometric, Energy Orbs, Holographic, Airplane, Train, Submarine
+- Lumex: Betta, Tetra, Discus, Plants (separate package)
 
 Features:
 - LLM-powered health reminders and news curation (Claude/OpenAI)
@@ -86,10 +90,10 @@ class ZenFishApp:
         # Update tray status
         self._update_tray_status()
 
-        logger.info("OHVERLAY fully initialized. Your betta is swimming!")
+        logger.info("OHVERLAY V4.0 fully initialized! Assistant's Division Active: Deep Sea + Non-Bio creatures ready!")
 
     def _init_monitors(self):
-        """Detect monitors - they form the fish's entire world."""
+        """Detect monitors - they form the creature's entire world."""
         self.monitor_manager = MonitorManager()
         self.total_bounds = self.monitor_manager.get_total_bounds_tuple()
 
@@ -456,7 +460,7 @@ class ZenFishApp:
         self.config.set("fish", "primary_color", list(primary))
         self.config.set("fish", "secondary_color", list(secondary))
         self.config.set("fish", "accent_color", list(accent))
-        logger.info(f"Fish color changed to: {primary}")
+        logger.info(f"Creature colors updated")
 
     def _on_size_changed(self, scale):
         self.skin.size_scale = scale
@@ -464,7 +468,7 @@ class ZenFishApp:
         logger.info(f"Creature size set to: {scale}x")
 
     def _on_speed_changed(self, speed_key):
-        """Adjust fish swimming speed."""
+        """Adjust creature swimming speed."""
         speed_map = {
             "super_slow": {"max": 40, "cruise": 12, "idle": 5, "dart": 80, "label": "Super Slow"},
             "slow": {"max": 90, "cruise": 30, "idle": 10, "dart": 150, "label": "Slow"},
@@ -477,7 +481,7 @@ class ZenFishApp:
         self.brain._idle_speed = preset["idle"]
         self.brain._dart_speed = preset["dart"]
         self.config.set("fish", "speed", speed_key)
-        logger.info(f"Swimming speed set to: {preset['label']}")
+        logger.info(f"Movement speed set to: {preset['label']}")
 
     def _on_species_changed(self, species, count):
         """School mode disabled - moved to LUMEX division (Betta/Tetra/Discus/Plants)."""
@@ -517,15 +521,19 @@ class ZenFishApp:
             logger.info(f"Module '{module_key}' {'enabled' if enabled else 'disabled'}")
 
     def _on_feed_fish(self):
-        if self.creature_type == "jellyfish":
+        """Trigger creature special effect (Ctrl+Alt+F)"""
+        if self.creature_type in ["jellyfish", "iridescent_jellyfish"]:
             # Trigger bioluminescent flash for jellyfish
             if hasattr(self.skin, 'trigger_flash'):
                 self.skin.trigger_flash()
-            self.bubble_system.queue_message("✨ Bioluminescent display triggered! Beautiful blue light show!", "ambient")
+            self.bubble_system.queue_message("✨ Bioluminescent display triggered! Beautiful light show!", "ambient")
+        elif self.creature_type == "submarine":
+            # Fire torpedo for submarine
+            if self.non_bio_skin and hasattr(self.non_bio_skin, 'fire_torpedo'):
+                self.non_bio_skin.fire_torpedo()
+            self.bubble_system.queue_message("🚢 Torpedo fired! Bubble burst detected!", "ambient")
         else:
-            cursor = QCursor.pos()
-            self.brain.drop_pellet(cursor.x(), cursor.y(), count=4)
-            self.bubble_system.queue_message("Pellets poured from the surface. Breathe and watch Uno forage.", "ambient")
+            self.bubble_system.queue_message(f"✨ Special effect triggered on {self.creature_type}!", "ambient")
 
     def _on_toggle_visibility(self):
         for sector in self.sectors:
