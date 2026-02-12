@@ -85,7 +85,12 @@ class ZenFishApp:
         ram_gb = self._get_system_ram_gb()
         
         # Get creature type from config (betta or jellyfish)
-        creature_type = self.config.get("creature_type", "betta") if hasattr(self.config, "get") else "betta"
+        try:
+            creature_type = self.config.get("creature_type", "betta")
+            if creature_type is None:
+                creature_type = "betta"
+        except:
+            creature_type = "betta"
         self.creature_type = creature_type.lower()
         
         if self.creature_type == "jellyfish":
