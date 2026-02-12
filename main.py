@@ -24,6 +24,7 @@ from engine.llm_brain import LLMBrain
 from ui.skin import FishSkin
 from ui.skin_realistic import RealisticBettaSkin
 from ui.jellyfish_skin import BioluminescentJellyfishSkin
+from ui.jellyfish_iridescent_skin import IridescentJellyfishSkin
 from ui.tetra_skin import NeonTetraSkin
 from ui.bubbles import BubbleSystem
 
@@ -108,6 +109,10 @@ class ZenFishApp:
             # Jellyfish works well on all RAM levels
             self.skin = BioluminescentJellyfishSkin(config=self.config)
             logger.info(f"Using BIOLUMINESCENT JELLYFISH - Deep sea variant with glowing lights!")
+        elif self.creature_type == "iridescent_jellyfish":
+            # NEW: Rainbow iridescent jellyfish
+            self.skin = IridescentJellyfishSkin(config=self.config)
+            logger.info(f"Using IRIDESCENT JELLYFISH - Rainbow bioluminescent deep sea creature!")
         elif self.creature_type == "geometric":
             self.non_bio_skin = GeometricShapes(config=self.config)
             self.skin = None  # No fish skin in non-bio mode
@@ -615,7 +620,8 @@ class ZenFishApp:
         # Define the creature cycle
         creature_cycle = [
             "betta",
-            "jellyfish", 
+            "jellyfish",
+            "iridescent_jellyfish",
             "geometric",
             "energy_orbs",
             "holographic",
@@ -658,6 +664,14 @@ class ZenFishApp:
                 sector.skin = self.skin
             self.bubble_system.queue_message("🎆 Switched to BIOLUMINESCENT JELLYFISH! Press Ctrl+Alt+F to trigger light show!", "ambient")
             logger.info("Switched to Jellyfish mode")
+            
+        elif next_creature == "iridescent_jellyfish":
+            self.creature_type = "iridescent_jellyfish"
+            self.skin = IridescentJellyfishSkin(config=self.config)
+            for sector in self.sectors:
+                sector.skin = self.skin
+            self.bubble_system.queue_message("🌈 Switched to IRIDESCENT JELLYFISH! Rainbow deep sea bioluminescence!", "ambient")
+            logger.info("Switched to Iridescent Jellyfish mode")
             
         elif next_creature == "geometric":
             self.creature_type = "geometric"
