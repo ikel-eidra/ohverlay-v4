@@ -57,7 +57,7 @@ from modules.updater import AppUpdater
 from utils.logger import logger
 
 
-class ZenFishApp:
+class OhverlayApp:
     """Main application controller wiring all systems together."""
 
     def __init__(self):
@@ -446,9 +446,9 @@ class ZenFishApp:
                 self.bubble_system.queue_message(msg, "ambient")
             elif targets:
                 target_str = ", ".join(str(t) for t in targets[:3])
-                self.bubble_system.queue_message(f"Nibbling near: {target_str}", "ambient")
+                self.bubble_system.queue_message(f"Exploring near: {target_str}", "ambient")
             else:
-                self.bubble_system.queue_message("I found tasty pixels on your screen!", "ambient")
+                self.bubble_system.queue_message("Exploring your screen!", "ambient")
 
     def _update_tray_status(self):
         """Update integration status in tray menu."""
@@ -731,7 +731,7 @@ class ZenFishApp:
         logger.info(f"LLM key set for {provider}, brain re-initialized.")
 
     def _on_quit(self):
-        logger.info("ZenFish shutting down...")
+        logger.info("Ohverlay V4.0 shutting down...")
         self.timer.stop()
         if self._hotkey_listener:
             try:
@@ -752,7 +752,7 @@ class ZenFishApp:
 
 def main():
     logger.info("Starting OHVERLAY...")
-    app = ZenFishApp()
+    app = OhverlayApp()
     sys.exit(app.run())
 
 
