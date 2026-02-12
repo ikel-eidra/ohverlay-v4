@@ -93,8 +93,15 @@ class RealisticBettaSkin:
                 self.primary, self.secondary, self.accent = list(p), list(s), list(a)
             self.size_scale = fish_cfg.get("size_scale", self.size_scale)
 
+    def render(self, painter, fish_state):
+        """Main render entry point - compatible with original FishSkin interface."""
+        x = fish_state.get("position", [0, 0])[0]
+        y = fish_state.get("position", [0, 0])[1]
+        angle = fish_state.get("facing_angle", 0)
+        self.update_and_render(painter, x, y, angle, fish_state)
+    
     def update_and_render(self, painter, x, y, angle, fish_state):
-        """Main render entry point."""
+        """Main render entry point with explicit position."""
         vx = fish_state.get("velocity", [0, 0])[0]
         vy = fish_state.get("velocity", [0, 0])[1]
         speed = math.hypot(vx, vy)
