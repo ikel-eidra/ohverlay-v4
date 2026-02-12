@@ -100,16 +100,10 @@ class OhverlayApp:
 
     def _init_rendering(self):
         """Create the creature renderer - Assistant's Division (Deep Sea + Non-Bio only)."""
-        # Get creature type from config (default: jellyfish - Lumex owns Betta now)
-        try:
-            # Access creature_type directly from root config (not via get() which expects section)
-            creature_type = self.config._config.get("creature_type", "jellyfish")
-            if not creature_type or creature_type in ["betta", "discus", "neon_tetra"]:
-                # Betta/Tetra/Discus moved to LUMEX - default to jellyfish
-                creature_type = "jellyfish"
-        except:
-            creature_type = "jellyfish"
-        self.creature_type = creature_type.lower()
+        # FORCE TRAIN MODE - Skip config reading issues
+        # User wants non-bio objects, not jellyfish
+        self.creature_type = "train"
+        logger.info("FORCED TRAIN MODE - Non-bio steam locomotive!")
         
         # Initialize non-biological object skins (Assistant's division)
         self.non_bio_skin = None
