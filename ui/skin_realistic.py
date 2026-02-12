@@ -93,8 +93,14 @@ class RealisticBettaSkin:
                 self.primary, self.secondary, self.accent = list(p), list(s), list(a)
             self.size_scale = fish_cfg.get("size_scale", self.size_scale)
 
-    def render(self, painter, fish_state):
-        """Main render entry point - compatible with original FishSkin interface."""
+    def render(self, painter, local_pos, fish_state):
+        """Main render entry point - compatible with original FishSkin interface.
+        
+        Args:
+            painter: QPainter instance
+            local_pos: (x, y) tuple of position (unused, we get it from fish_state)
+            fish_state: Dictionary with fish state including position and angle
+        """
         x = fish_state.get("position", [0, 0])[0]
         y = fish_state.get("position", [0, 0])[1]
         angle = fish_state.get("facing_angle", 0)
