@@ -21,7 +21,7 @@ from utils.logger import logger
 class BehavioralReactor:
     """The fish's brain: realistic behavior, smooth movement, environmental awareness."""
 
-    STATES = ("IDLE", "SEARCHING", "FEEDING", "RESTING", "COMMUNICATING", "DARTING", "FLARING", "SURFACE_BREATH")
+    STATES = ("IDLE", "SEARCHING", "FEEDING", "RESTING", "COMMUNICATING", "DARTING", "FLARING", "SURFACE_BREATH", "GRAZING")
 
     def __init__(self, config=None):
         self.hunger = 0.0
@@ -89,6 +89,14 @@ class BehavioralReactor:
         # -- Wandering path (curved, not straight) --
         self._waypoints = []
         self._waypoint_idx = 0
+
+        # -- Edge grazing (nibble at screen edges like eating algae) --
+        self._graze_timer = 0.0
+        self._graze_interval = np.random.uniform(15.0, 45.0)  # Occasional grazing
+        self._is_grazing = False
+        self._graze_target = None
+        self._graze_duration = 0.0
+        self._graze_max_duration = np.random.uniform(3.0, 8.0)
 
         # -- Speed parameters --
         self._max_speed = 180.0
@@ -235,6 +243,17 @@ class BehavioralReactor:
             if self._explore_timer >= self._explore_interval and not self._pellets:
                 self._explore_timer = 0.0
                 self._explore_interval = np.random.uniform(9.0, 18.0)
+                
+                # Occasionally go to screen edges to "graze" (eat algae)
+                if np.random.random() < 0.25:  # 25% chance to graze at edges
+                    edge_target = self._find_edge_graze_target()
+                    if edge_target is not None:
+                        self._graze_target = edge_target
+                        self.state = "GRAZING"
+                        self._graze_duration = 0.0
+                        self._graze_max_duration = np.random.uniform(3.0, 8.0)
+                        return
+                
                 destination = self._find_valid_target()
                 self._generate_wandering_path(destination)
                 self.state = "SEARCHING"
@@ -324,6 +343,30 @@ class BehavioralReactor:
                 self._flare_timer = 0.0
                 self.mood = min(100.0, self.mood + 5.0)
 
+        elif self.state == "GRAZING":
+            # Grazing at screen edges - "eating algae"
+            self._graze_duration += dt
+            
+            if self._graze_target is not None:
+                dist_to_edge = np.linalg.norm(self._graze_target - self.position)
+                
+                if dist_to_edge < 15.0:
+                    # Close to edge, nibble in place
+                    self.velocity *= 0.85  # Slow down
+                    # Gentle bobbing motion while nibbling
+                    nibble = math.sin(self._graze_duration * 8) * 0.5
+                    self.velocity[0] += nibble
+                    self.velocity[1] += abs(nibble) * 0.5
+                
+                # Done grazing after duration
+                if self._graze_duration > self._graze_max_duration:
+                    self.state = "IDLE"
+                    self._graze_duration = 0.0
+                    self._graze_target = None
+                    self.mood = min(100.0, self.mood + 2.0)  # Happy after eating
+            else:
+                self.state = "IDLE"
+
         elif self.state == "SURFACE_BREATH":
             if self._surface_target is None:
                 self.state = "IDLE"
@@ -376,15 +419,69 @@ class BehavioralReactor:
         self._waypoints.append(destination)
 
     def _find_valid_target(self):
-        """Pick a random target within bounds, avoiding sanctuary zones."""
+        """Pick a random target anywhere within bounds (including edges), avoiding sanctuary zones."""
         x_min, y_min, w, h = self.bounds
         for _ in range(20):
-            tx = np.random.uniform(x_min + 60, x_min + w - 60)
-            ty = np.random.uniform(y_min + 60, y_min + h - 60)
+            # Use full screen space including edges (with small margin)
+            tx = np.random.uniform(x_min + 30, x_min + w - 30)
+            ty = np.random.uniform(y_min + 30, y_min + h - 30)
             if self.sanctuary and self.sanctuary.is_in_sanctuary(tx, ty):
                 continue
             return np.array([tx, ty])
         return self.position + np.random.uniform(-80, 80, size=2)
+
+    def _find_edge_graze_target(self):
+        """
+        Find a target at screen edges for 'grazing' behavior.
+        Fish/jellyfish swims to edges and nibbles like eating algae.
+        Uses entire multi-monitor space - all edges of all screens.
+        """
+        x_min, y_min, w, h = self.bounds
+        
+        # Define edge zones (with margin for grazing)
+        edge_margin = 50
+        
+        # Possible edge positions
+        edge_targets = []
+        
+        # Left edge
+        for _ in range(3):
+            edge_targets.append(np.array([
+                x_min + edge_margin,
+                np.random.uniform(y_min + 100, y_min + h - 100)
+            ]))
+        
+        # Right edge  
+        for _ in range(3):
+            edge_targets.append(np.array([
+                x_min + w - edge_margin,
+                np.random.uniform(y_min + 100, y_min + h - 100)
+            ]))
+        
+        # Top edge (just above taskbar)
+        for _ in range(2):
+            edge_targets.append(np.array([
+                np.random.uniform(x_min + 100, x_min + w - 100),
+                y_min + h - 60  # Just above taskbar
+            ]))
+        
+        # Corners (favorite grazing spots)
+        edge_targets.append(np.array([x_min + edge_margin, y_min + h - 60]))  # Bottom-left
+        edge_targets.append(np.array([x_min + w - edge_margin, y_min + h - 60]))  # Bottom-right
+        
+        # Filter out sanctuary zones and pick random valid target
+        valid_targets = []
+        for target in edge_targets:
+            if self.sanctuary and self.sanctuary.is_in_sanctuary(target[0], target[1]):
+                continue
+            # Check if target is reachable (not too far)
+            dist = np.linalg.norm(target - self.position)
+            if dist < w * 0.8:  # Within reasonable distance
+                valid_targets.append(target)
+        
+        if valid_targets:
+            return valid_targets[np.random.randint(0, len(valid_targets))]
+        return None
 
     def _find_drift_target(self):
         """Gentle nearby drift for idle hovering."""
@@ -511,6 +608,21 @@ class BehavioralReactor:
             hover_x = math.sin(self._flare_timer * 3.0) * 2.0
             hover_y = math.cos(self._flare_timer * 2.5) * 1.5
             self.velocity += np.array([hover_x, hover_y]) * dt
+
+        elif self.state == "GRAZING":
+            # Move toward edge target then nibble
+            if self._graze_target is not None:
+                dist = np.linalg.norm(self._graze_target - self.position)
+                if dist > 15.0:
+                    # Still moving to edge
+                    self._steer_towards(self._graze_target, max_accel=80.0, drag=0.05, desired_speed=self._cruise_speed * 0.7)
+                else:
+                    # At edge, gentle nibbling motion
+                    self.velocity *= 0.88
+                    # Small circular nibbling motion
+                    nibble_x = math.cos(self._graze_duration * 5) * 1.2
+                    nibble_y = math.sin(self._graze_duration * 8) * 0.8
+                    self.velocity += np.array([nibble_x, nibble_y]) * dt
 
         elif self.state == "COMMUNICATING":
             self.velocity *= 0.90
