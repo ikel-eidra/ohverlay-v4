@@ -65,7 +65,7 @@ class SystemTray(QSystemTrayIcon):
 
         self._create_icon()
         self._create_menu()
-        self.setToolTip("OHVERLAY")
+        self.setToolTip("Ohverlay v4.0")
 
     def _create_icon(self):
         """Generate a simple fish icon for the tray."""
@@ -104,7 +104,7 @@ class SystemTray(QSystemTrayIcon):
         menu = QMenu()
 
         # --- Header ---
-        header = menu.addAction("OHVERLAY")
+        header = menu.addAction("🐟 Ohverlay v4.0")
         header.setEnabled(False)
         menu.addSeparator()
 

@@ -43,7 +43,7 @@ class ZenFishApp:
 
     def __init__(self):
         self.app = QApplication(sys.argv)
-        self.app.setApplicationName("OHVERLAY")
+        self.app.setApplicationName("Ohverlay v4.0")
         self.app.setOrganizationName("Futol Ethical Technology Ecosystems")
         self.app.setOrganizationDomain("futol-ethical-technology-ecosystems.local")
         self.app.setQuitOnLastWindowClosed(False)
