@@ -4,11 +4,17 @@ REM  OHVERLAY v4.0 - Windows Build Script
 REM  By Futol Ethical Technology Ecosystems
 REM  Creates a portable .exe folder (no admin/install needed)
 REM ============================================================
+
+REM Auto-navigate to the folder where this script lives
+cd /d "%~dp0"
+
 echo.
 echo   =============================================
 echo    OHVERLAY v4.0 - Portable Windows Builder
 echo    Futol Ethical Technology Ecosystems
 echo   =============================================
+echo.
+echo   Working directory: %cd%
 echo.
 
 REM Check if Python is available

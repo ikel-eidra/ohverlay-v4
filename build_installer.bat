@@ -8,6 +8,10 @@ REM  This script:
 REM    1. Builds the portable app with PyInstaller
 REM    2. Packages it into a setup wizard with Inno Setup
 REM ============================================================
+
+REM Auto-navigate to the folder where this script lives
+cd /d "%~dp0"
+
 echo.
 echo   =============================================
 echo    OHVERLAY v4.0 - Windows Installer Builder
