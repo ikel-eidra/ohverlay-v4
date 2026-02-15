@@ -26,6 +26,7 @@ from engine.sanctuary import SanctuaryEngine
 from engine.llm_brain import LLMBrain
 from ui.jellyfish_skin import BioluminescentJellyfishSkin
 from ui.jellyfish_iridescent_skin import IridescentJellyfishSkin
+from ui.jellyfish_cyan_skin import CyanJellyfishSkin
 from ui.bubbles import BubbleSystem
 
 # MOVED TO LUMEX PACKAGE (Betta, Tetra, Discus, Plants):
@@ -116,6 +117,10 @@ class OhverlayApp:
             # Deep sea rainbow iridescent jellyfish
             self.skin = IridescentJellyfishSkin(config=self.config)
             logger.info("Using IRIDESCENT JELLYFISH - Rainbow bioluminescent deep sea creature!")
+        elif self.creature_type == "cyan_jellyfish":
+            # Ethereal cyan bioluminescent moon jelly
+            self.skin = CyanJellyfishSkin(config=self.config)
+            logger.info("Using CYAN JELLYFISH - Ethereal glowing moon jelly!")
         elif self.creature_type == "geometric":
             self.non_bio_skin = GeometricShapes(config=self.config)
             self.skin = None
@@ -529,7 +534,7 @@ class OhverlayApp:
 
     def _on_feed_fish(self):
         """Trigger creature special effect (Ctrl+Alt+F)"""
-        if self.creature_type in ["jellyfish", "iridescent_jellyfish"]:
+        if self.creature_type in ["jellyfish", "iridescent_jellyfish", "cyan_jellyfish"]:
             # Trigger bioluminescent flash for jellyfish
             if hasattr(self.skin, 'trigger_flash'):
                 self.skin.trigger_flash()
@@ -558,6 +563,7 @@ class OhverlayApp:
         creature_cycle = [
             "jellyfish",            # Deep sea
             "iridescent_jellyfish", # Deep sea rainbow
+            "cyan_jellyfish",       # Deep sea cyan moon jelly
             "geometric",            # Non-bio
             "energy_orbs",          # Non-bio
             "holographic",          # Non-bio
@@ -598,6 +604,14 @@ class OhverlayApp:
             self.bubble_system.queue_message("🌈 Switched to IRIDESCENT JELLYFISH! Rainbow deep sea bioluminescence!", "ambient")
             logger.info("Switched to Iridescent Jellyfish mode")
             
+        elif next_creature == "cyan_jellyfish":
+            self.creature_type = "cyan_jellyfish"
+            self.skin = CyanJellyfishSkin(config=self.config)
+            for sector in self.sectors:
+                sector.skin = self.skin
+            self.bubble_system.queue_message("🪼 Switched to CYAN JELLYFISH! Ethereal glowing moon jelly!", "ambient")
+            logger.info("Switched to Cyan Jellyfish mode")
+
         elif next_creature == "geometric":
             self.creature_type = "geometric"
             self.skin = None

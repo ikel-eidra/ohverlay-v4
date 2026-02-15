@@ -1,35 +1,62 @@
 @echo off
-REM ============================================
-REM  ZenFish Overlay - Windows Build Script
-REM  Creates a portable .exe (no admin needed)
-REM ============================================
+REM ============================================================
+REM  OHVERLAY v4.0 - Windows Build Script
+REM  By Futol Ethical Technology Ecosystems
+REM  Creates a portable .exe folder (no admin/install needed)
+REM ============================================================
 echo.
-echo  ZenFish Overlay - Building portable Windows app...
-echo  ==================================================
+echo   =============================================
+echo    OHVERLAY v4.0 - Portable Windows Builder
+echo    Futol Ethical Technology Ecosystems
+echo   =============================================
 echo.
 
 REM Check if Python is available
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo  ERROR: Python not found!
-    echo  Download portable Python from: https://www.python.org/downloads/
-    echo  Or use the WinPython/Miniconda portable method in INSTALL.md
+    echo  [ERROR] Python not found in PATH!
+    echo  Download Python 3.10+ from: https://www.python.org/downloads/
+    echo  Make sure to check "Add Python to PATH" during install.
+    echo.
     pause
     exit /b 1
 )
 
-echo [1/3] Installing build dependencies...
-pip install --user pyinstaller PySide6 numpy loguru requests pynput anthropic
+echo  [1/4] Installing build tools...
+pip install --user pyinstaller
 
 echo.
-echo [2/3] Building ZenFish.exe...
-pyinstaller zenfish.spec --noconfirm --clean
+echo  [2/4] Installing application dependencies...
+pip install --user -r requirements.txt
 
 echo.
-echo [3/3] Done!
+echo  [3/4] Building Ohverlay.exe with PyInstaller...
+echo         (This may take 2-5 minutes)
 echo.
-echo  Your portable ZenFish app is in: dist\ZenFish\
-echo  Just copy that folder anywhere and run ZenFish.exe
-echo  No admin privileges needed!
+pyinstaller ohverlay.spec --noconfirm --clean
+
+if errorlevel 1 (
+    echo.
+    echo  [ERROR] Build failed! Check the errors above.
+    pause
+    exit /b 1
+)
+
+echo.
+echo  [4/4] Build complete!
+echo.
+echo  =============================================
+echo   Your portable OHVERLAY is ready!
+echo  =============================================
+echo.
+echo   Location: dist\Ohverlay\
+echo   Run:      dist\Ohverlay\Ohverlay.exe
+echo.
+echo   To distribute:
+echo     1. Copy the entire dist\Ohverlay\ folder
+echo     2. Share it as a ZIP file
+echo     3. Or run build_installer.bat to create a setup wizard
+echo.
+echo   No admin privileges or Python needed to run!
 echo.
 pause
