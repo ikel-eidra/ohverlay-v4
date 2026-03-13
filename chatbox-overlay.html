@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chatbox Overlay</title>
+<title>Blue - Ohverlay AI Assistant</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
@@ -286,7 +286,7 @@
   <!-- Header (drag handle) -->
   <div class="chat-header" id="chatHeader">
     <div class="header-left">
-      <span class="chat-title">Ohverlay AI</span>
+      <span class="chat-title">Blue</span>
       <span class="web-badge">WEB</span>
     </div>
     <div class="header-right">
@@ -297,7 +297,7 @@
 
   <!-- Messages -->
   <div class="chat-messages" id="chatMessages">
-    <div class="msg msg-system">Ohverlay AI assistant ready. Type a message to start chatting.</div>
+    <div class="msg msg-system">Hi! I'm Blue, your Ohverlay assistant. I remember our conversations. How can I help?</div>
   </div>
 
   <!-- Input -->
@@ -362,6 +362,140 @@ const chatStatus = document.getElementById('chatStatus');
 let currentTheme = 'glass-dark';
 let isProcessing = false;
 let conversationHistory = [];
+
+/* ─── Blue's Memory System (localStorage-based for HTML overlay) ─── */
+const BlueMemory = {
+  _key: 'ohverlay-blue-memory',
+
+  _load() {
+    try {
+      return JSON.parse(localStorage.getItem(this._key)) || this._defaults();
+    } catch(e) { return this._defaults(); }
+  },
+
+  _defaults() {
+    return {
+      userFacts: [],         // {category, fact, timestamp}
+      conversationLog: [],   // {role, content, timestamp} - last 200
+      reminders: [],         // {content, deadline, completed}
+      preferences: {},       // key-value pairs
+      sessionCount: 0,
+      firstSeen: Date.now(),
+      lastSeen: Date.now(),
+    };
+  },
+
+  _save(data) {
+    try { localStorage.setItem(this._key, JSON.stringify(data)); } catch(e) {}
+  },
+
+  addFact(category, fact) {
+    const data = this._load();
+    const existing = data.userFacts.find(f => f.category === category && f.fact === fact);
+    if (!existing) {
+      data.userFacts.push({ category, fact, timestamp: Date.now() });
+      if (data.userFacts.length > 100) data.userFacts = data.userFacts.slice(-100);
+    }
+    this._save(data);
+  },
+
+  logMessage(role, content) {
+    const data = this._load();
+    data.conversationLog.push({ role, content, timestamp: Date.now() });
+    if (data.conversationLog.length > 200) data.conversationLog = data.conversationLog.slice(-200);
+    data.lastSeen = Date.now();
+    this._save(data);
+  },
+
+  addReminder(content, deadline) {
+    const data = this._load();
+    data.reminders.push({ content, deadline, completed: false, created: Date.now() });
+    this._save(data);
+  },
+
+  setPref(key, value) {
+    const data = this._load();
+    data.preferences[key] = value;
+    this._save(data);
+  },
+
+  startSession() {
+    const data = this._load();
+    data.sessionCount++;
+    data.lastSeen = Date.now();
+    this._save(data);
+  },
+
+  buildContext() {
+    const data = this._load();
+    const parts = [];
+
+    if (data.userFacts.length > 0) {
+      parts.push('Known facts about user:');
+      const byCategory = {};
+      data.userFacts.forEach(f => {
+        if (!byCategory[f.category]) byCategory[f.category] = [];
+        byCategory[f.category].push(f.fact);
+      });
+      for (const [cat, facts] of Object.entries(byCategory)) {
+        parts.push('  ' + cat + ': ' + facts.slice(-5).join(', '));
+      }
+    }
+
+    const activeReminders = (data.reminders || []).filter(r => !r.completed);
+    if (activeReminders.length > 0) {
+      parts.push('\nActive reminders:');
+      activeReminders.slice(-5).forEach(r => {
+        let dl = r.deadline ? ' (due: ' + new Date(r.deadline).toLocaleString() + ')' : '';
+        parts.push('  - ' + r.content + dl);
+      });
+    }
+
+    const daysSinceFirst = Math.floor((Date.now() - data.firstSeen) / 86400000);
+    parts.push('\nRelationship: ' + data.sessionCount + ' sessions over ' + daysSinceFirst + ' days');
+
+    // Recent conversation summary (last 6 messages for context)
+    if (data.conversationLog.length > 0) {
+      parts.push('\nRecent conversation topics (for continuity):');
+      data.conversationLog.slice(-6).forEach(m => {
+        parts.push('  ' + m.role + ': ' + m.content.slice(0, 80));
+      });
+    }
+
+    return parts.join('\n');
+  },
+
+  // Extract facts from user messages using simple pattern matching
+  extractFacts(message) {
+    const lower = message.toLowerCase();
+    const patterns = [
+      { re: /my name is (\w+)/i, cat: 'identity', fmt: m => 'Name: ' + m[1] },
+      { re: /i(?:'m| am) (\d+) years? old/i, cat: 'identity', fmt: m => 'Age: ' + m[1] },
+      { re: /i live in (.+?)(?:\.|,|$)/i, cat: 'location', fmt: m => m[1].trim() },
+      { re: /i (?:like|love|enjoy) (.+?)(?:\.|,|!|$)/i, cat: 'likes', fmt: m => m[1].trim() },
+      { re: /i (?:hate|dislike|don't like) (.+?)(?:\.|,|!|$)/i, cat: 'dislikes', fmt: m => m[1].trim() },
+      { re: /i work (?:at|for|in) (.+?)(?:\.|,|$)/i, cat: 'work', fmt: m => m[1].trim() },
+      { re: /i(?:'m| am) a (.+?)(?:\.|,|$)/i, cat: 'identity', fmt: m => m[1].trim() },
+      { re: /my (?:birthday|bday) is (.+?)(?:\.|,|$)/i, cat: 'identity', fmt: m => 'Birthday: ' + m[1].trim() },
+      { re: /call me (\w+)/i, cat: 'identity', fmt: m => 'Preferred name: ' + m[1] },
+      { re: /remind me (?:to |about )?(.+?)(?:\.|!|$)/i, cat: 'reminder', fmt: m => m[1].trim() },
+    ];
+
+    patterns.forEach(p => {
+      const match = message.match(p.re);
+      if (match) {
+        if (p.cat === 'reminder') {
+          this.addReminder(p.fmt(match), null);
+        } else {
+          this.addFact(p.cat, p.fmt(match));
+        }
+      }
+    });
+  }
+};
+
+// Start session on load
+BlueMemory.startSession();
 
 /* ─── LLM Provider Configs ─── */
 const providers = {
@@ -548,17 +682,26 @@ async function callLLM(userMessage) {
     }
   }
 
+  // Extract facts from user message and log it
+  BlueMemory.extractFacts(userMessage);
+  BlueMemory.logMessage('user', userMessage);
+
   // Build conversation
   conversationHistory.push({ role: 'user', content: userMessage });
 
-  const systemPrompt = 'You are Ohverlay AI, a helpful and concise desktop assistant. ' +
-    'You have web search capabilities when the LLM provider supports it. ' +
-    'Keep responses brief and friendly (2-4 sentences max unless asked for detail). ' +
-    'You are part of Ohverlay, a desktop overlay application.';
+  // Build Blue's system prompt with memory context
+  const memoryContext = BlueMemory.buildContext();
+  const systemPrompt = 'You are Blue, a warm, friendly, and helpful AI desktop assistant that lives inside Ohverlay. ' +
+    'You are like a caring companion who remembers things about the user and genuinely wants to help.\n\n' +
+    'Personality: Warm, supportive, a little playful. Use casual language but stay helpful and smart. ' +
+    'Keep responses concise (2-4 sentences) unless asked for more detail. ' +
+    'If the user speaks Tagalog/Filipino, respond naturally in the same language. ' +
+    'You proactively remind users about deadlines and health (20-20-20 eye rule).\n\n' +
+    (memoryContext ? '--- YOUR MEMORY ---\n' + memoryContext + '\n--- END MEMORY ---\n' : '');
 
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...conversationHistory.slice(-20), // Keep last 20 messages for context
+    ...conversationHistory.slice(-20),
   ];
 
   isProcessing = true;
@@ -614,6 +757,7 @@ async function callLLM(userMessage) {
     }
 
     conversationHistory.push({ role: 'assistant', content: aiText });
+    BlueMemory.logMessage('assistant', aiText);
 
     removeTypingIndicator();
     addMessage(aiText, 'ai');
