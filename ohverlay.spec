@@ -20,6 +20,12 @@ a = Analysis(
         ('config', 'config'),
         # Include LUMEX package
         ('LUMEX_PACKAGE', 'LUMEX_PACKAGE'),
+        # Include HTML overlays
+        ('chatbox-overlay.html', '.'),
+        ('sticky-note-overlay.html', '.'),
+        ('fairy-dandelion.html', '.'),
+        ('manta-ray-overlay.html', '.'),
+        ('aurora.html', '.'),
         # Include version info
         ('windows_file_version_info.txt', '.'),
     ],
@@ -57,6 +63,8 @@ a = Analysis(
         'modules.telegram_bridge',
         'modules.webhook_server',
         'modules.updater',
+        'modules.blue_memory',
+        'modules.blue_realtime',
         # Config
         'config.settings',
         # Utils
