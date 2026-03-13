@@ -17,8 +17,8 @@
   /* ─── Sticky Note Container ─── */
   .sticky-note {
     position: absolute;
-    width: 192px;   /* ~2 inches at 96dpi */
-    height: 288px;  /* ~3 inches at 96dpi */
+    width: 210px;
+    height: 310px;
     border-radius: 2px;
     cursor: grab;
     transition: box-shadow 0.3s ease, transform 0.15s ease;
@@ -30,15 +30,13 @@
     transform: rotate(0deg) scale(1.02);
   }
 
-  /* ─── Paper Layer (background texture) ─── */
+  /* ─── Paper Layer ─── */
   .paper-bg {
     position: absolute;
     inset: 0;
     border-radius: 2px;
     overflow: hidden;
   }
-
-  /* ─── Fold / Curl Effect ─── */
   .paper-bg::after {
     content: '';
     position: absolute;
@@ -48,27 +46,22 @@
     border-radius: 0 0 2px 0;
   }
 
-  /* ─── Tape Strip ─── */
+  /* ─── Tape & Pin ─── */
   .tape {
     position: absolute;
-    top: -8px;
-    left: 50%;
+    top: -8px; left: 50%;
     transform: translateX(-50%) rotate(1deg);
-    width: 60px;
-    height: 20px;
+    width: 60px; height: 20px;
     background: rgba(255,255,255,0.35);
     border: 1px solid rgba(255,255,255,0.15);
     border-radius: 1px;
     backdrop-filter: blur(2px);
     z-index: 2;
   }
-
-  /* ─── Pin ─── */
   .pin {
     display: none;
     position: absolute;
-    top: -6px;
-    left: 50%;
+    top: -6px; left: 50%;
     transform: translateX(-50%);
     width: 14px; height: 14px;
     border-radius: 50%;
@@ -81,96 +74,211 @@
   .note-content {
     position: relative;
     z-index: 1;
-    padding: 28px 14px 14px 14px;
+    padding: 22px 12px 10px 12px;
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  /* ─── Running Time ─── */
+  /* ─── Editable Note Area ─── */
+  .note-textarea {
+    width: 100%;
+    min-height: 45px;
+    max-height: 70px;
+    background: rgba(0,0,0,0.04);
+    border: 1px dashed rgba(0,0,0,0.12);
+    border-radius: 3px;
+    padding: 5px 7px;
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1.4;
+    resize: none;
+    outline: none;
+    cursor: text;
+    user-select: text;
+    overflow-y: auto;
+  }
+  .note-textarea:focus {
+    background: rgba(0,0,0,0.06);
+    border-color: rgba(0,0,0,0.2);
+  }
+  .note-textarea::placeholder { opacity: 0.4; font-style: italic; }
+
+  /* ─── Time Displays ─── */
+  .time-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 8px;
+  }
   .time-display {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 300;
-    letter-spacing: 2px;
-    margin-top: 20px;
+    letter-spacing: 1.5px;
     font-variant-numeric: tabular-nums;
   }
   .time-label {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    margin-top: 4px;
-    opacity: 0.6;
-  }
-  .date-display {
-    font-size: 11px;
-    margin-top: 16px;
-    opacity: 0.7;
-    text-align: center;
-    line-height: 1.4;
-  }
-  .elapsed-label {
     font-size: 8px;
     text-transform: uppercase;
     letter-spacing: 2px;
-    margin-top: 18px;
+    opacity: 0.5;
+  }
+  .date-display {
+    font-size: 10px;
+    margin-top: 3px;
+    opacity: 0.6;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  /* ─── Divider ─── */
+  .divider {
+    width: 80%;
+    height: 1px;
+    background: rgba(0,0,0,0.08);
+    margin: 7px 0;
+  }
+
+  /* ─── Countdown / Deadline ─── */
+  .deadline-section {
+    width: 100%;
+    text-align: center;
+  }
+  .deadline-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .deadline-label {
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
     opacity: 0.45;
   }
-  .elapsed-display {
-    font-size: 14px;
+  .deadline-edit-btn {
+    font-size: 9px;
+    cursor: pointer;
+    opacity: 0.35;
+    border: none;
+    background: none;
+    padding: 0 3px;
+    line-height: 1;
+  }
+  .deadline-edit-btn:hover { opacity: 0.7; }
+
+  .countdown-display {
+    font-size: 16px;
     font-weight: 300;
     letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
     margin-top: 2px;
-    opacity: 0.6;
+  }
+  .countdown-display.overdue { opacity: 0.7; }
+  .deadline-date-text {
+    font-size: 8px;
+    opacity: 0.4;
+    margin-top: 1px;
+  }
+
+  /* ─── Deadline Input Modal ─── */
+  .deadline-input-row {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .deadline-input-row.visible { display: flex; }
+  .deadline-input {
+    width: 100%;
+    padding: 4px 6px;
+    font-family: inherit;
+    font-size: 10px;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.5);
+    outline: none;
+    cursor: text;
+    user-select: text;
+  }
+  .deadline-input:focus { border-color: rgba(0,0,0,0.3); }
+  .deadline-btn-row {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+  }
+  .deadline-btn {
+    font-size: 9px;
+    padding: 2px 8px;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.5);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .deadline-btn:hover { background: rgba(255,255,255,0.8); }
+
+  /* ─── Session Timer ─── */
+  .session-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .session-label {
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.35;
+  }
+  .session-display {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 1px;
+    opacity: 0.5;
     font-variant-numeric: tabular-nums;
   }
 
-  /* ─── Style Switcher (bottom) ─── */
+  /* ─── Style & Attach Bars ─── */
   .style-bar {
     position: absolute;
-    bottom: 10px;
-    left: 50%;
+    bottom: 8px; left: 50%;
     transform: translateX(-50%);
-    display: flex;
-    gap: 5px;
+    display: flex; gap: 4px;
     z-index: 3;
     opacity: 0;
     transition: opacity 0.3s ease;
   }
   .sticky-note:hover .style-bar { opacity: 1; }
-
   .style-dot {
-    width: 12px; height: 12px;
+    width: 11px; height: 11px;
     border-radius: 50%;
     cursor: pointer;
     border: 1.5px solid rgba(0,0,0,0.15);
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.2s ease;
   }
   .style-dot:hover { transform: scale(1.3); }
   .style-dot.active { border-color: rgba(0,0,0,0.5); transform: scale(1.2); }
 
-  /* ─── Attachment Switcher ─── */
   .attach-bar {
     position: absolute;
-    top: -24px;
-    right: 4px;
-    display: flex;
-    gap: 4px;
+    top: -24px; right: 4px;
+    display: flex; gap: 4px;
     z-index: 3;
     opacity: 0;
     transition: opacity 0.3s ease;
   }
   .sticky-note:hover .attach-bar { opacity: 0.7; }
   .attach-btn {
-    font-size: 10px;
+    font-size: 9px;
     cursor: pointer;
     padding: 2px 5px;
     border-radius: 3px;
     border: 1px solid rgba(0,0,0,0.15);
     background: rgba(255,255,255,0.5);
     color: #555;
-    transition: background 0.2s;
   }
   .attach-btn:hover { background: rgba(255,255,255,0.8); }
   .attach-btn.active { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.3); }
@@ -178,142 +286,151 @@
   /* ══════════════════════════════════════
      PAPER STYLES
      ══════════════════════════════════════ */
-
-  /* 1. Classic Yellow */
   .paper-yellow .paper-bg {
     background: rgba(255, 248, 180, 0.88);
     box-shadow: 0 4px 15px rgba(0,0,0,0.15), inset 0 0 40px rgba(255,240,100,0.1);
   }
-  .paper-yellow .time-display,
-  .paper-yellow .date-display,
-  .paper-yellow .time-label,
-  .paper-yellow .elapsed-label,
-  .paper-yellow .elapsed-display { color: #6b5c00; }
+  .paper-yellow .note-textarea { color: #6b5c00; border-color: rgba(107,92,0,0.15); }
+  .paper-yellow .time-display, .paper-yellow .date-display, .paper-yellow .time-label,
+  .paper-yellow .deadline-label, .paper-yellow .countdown-display, .paper-yellow .deadline-date-text,
+  .paper-yellow .session-label, .paper-yellow .session-display, .paper-yellow .deadline-edit-btn { color: #6b5c00; }
 
-  /* 2. Soft Pink */
   .paper-pink .paper-bg {
     background: rgba(255, 210, 220, 0.88);
     box-shadow: 0 4px 15px rgba(0,0,0,0.12), inset 0 0 40px rgba(255,180,200,0.1);
   }
-  .paper-pink .time-display,
-  .paper-pink .date-display,
-  .paper-pink .time-label,
-  .paper-pink .elapsed-label,
-  .paper-pink .elapsed-display { color: #8b3a50; }
+  .paper-pink .note-textarea { color: #8b3a50; border-color: rgba(139,58,80,0.15); }
+  .paper-pink .time-display, .paper-pink .date-display, .paper-pink .time-label,
+  .paper-pink .deadline-label, .paper-pink .countdown-display, .paper-pink .deadline-date-text,
+  .paper-pink .session-label, .paper-pink .session-display, .paper-pink .deadline-edit-btn { color: #8b3a50; }
 
-  /* 3. Sky Blue */
   .paper-blue .paper-bg {
     background: rgba(200, 225, 255, 0.88);
     box-shadow: 0 4px 15px rgba(0,0,0,0.12), inset 0 0 40px rgba(180,210,255,0.1);
   }
-  .paper-blue .time-display,
-  .paper-blue .date-display,
-  .paper-blue .time-label,
-  .paper-blue .elapsed-label,
-  .paper-blue .elapsed-display { color: #2c5080; }
+  .paper-blue .note-textarea { color: #2c5080; border-color: rgba(44,80,128,0.15); }
+  .paper-blue .time-display, .paper-blue .date-display, .paper-blue .time-label,
+  .paper-blue .deadline-label, .paper-blue .countdown-display, .paper-blue .deadline-date-text,
+  .paper-blue .session-label, .paper-blue .session-display, .paper-blue .deadline-edit-btn { color: #2c5080; }
 
-  /* 4. Mint Green */
   .paper-green .paper-bg {
     background: rgba(200, 245, 220, 0.88);
     box-shadow: 0 4px 15px rgba(0,0,0,0.12), inset 0 0 40px rgba(180,240,200,0.1);
   }
-  .paper-green .time-display,
-  .paper-green .date-display,
-  .paper-green .time-label,
-  .paper-green .elapsed-label,
-  .paper-green .elapsed-display { color: #2a6b45; }
+  .paper-green .note-textarea { color: #2a6b45; border-color: rgba(42,107,69,0.15); }
+  .paper-green .time-display, .paper-green .date-display, .paper-green .time-label,
+  .paper-green .deadline-label, .paper-green .countdown-display, .paper-green .deadline-date-text,
+  .paper-green .session-label, .paper-green .session-display, .paper-green .deadline-edit-btn { color: #2a6b45; }
 
-  /* 5. Lavender */
   .paper-lavender .paper-bg {
     background: rgba(225, 210, 255, 0.88);
     box-shadow: 0 4px 15px rgba(0,0,0,0.12), inset 0 0 40px rgba(210,190,255,0.1);
   }
-  .paper-lavender .time-display,
-  .paper-lavender .date-display,
-  .paper-lavender .time-label,
-  .paper-lavender .elapsed-label,
-  .paper-lavender .elapsed-display { color: #5a3d8a; }
+  .paper-lavender .note-textarea { color: #5a3d8a; border-color: rgba(90,61,138,0.15); }
+  .paper-lavender .time-display, .paper-lavender .date-display, .paper-lavender .time-label,
+  .paper-lavender .deadline-label, .paper-lavender .countdown-display, .paper-lavender .deadline-date-text,
+  .paper-lavender .session-label, .paper-lavender .session-display, .paper-lavender .deadline-edit-btn { color: #5a3d8a; }
 
-  /* 6. Dark / Transparent */
   .paper-dark .paper-bg {
     background: rgba(30, 30, 40, 0.75);
     box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 0 40px rgba(60,60,80,0.1);
     border: 1px solid rgba(255,255,255,0.08);
   }
+  .paper-dark .note-textarea { color: rgba(200,220,255,0.85); border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); }
   .paper-dark .time-display { color: rgba(200,220,255,0.9); }
-  .paper-dark .date-display { color: rgba(180,200,240,0.7); }
-  .paper-dark .time-label { color: rgba(160,180,220,0.5); }
-  .paper-dark .elapsed-label { color: rgba(140,160,200,0.4); }
-  .paper-dark .elapsed-display { color: rgba(160,180,220,0.6); }
+  .paper-dark .date-display, .paper-dark .session-display { color: rgba(180,200,240,0.6); }
+  .paper-dark .time-label, .paper-dark .deadline-label, .paper-dark .session-label { color: rgba(160,180,220,0.4); }
+  .paper-dark .countdown-display { color: rgba(200,220,255,0.85); }
+  .paper-dark .deadline-date-text { color: rgba(160,180,220,0.4); }
+  .paper-dark .deadline-edit-btn { color: rgba(180,200,240,0.5); }
+  .paper-dark .divider { background: rgba(255,255,255,0.06); }
   .paper-dark .tape { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.05); }
+  .paper-dark .deadline-input { background: rgba(255,255,255,0.08); color: rgba(200,220,255,0.85); border-color: rgba(255,255,255,0.15); }
+  .paper-dark .deadline-btn { background: rgba(255,255,255,0.08); color: rgba(200,220,255,0.7); border-color: rgba(255,255,255,0.1); }
 
-  /* 7. Lined Paper */
   .paper-lined .paper-bg {
     background: rgba(255, 252, 245, 0.9);
-    background-image:
-      repeating-linear-gradient(
-        transparent, transparent 23px,
-        rgba(180,200,220,0.3) 23px, rgba(180,200,220,0.3) 24px
-      );
+    background-image: repeating-linear-gradient(transparent, transparent 23px, rgba(180,200,220,0.3) 23px, rgba(180,200,220,0.3) 24px);
     background-position: 0 30px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.12);
   }
   .paper-lined .paper-bg::before {
-    content: '';
-    position: absolute;
+    content: ''; position: absolute;
     left: 28px; top: 0; bottom: 0;
-    width: 1px;
-    background: rgba(255,100,100,0.25);
+    width: 1px; background: rgba(255,100,100,0.25);
   }
-  .paper-lined .time-display,
-  .paper-lined .date-display,
-  .paper-lined .time-label,
-  .paper-lined .elapsed-label,
-  .paper-lined .elapsed-display { color: #3a4a5a; }
+  .paper-lined .note-textarea { color: #3a4a5a; border-color: rgba(58,74,90,0.12); }
+  .paper-lined .time-display, .paper-lined .date-display, .paper-lined .time-label,
+  .paper-lined .deadline-label, .paper-lined .countdown-display, .paper-lined .deadline-date-text,
+  .paper-lined .session-label, .paper-lined .session-display, .paper-lined .deadline-edit-btn { color: #3a4a5a; }
 
-  /* 8. Grid Paper */
   .paper-grid .paper-bg {
     background: rgba(255, 252, 248, 0.9);
-    background-image:
-      linear-gradient(rgba(150,180,200,0.15) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(150,180,200,0.15) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(150,180,200,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(150,180,200,0.15) 1px, transparent 1px);
     background-size: 16px 16px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.12);
   }
-  .paper-grid .time-display,
-  .paper-grid .date-display,
-  .paper-grid .time-label,
-  .paper-grid .elapsed-label,
-  .paper-grid .elapsed-display { color: #3a4a5a; }
+  .paper-grid .note-textarea { color: #3a4a5a; border-color: rgba(58,74,90,0.12); }
+  .paper-grid .time-display, .paper-grid .date-display, .paper-grid .time-label,
+  .paper-grid .deadline-label, .paper-grid .countdown-display, .paper-grid .deadline-date-text,
+  .paper-grid .session-label, .paper-grid .session-display, .paper-grid .deadline-edit-btn { color: #3a4a5a; }
 </style>
 </head>
 <body>
 
 <div class="sticky-note paper-yellow" id="stickyNote">
-  <!-- Attachment options -->
   <div class="tape" id="tapeEl"></div>
   <div class="pin" id="pinEl"></div>
 
-  <!-- Attachment switcher -->
   <div class="attach-bar">
     <div class="attach-btn active" data-attach="tape">Tape</div>
     <div class="attach-btn" data-attach="pin">Pin</div>
     <div class="attach-btn" data-attach="none">None</div>
   </div>
 
-  <!-- Paper background -->
   <div class="paper-bg"></div>
 
-  <!-- Content -->
   <div class="note-content">
-    <div class="time-display" id="timeDisplay">00:00:00</div>
+    <!-- Editable note area -->
+    <textarea class="note-textarea" id="noteText" placeholder="Type your reminder or note here..." rows="3"></textarea>
+
+    <!-- Current time + date -->
+    <div class="time-row">
+      <div class="time-display" id="timeDisplay">00:00:00</div>
+    </div>
     <div class="time-label">current time</div>
     <div class="date-display" id="dateDisplay"></div>
-    <div class="elapsed-label">session</div>
-    <div class="elapsed-display" id="elapsedDisplay">00:00:00</div>
+
+    <div class="divider"></div>
+
+    <!-- Deadline countdown -->
+    <div class="deadline-section">
+      <div class="deadline-header">
+        <span class="deadline-label">deadline</span>
+        <button class="deadline-edit-btn" id="deadlineEditBtn" title="Set deadline">&#9998;</button>
+      </div>
+      <div class="countdown-display" id="countdownDisplay">--:--:--</div>
+      <div class="deadline-date-text" id="deadlineDateText">click pencil to set</div>
+
+      <!-- Deadline input form -->
+      <div class="deadline-input-row" id="deadlineInputRow">
+        <input type="datetime-local" class="deadline-input" id="deadlineInput">
+        <div class="deadline-btn-row">
+          <button class="deadline-btn" id="deadlineSetBtn">Set</button>
+          <button class="deadline-btn" id="deadlineClearBtn">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Session elapsed -->
+    <div class="session-row">
+      <span class="session-label">session</span>
+      <span class="session-display" id="sessionDisplay">00:00:00</span>
+    </div>
   </div>
 
-  <!-- Paper style dots -->
   <div class="style-bar" id="styleBar">
     <div class="style-dot active" data-style="yellow"   style="background:#fff8b4;"></div>
     <div class="style-dot"        data-style="pink"     style="background:#ffd2dc;"></div>
@@ -327,32 +444,73 @@
 </div>
 
 <script>
-/* ─── State ─── */
+/* ─── Elements ─── */
 const note = document.getElementById('stickyNote');
 const timeEl = document.getElementById('timeDisplay');
 const dateEl = document.getElementById('dateDisplay');
-const elapsedEl = document.getElementById('elapsedDisplay');
+const sessionEl = document.getElementById('sessionDisplay');
+const countdownEl = document.getElementById('countdownDisplay');
+const deadlineDateText = document.getElementById('deadlineDateText');
+const deadlineEditBtn = document.getElementById('deadlineEditBtn');
+const deadlineInputRow = document.getElementById('deadlineInputRow');
+const deadlineInput = document.getElementById('deadlineInput');
+const deadlineSetBtn = document.getElementById('deadlineSetBtn');
+const deadlineClearBtn = document.getElementById('deadlineClearBtn');
+const noteText = document.getElementById('noteText');
 const tapeEl = document.getElementById('tapeEl');
 const pinEl = document.getElementById('pinEl');
 
+/* ─── State ─── */
 const sessionStart = Date.now();
 let currentStyle = 'yellow';
-let currentAttach = 'tape';
+let deadlineTime = null; // Date object or null
 
-/* ─── Position: start near top-right, slightly inset ─── */
-let noteX = window.innerWidth - 230;
+// Load saved state from localStorage
+try {
+  const saved = localStorage.getItem('ohverlay-sticky-state');
+  if (saved) {
+    const s = JSON.parse(saved);
+    if (s.note) noteText.value = s.note;
+    if (s.deadline) deadlineTime = new Date(s.deadline);
+    if (s.style) {
+      currentStyle = s.style;
+      note.classList.remove('paper-yellow');
+      note.classList.add('paper-' + s.style);
+      document.querySelectorAll('.style-dot').forEach(d => {
+        d.classList.toggle('active', d.dataset.style === s.style);
+      });
+    }
+  }
+} catch(e) {}
+
+// Auto-save
+function saveState() {
+  try {
+    localStorage.setItem('ohverlay-sticky-state', JSON.stringify({
+      note: noteText.value,
+      deadline: deadlineTime ? deadlineTime.toISOString() : null,
+      style: currentStyle,
+    }));
+  } catch(e) {}
+}
+noteText.addEventListener('input', saveState);
+
+/* ─── Position ─── */
+let noteX = window.innerWidth - 250;
 let noteY = 40;
 note.style.left = noteX + 'px';
 note.style.top = noteY + 'px';
 
 /* ─── Dragging ─── */
 let isDragging = false;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
+let dragOffsetX = 0, dragOffsetY = 0;
 
 note.addEventListener('mousedown', (e) => {
-  if (e.target.classList.contains('style-dot') ||
-      e.target.classList.contains('attach-btn')) return;
+  // Don't drag when interacting with inputs/buttons
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' ||
+      e.target.tagName === 'BUTTON' || e.target.classList.contains('style-dot') ||
+      e.target.classList.contains('attach-btn') || e.target.classList.contains('deadline-edit-btn') ||
+      e.target.classList.contains('deadline-btn')) return;
   isDragging = true;
   dragOffsetX = e.clientX - noteX;
   dragOffsetY = e.clientY - noteY;
@@ -364,11 +522,8 @@ window.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
   noteX = e.clientX - dragOffsetX;
   noteY = e.clientY - dragOffsetY;
-
-  // Clamp to screen bounds
-  noteX = Math.max(-50, Math.min(window.innerWidth - 142, noteX));
+  noteX = Math.max(-50, Math.min(window.innerWidth - 160, noteX));
   noteY = Math.max(-10, Math.min(window.innerHeight - 50, noteY));
-
   note.style.left = noteX + 'px';
   note.style.top = noteY + 'px';
 });
@@ -384,36 +539,77 @@ window.addEventListener('mouseup', () => {
 document.getElementById('styleBar').addEventListener('click', (e) => {
   const dot = e.target.closest('.style-dot');
   if (!dot) return;
-
   const style = dot.dataset.style;
   if (style === currentStyle) return;
-
-  // Remove old, add new
   note.classList.remove('paper-' + currentStyle);
   note.classList.add('paper-' + style);
   currentStyle = style;
-
-  // Update active dot
   document.querySelectorAll('.style-dot').forEach(d => d.classList.remove('active'));
   dot.classList.add('active');
+  saveState();
 });
 
 /* ─── Attachment Switching ─── */
 document.querySelectorAll('.attach-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const attach = btn.dataset.attach;
-    currentAttach = attach;
-
     tapeEl.style.display = attach === 'tape' ? 'block' : 'none';
     pinEl.style.display = attach === 'pin' ? 'block' : 'none';
-
     document.querySelectorAll('.attach-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   });
 });
 
+/* ─── Deadline Controls ─── */
+deadlineEditBtn.addEventListener('click', () => {
+  const row = deadlineInputRow;
+  row.classList.toggle('visible');
+  if (row.classList.contains('visible') && deadlineTime) {
+    // Pre-fill with current deadline
+    const d = deadlineTime;
+    const pad = n => String(n).padStart(2, '0');
+    deadlineInput.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+                          'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+});
+
+deadlineSetBtn.addEventListener('click', () => {
+  const val = deadlineInput.value;
+  if (val) {
+    deadlineTime = new Date(val);
+    deadlineInputRow.classList.remove('visible');
+    saveState();
+  }
+});
+
+deadlineClearBtn.addEventListener('click', () => {
+  deadlineTime = null;
+  deadlineInputRow.classList.remove('visible');
+  countdownEl.textContent = '--:--:--';
+  deadlineDateText.textContent = 'click pencil to set';
+  countdownEl.classList.remove('overdue');
+  saveState();
+});
+
 /* ─── Time Updates ─── */
 function pad(n) { return String(n).padStart(2, '0'); }
+const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatCountdown(diffMs) {
+  const absDiff = Math.abs(diffMs);
+  const totalSecs = Math.floor(absDiff / 1000);
+  const days = Math.floor(totalSecs / 86400);
+  const hrs = Math.floor((totalSecs % 86400) / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+
+  const prefix = diffMs < 0 ? '-' : '';
+  if (days > 0) {
+    return prefix + days + 'd ' + pad(hrs) + ':' + pad(mins) + ':' + pad(secs);
+  }
+  return prefix + pad(hrs) + ':' + pad(mins) + ':' + pad(secs);
+}
 
 function updateTime() {
   const now = new Date();
@@ -422,24 +618,30 @@ function updateTime() {
   timeEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
 
   // Date
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  dateEl.textContent = days[now.getDay()] + '\n' + months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+  dateEl.textContent = dayNames[now.getDay()] + ', ' + monthNames[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
 
   // Session elapsed
   const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
-  const hrs = Math.floor(elapsed / 3600);
-  const mins = Math.floor((elapsed % 3600) / 60);
-  const secs = elapsed % 60;
-  elapsedEl.textContent = pad(hrs) + ':' + pad(mins) + ':' + pad(secs);
+  sessionEl.textContent = pad(Math.floor(elapsed / 3600)) + ':' + pad(Math.floor((elapsed % 3600) / 60)) + ':' + pad(elapsed % 60);
+
+  // Deadline countdown
+  if (deadlineTime) {
+    const diff = deadlineTime.getTime() - now.getTime();
+    countdownEl.textContent = formatCountdown(diff);
+    countdownEl.classList.toggle('overdue', diff < 0);
+
+    // Show deadline date
+    deadlineDateText.textContent = monthNames[deadlineTime.getMonth()] + ' ' + deadlineTime.getDate() + ', ' +
+                                   deadlineTime.getFullYear() + ' ' + pad(deadlineTime.getHours()) + ':' + pad(deadlineTime.getMinutes());
+  }
 }
 
 updateTime();
 setInterval(updateTime, 1000);
 
-/* ─── Handle window resize ─── */
+/* ─── Resize ─── */
 window.addEventListener('resize', () => {
-  noteX = Math.min(noteX, window.innerWidth - 142);
+  noteX = Math.min(noteX, window.innerWidth - 160);
   noteY = Math.min(noteY, window.innerHeight - 50);
   note.style.left = noteX + 'px';
   note.style.top = noteY + 'px';
