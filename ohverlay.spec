@@ -65,6 +65,7 @@ a = Analysis(
         'modules.updater',
         'modules.blue_memory',
         'modules.blue_realtime',
+        'modules.blue_vision',
         # Config
         'config.settings',
         # Utils

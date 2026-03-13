@@ -634,6 +634,114 @@ document.querySelectorAll('.theme-dot').forEach(dot => {
   });
 });
 
+/* ─── Vision: Screenshot + Groq Llama Vision ─── */
+async function captureAndAnalyze(question) {
+  const provider = providerSelect.value;
+  const apiKey = apiKeyInput.value.trim();
+
+  // Vision only works with Groq (free Llama Vision)
+  const groqKey = (provider === 'groq') ? apiKey : '';
+  if (!groqKey) {
+    addMessage('Vision requires Groq provider. Switch to Groq in settings and add your API key.', 'system');
+    return;
+  }
+
+  chatStatus.textContent = 'looking...';
+  const typingEl = addTypingIndicator();
+
+  try {
+    // Capture screen using canvas (works in browser context)
+    // In PySide6/Electron context, this would use native screenshot
+    // For the HTML overlay, we use the Screen Capture API if available
+    let imageB64 = null;
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { mediaSource: 'screen' }
+        });
+        const track = stream.getVideoTracks()[0];
+        const imageCapture = new ImageCapture(track);
+        const bitmap = await imageCapture.grabFrame();
+        track.stop();
+
+        // Draw to canvas and extract base64
+        const canvas = document.createElement('canvas');
+        const maxSize = 1024;
+        let w = bitmap.width, h = bitmap.height;
+        if (Math.max(w, h) > maxSize) {
+          const ratio = maxSize / Math.max(w, h);
+          w = Math.floor(w * ratio);
+          h = Math.floor(h * ratio);
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0, w, h);
+        imageB64 = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
+      } catch (screenErr) {
+        // User denied screen capture or not supported
+        removeTypingIndicator();
+        addMessage('Screen capture was denied or not available. Grant permission when prompted.', 'system');
+        chatStatus.textContent = 'ready';
+        return;
+      }
+    } else {
+      removeTypingIndicator();
+      addMessage('Screen capture not available in this browser. Vision works best in the desktop app.', 'system');
+      chatStatus.textContent = 'ready';
+      return;
+    }
+
+    if (!imageB64) {
+      removeTypingIndicator();
+      addMessage('Could not capture screen.', 'system');
+      chatStatus.textContent = 'ready';
+      return;
+    }
+
+    // Send to Groq Llama Vision
+    const visionPrompt = question || 'What do you see on my screen? Be brief and helpful.';
+    const messages = [
+      { role: 'system', content: 'You are Blue, a friendly AI desktop assistant with vision. Be concise (2-3 sentences). If you see something the user might need help with, mention it.' },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: visionPrompt },
+          { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + imageB64 } }
+        ]
+      }
+    ];
+
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + groqKey,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.2-11b-vision-preview',
+        messages: messages,
+        max_tokens: 300,
+        temperature: 0.5,
+      })
+    });
+
+    const data = await resp.json();
+    const aiText = data.choices?.[0]?.message?.content || 'Could not analyze the image.';
+
+    removeTypingIndicator();
+    addMessage(aiText, 'ai');
+    BlueMemory.logMessage('assistant', '[vision] ' + aiText);
+    chatStatus.textContent = 'ready';
+
+  } catch (err) {
+    removeTypingIndicator();
+    addMessage('Vision error: ' + err.message, 'system');
+    chatStatus.textContent = 'ready';
+  }
+}
+
 /* ─── Message Functions ─── */
 function addMessage(text, type) {
   const div = document.createElement('div');
@@ -782,7 +890,19 @@ function sendMessage() {
   chatInput.value = '';
   chatInput.style.height = 'auto';
 
-  callLLM(text);
+  // Vision commands - Blue can look at the screen
+  const lower = text.toLowerCase();
+  const visionTriggers = ['look at my screen', 'what do you see', 'see my screen', 'look at screen',
+    'screenshot', 'whats on my screen', "what's on my screen", 'can you see', 'tingnan mo',
+    'look at this', 'anong nakikita mo', 'check my screen', 'read my screen', 'read screen'];
+  const isVision = visionTriggers.some(t => lower.includes(t));
+
+  if (isVision) {
+    const question = text.replace(/^(blue[,:]?\s*)/i, '');
+    captureAndAnalyze(question);
+  } else {
+    callLLM(text);
+  }
 }
 
 sendBtn.addEventListener('click', sendMessage);
