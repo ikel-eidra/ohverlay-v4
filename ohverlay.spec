@@ -66,6 +66,7 @@ a = Analysis(
         'modules.blue_memory',
         'modules.blue_realtime',
         'modules.blue_vision',
+        'modules.blue_vision_bridge',
         # Config
         'config.settings',
         # Utils

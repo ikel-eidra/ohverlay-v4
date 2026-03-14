@@ -98,6 +98,10 @@ class BehavioralReactor:
         self._graze_duration = 0.0
         self._graze_max_duration = np.random.uniform(3.0, 8.0)
 
+        # -- Screen context (fed by Blue Vision bridge) --
+        self.screen_context = None  # ScreenContext object from vision bridge
+        self._screen_speed_modifier = 1.0
+
         # -- Speed parameters --
         self._max_speed = 180.0
         self._cruise_speed = 55.0
@@ -775,8 +779,14 @@ class BehavioralReactor:
             except Exception as e:
                 logger.warning(f"Module check error: {e}")
 
+    def set_screen_context(self, screen_context):
+        """Set the screen context from Blue Vision bridge."""
+        self.screen_context = screen_context
+        if screen_context:
+            self._screen_speed_modifier = screen_context.speed_modifier
+
     def get_state(self):
-        return {
+        state = {
             "position": self.position.tolist(),
             "velocity": self.velocity.tolist(),
             "hunger": self.hunger,
@@ -792,3 +802,8 @@ class BehavioralReactor:
             "swim_cadence": self._swim_cadence,
             "pellets": [p["pos"].tolist() for p in self._pellets],
         }
+        # Include screen context info for renderers
+        if self.screen_context:
+            state["screen_activity"] = self.screen_context.activity_type
+            state["screen_stress"] = self.screen_context.stress_level
+        return state
