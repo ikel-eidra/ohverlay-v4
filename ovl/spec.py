@@ -121,6 +121,7 @@ TOKEN_TYPES = {
 VALID_BLOCKS = {
     "overlay", "creature", "particles", "background", "text",
     "behavior", "video", "sound", "timer", "widget", "import",
+    "quiz", "question",
 }
 
 # ─── Valid Styles ───
