@@ -109,16 +109,18 @@ CREATE TABLE IF NOT EXISTS releases (
     released_at     TIMESTAMP DEFAULT NOW()
 );
 
--- Advertisement overlays (non-intrusive, ethical ads)
-CREATE TABLE IF NOT EXISTS ad_overlays (
+-- Ohverlay promo overlays (company announcements only, minimal, hanapbuhay lang)
+-- NO third-party ads. Only Ohverlay's own: new features, pro tier, tips.
+CREATE TABLE IF NOT EXISTS promo_overlays (
     id              SERIAL PRIMARY KEY,
-    advertiser      VARCHAR(200) NOT NULL,
+    title           VARCHAR(200) NOT NULL,
     overlay_html    TEXT NOT NULL,
-    target_tier     VARCHAR(20) DEFAULT 'free',  -- only shown to free users
-    category        VARCHAR(50),
+    promo_type      VARCHAR(50) DEFAULT 'feature',  -- feature, pro_upgrade, tip, changelog
+    target_tier     VARCHAR(20) DEFAULT 'free',      -- which tier sees it
     impressions     INTEGER DEFAULT 0,
-    clicks          INTEGER DEFAULT 0,
+    dismissed       INTEGER DEFAULT 0,
     is_active       BOOLEAN DEFAULT TRUE,
+    max_impressions INTEGER DEFAULT 3,               -- show max 3x per user, then stop
     start_date      DATE,
     end_date        DATE,
     created_at      TIMESTAMP DEFAULT NOW()

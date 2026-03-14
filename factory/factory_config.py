@@ -41,7 +41,7 @@ OVERLAY_CATEGORIES = [
     "information",   # News tickers, weather, crypto
     "wellness",      # Break reminders, eye care, breathing
     "creative",      # Art, animations, visualizations
-    "ads",           # Sponsored overlays (non-intrusive)
+    "promo",         # Ohverlay's own announcements only (minimal, no 3rd party)
 ]
 
 # ─── Update System ───
