@@ -1,0 +1,46 @@
+// Fairy Garden - Magical wireframe fairies with fireflies
+// Multiple creatures + particle systems working together
+
+@overlay "Fairy Garden"
+  type: creative
+  size: fullscreen
+  blend: screen
+
+  @creature fairy
+    style: wireframe
+    glow: magenta 0.7
+    color: magenta
+    count: 2
+    movement: float, wander
+    speed: slow
+    opacity: 70%
+
+  @creature butterfly
+    style: wireframe
+    glow: lavender 0.5
+    color: lavender
+    count: 4
+    movement: float, drift
+    speed: normal
+    opacity: 60%
+
+  @particles fireflies
+    count: 60
+    color: gold
+    opacity: 50%
+    direction: up
+    speed: slow
+    shape: circle
+
+  @particles cherry
+    count: 25
+    color: pink
+    opacity: 40%
+    direction: down
+    speed: slow
+    shape: circle
+
+  @behavior
+    on idle: drift slowly
+    on evening: glow brighter
+    on creative: celebrate

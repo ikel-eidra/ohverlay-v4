@@ -1,0 +1,44 @@
+// Deep Ocean - Underwater scene with manta ray and fish
+// Multi-creature ambient overlay
+
+@overlay "Deep Ocean"
+  type: ambient
+  size: fullscreen
+  blend: screen
+
+  @creature manta
+    style: wireframe
+    glow: teal 0.6
+    color: teal
+    count: 1
+    movement: drift
+    speed: very-slow
+    opacity: 60%
+
+  @creature fish
+    style: wireframe
+    glow: cyan 0.5
+    color: cyan
+    count: 5
+    movement: swim, drift
+    speed: normal
+    opacity: 50%
+
+  @particles bubbles
+    count: 30
+    color: #88ccff
+    opacity: 25%
+    direction: up
+    speed: slow
+
+  @particles dust
+    count: 50
+    color: #336688
+    opacity: 15%
+    direction: up
+    speed: slow
+
+  @behavior
+    on idle: drift slowly
+    on stressed: slow down
+    on morning: speed up
