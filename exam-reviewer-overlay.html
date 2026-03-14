@@ -429,6 +429,37 @@
     <button class="settings-btn" id="resetBtn">Reset Score</button>
   </div>
 
+  <h3 style="margin-top:16px">PlumberPass Connection</h3>
+
+  <label>PlumberPass API URL</label>
+  <input type="text" id="apiUrlInput" value="http://localhost:8401" placeholder="http://localhost:8401">
+
+  <label>Subject Filter</label>
+  <select id="subjectFilter">
+    <option value="">All Subjects</option>
+    <option value="plumbing-code">Plumbing Code (RA 1378)</option>
+    <option value="sanitary-eng">Sanitary Engineering</option>
+    <option value="design-layout">Design & Layout</option>
+    <option value="water-supply">Water Supply Systems</option>
+    <option value="drainage">Drainage & Sewage</option>
+    <option value="fixtures">Fixtures & Materials</option>
+    <option value="mathematics">Plumbing Math</option>
+    <option value="environmental">Environmental Laws</option>
+    <option value="ethics">Ethics & Practice</option>
+    <option value="general">General Knowledge</option>
+  </select>
+
+  <div class="settings-btn-row">
+    <button class="settings-btn green" id="fetchBtn">Fetch from PlumberPass</button>
+    <button class="settings-btn" id="syncStatsBtn">Sync Stats</button>
+  </div>
+
+  <div id="apiStatus" style="font-size:10px;color:#556;margin-top:6px;min-height:14px;"></div>
+
+  <label>Upload PDF Reviewer</label>
+  <input type="file" id="pdfUpload" accept=".pdf" style="display:block;margin-top:4px;">
+  <div id="pdfStatus" style="font-size:10px;color:#556;margin-top:4px;min-height:14px;"></div>
+
   <label style="margin-top:14px">Stats</label>
   <div id="statsDisplay" style="font-size:11px;color:#667;font-family:monospace;padding:6px 0;"></div>
 </div>
@@ -593,15 +624,19 @@ function selectAnswer(q, selectedIdx, element) {
   state.total++;
   state.answered.add(q.index);
 
-  if (selectedIdx === q.answer) {
-    // Correct!
+  const isCorrect = selectedIdx === q.answer;
+  if (isCorrect) {
     state.score++;
     element.classList.add('correct');
     document.getElementById('quizHint').textContent = 'correct!';
   } else {
-    // Wrong
     element.classList.add('wrong');
     document.getElementById('quizHint').textContent = 'not quite...';
+  }
+
+  // Sync answer to PlumberPass (if connected)
+  if (q._id) {
+    plumberpass.recordAnswer(q._id, isCorrect, 0);
   }
 
   // Always reveal correct answer
@@ -776,6 +811,175 @@ function updateStats() {
     Next: appears in ${state.interval} min
   `;
 }
+
+// ─── PlumberPass API Connection ───
+const plumberpass = {
+  apiUrl: localStorage.getItem('plumberpass-api-url') || 'http://localhost:8401',
+
+  async fetchQuestions(subject, count = 20) {
+    const url = new URL(`${this.apiUrl}/api/v1/questions/overlay`);
+    url.searchParams.set('count', count);
+    url.searchParams.set('smart', 'true');
+    if (subject) url.searchParams.set('subject', subject);
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      if (data.questions && data.questions.length > 0) {
+        // Convert PlumberPass format to overlay format
+        const converted = data.questions.map(q => ({
+          q: q.question,
+          options: q.options,
+          answer: q.answer,
+          explanation: q.explanation || '',
+          _id: q.id,  // Keep PlumberPass ID for syncing answers
+          _subject: q.subject_id,
+          _difficulty: q.difficulty,
+        }));
+        return converted;
+      }
+      return [];
+    } catch (e) {
+      console.warn('PlumberPass fetch failed:', e.message);
+      return [];
+    }
+  },
+
+  async recordAnswer(questionId, wasCorrect, timeTaken) {
+    if (!questionId) return;
+    try {
+      await fetch(`${this.apiUrl}/api/v1/questions/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: questionId,
+          was_correct: wasCorrect,
+          time_taken: timeTaken,
+        }),
+      });
+    } catch (e) {
+      // Silently fail — offline is OK
+    }
+  },
+
+  async getStats() {
+    try {
+      const resp = await fetch(`${this.apiUrl}/api/v1/stats`);
+      if (!resp.ok) return null;
+      return await resp.json();
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async uploadPDF(file) {
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const resp = await fetch(`${this.apiUrl}/api/v1/pdf/upload`, {
+        method: 'POST',
+        body: form,
+      });
+      return await resp.json();
+    } catch (e) {
+      return { status: 'error', error: e.message };
+    }
+  },
+
+  async checkHealth() {
+    try {
+      const resp = await fetch(`${this.apiUrl}/api/v1/health`, { signal: AbortSignal.timeout(3000) });
+      if (!resp.ok) return null;
+      return await resp.json();
+    } catch (e) {
+      return null;
+    }
+  },
+};
+
+// Fetch from PlumberPass button
+document.getElementById('fetchBtn').onclick = async () => {
+  const statusEl = document.getElementById('apiStatus');
+  statusEl.textContent = 'Connecting to PlumberPass...';
+  statusEl.style.color = '#00d4ff';
+
+  plumberpass.apiUrl = document.getElementById('apiUrlInput').value.replace(/\/$/, '');
+  localStorage.setItem('plumberpass-api-url', plumberpass.apiUrl);
+
+  const subject = document.getElementById('subjectFilter').value;
+  const questions = await plumberpass.fetchQuestions(subject, 30);
+
+  if (questions.length > 0) {
+    state.questions = questions;
+    state.answered.clear();
+    state.subject = subject
+      ? document.getElementById('subjectFilter').selectedOptions[0].text
+      : 'Master Plumber Review';
+    document.getElementById('subjectInput').value = state.subject;
+    document.getElementById('questionsInput').value = JSON.stringify(state.questions, null, 2);
+    shuffleOrder();
+    saveState();
+    updateStats();
+    statusEl.textContent = `Loaded ${questions.length} questions from PlumberPass!`;
+    statusEl.style.color = '#00ff96';
+  } else {
+    const health = await plumberpass.checkHealth();
+    if (health) {
+      statusEl.textContent = `Connected but no questions found. Upload PDF reviewers first! (${health.total_questions} in bank)`;
+    } else {
+      statusEl.textContent = 'Cannot connect to PlumberPass. Is the server running?';
+    }
+    statusEl.style.color = '#ff6666';
+  }
+};
+
+// Sync stats button
+document.getElementById('syncStatsBtn').onclick = async () => {
+  const stats = await plumberpass.getStats();
+  const statusEl = document.getElementById('apiStatus');
+  if (stats) {
+    statusEl.innerHTML =
+      `PlumberPass: ${stats.total_questions} questions | ` +
+      `${stats.accuracy}% accuracy | ${stats.coverage}% coverage`;
+    statusEl.style.color = '#00ff96';
+  } else {
+    statusEl.textContent = 'Cannot connect to PlumberPass.';
+    statusEl.style.color = '#ff6666';
+  }
+};
+
+// PDF upload
+document.getElementById('pdfUpload').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const pdfStatus = document.getElementById('pdfStatus');
+  pdfStatus.textContent = `Uploading ${file.name}... (AI is extracting questions)`;
+  pdfStatus.style.color = '#00d4ff';
+
+  plumberpass.apiUrl = document.getElementById('apiUrlInput').value.replace(/\/$/, '');
+  const result = await plumberpass.uploadPDF(file);
+
+  if (result.status === 'done') {
+    pdfStatus.textContent =
+      `Done! Extracted ${result.questions_added} questions from ${result.pages_processed} pages (${result.duration}s)`;
+    pdfStatus.style.color = '#00ff96';
+    // Auto-fetch new questions
+    document.getElementById('fetchBtn').click();
+  } else {
+    pdfStatus.textContent = `Error: ${result.error || 'Upload failed'}`;
+    pdfStatus.style.color = '#ff6666';
+  }
+};
+
+// Load saved API URL
+document.getElementById('apiUrlInput').value = plumberpass.apiUrl;
+
+// Override selectAnswer to also sync to PlumberPass
+const _originalSelectAnswer = selectAnswer;
+// (we patch inline below)
 
 // ─── Initialize ───
 loadState();
