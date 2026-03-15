@@ -1,0 +1,1138 @@
+<!--
+  OHVERLAY VIDEO CONVERTER v1.0
+  ==============================
+  Convert any video into a semi-transparent Ohverlay-style overlay.
+
+  Modes:
+    1. Wireframe (Edge Detection) - Sobel filter, instant hologram look
+    2. Glow (Luminance Key) - Dark = transparent, bright = neon glow
+    3. Silhouette (Chroma Key) - Remove background, keep glowing subject
+    4. Particle Trace - Extract motion as flowing particles
+    5. Ghost (Alpha Fade) - Semi-transparent ghostly apparition
+
+  By Futol Ethical Technology Ecosystems
+  Part of the Ohverlay Factory pipeline
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ohverlay Video Converter</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center;
+    padding: 30px 20px 15px;
+    background: linear-gradient(180deg, rgba(0,200,255,0.08) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(0,200,255,0.15);
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 4px;
+    color: #00d4ff;
+    text-transform: uppercase;
+  }
+
+  .header p {
+    font-size: 12px;
+    color: #667;
+    margin-top: 5px;
+    letter-spacing: 1px;
+  }
+
+  .main {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: rgba(15,15,25,0.9);
+    border: 1px solid rgba(0,200,255,0.12);
+    border-radius: 10px;
+    padding: 18px;
+  }
+
+  .controls-panel {
+    width: 280px;
+    flex-shrink: 0;
+  }
+
+  .preview-panel {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #00d4ff;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(0,200,255,0.1);
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed rgba(0,200,255,0.25);
+    border-radius: 8px;
+    padding: 25px 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 15px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: #00d4ff;
+    background: rgba(0,200,255,0.05);
+  }
+
+  .drop-zone .icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-zone .text { font-size: 12px; color: #889; }
+  .drop-zone .text b { color: #00d4ff; }
+  .drop-zone input { display: none; }
+
+  /* Mode selector */
+  .mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 15px;
+  }
+
+  .mode-btn {
+    background: rgba(30,30,50,0.8);
+    border: 1px solid rgba(0,200,255,0.1);
+    border-radius: 6px;
+    padding: 10px 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 10px;
+    color: #99a;
+  }
+
+  .mode-btn:hover { border-color: rgba(0,200,255,0.3); color: #ccd; }
+  .mode-btn.active {
+    border-color: #00d4ff;
+    background: rgba(0,200,255,0.08);
+    color: #00d4ff;
+    box-shadow: 0 0 12px rgba(0,200,255,0.1);
+  }
+
+  .mode-btn .mode-icon { font-size: 18px; display: block; margin-bottom: 4px; }
+
+  /* Sliders */
+  .slider-group { margin-bottom: 12px; }
+  .slider-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #889;
+    margin-bottom: 4px;
+  }
+  .slider-group label span { color: #00d4ff; font-family: monospace; }
+
+  input[type="range"] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: rgba(0,200,255,0.15);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #00d4ff;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0,200,255,0.4);
+  }
+
+  /* Color picker row */
+  .color-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.active { border-color: white; box-shadow: 0 0 10px currentColor; }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid rgba(0,200,255,0.3);
+    border-radius: 6px;
+    background: rgba(0,200,255,0.08);
+    color: #00d4ff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .btn:hover {
+    background: rgba(0,200,255,0.15);
+    box-shadow: 0 0 15px rgba(0,200,255,0.15);
+  }
+
+  .btn-export {
+    border-color: rgba(0,255,150,0.3);
+    background: rgba(0,255,150,0.08);
+    color: #00ff96;
+  }
+  .btn-export:hover {
+    background: rgba(0,255,150,0.15);
+    box-shadow: 0 0 15px rgba(0,255,150,0.15);
+  }
+
+  /* Preview area */
+  .preview-container {
+    position: relative;
+    background: repeating-conic-gradient(#1a1a2e 0% 25%, #12121f 0% 50%) 50%/20px 20px;
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .preview-container canvas {
+    max-width: 100%;
+    max-height: 70vh;
+  }
+
+  .preview-placeholder {
+    text-align: center;
+    color: #445;
+    font-size: 14px;
+  }
+
+  .preview-placeholder .big { font-size: 40px; margin-bottom: 10px; }
+
+  /* Hidden video element */
+  #sourceVideo { display: none; }
+
+  /* Preview background selector */
+  .bg-row {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    justify-content: center;
+  }
+
+  .bg-option {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .bg-option:hover { border-color: rgba(255,255,255,0.3); }
+  .bg-option.active { border-color: #00d4ff; }
+
+  /* Playback controls */
+  .playback-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+  }
+
+  .play-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,200,255,0.3);
+    background: rgba(0,200,255,0.08);
+    color: #00d4ff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .playback-bar input[type="range"] { flex: 1; }
+
+  .time-display {
+    font-size: 11px;
+    font-family: monospace;
+    color: #667;
+    min-width: 80px;
+    text-align: right;
+  }
+
+  .status {
+    text-align: center;
+    font-size: 11px;
+    color: #556;
+    margin-top: 8px;
+    min-height: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Ohverlay Video Converter</h1>
+  <p>Transform any video into a transparent overlay animation</p>
+</div>
+
+<div class="main">
+  <!-- Left: Controls -->
+  <div class="panel controls-panel">
+
+    <!-- File Drop -->
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">&#128253;</div>
+      <div class="text">Drop video here or <b>browse</b></div>
+      <input type="file" id="fileInput" accept="video/*">
+    </div>
+
+    <!-- Conversion Mode -->
+    <div class="section-label">Conversion Mode</div>
+    <div class="mode-grid">
+      <div class="mode-btn active" data-mode="wireframe">
+        <span class="mode-icon">&#9670;</span>
+        Wireframe
+      </div>
+      <div class="mode-btn" data-mode="glow">
+        <span class="mode-icon">&#10022;</span>
+        Glow
+      </div>
+      <div class="mode-btn" data-mode="ghost">
+        <span class="mode-icon">&#128123;</span>
+        Ghost
+      </div>
+      <div class="mode-btn" data-mode="silhouette">
+        <span class="mode-icon">&#9899;</span>
+        Silhouette
+      </div>
+      <div class="mode-btn" data-mode="particle">
+        <span class="mode-icon">&#10057;</span>
+        Particle
+      </div>
+      <div class="mode-btn" data-mode="chroma">
+        <span class="mode-icon">&#127912;</span>
+        Chroma Key
+      </div>
+    </div>
+
+    <!-- Glow Color -->
+    <div class="section-label">Glow Color</div>
+    <div class="color-row">
+      <div class="color-swatch active" data-color="#00d4ff" style="background:#00d4ff"></div>
+      <div class="color-swatch" data-color="#ff00ff" style="background:#ff00ff"></div>
+      <div class="color-swatch" data-color="#00ff96" style="background:#00ff96"></div>
+      <div class="color-swatch" data-color="#ff6600" style="background:#ff6600"></div>
+      <div class="color-swatch" data-color="#ffffff" style="background:#ffffff"></div>
+      <div class="color-swatch" data-color="#ff3366" style="background:#ff3366"></div>
+      <div class="color-swatch" data-color="rainbow" style="background:linear-gradient(135deg,#f0f,#0ff,#0f0,#ff0,#f00)"></div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="section-label">Parameters</div>
+
+    <div class="slider-group">
+      <label>Opacity <span id="opacityVal">70%</span></label>
+      <input type="range" id="opacity" min="10" max="100" value="70">
+    </div>
+
+    <div class="slider-group">
+      <label>Edge Threshold <span id="thresholdVal">30</span></label>
+      <input type="range" id="threshold" min="5" max="100" value="30">
+    </div>
+
+    <div class="slider-group">
+      <label>Glow Intensity <span id="glowVal">60%</span></label>
+      <input type="range" id="glowIntensity" min="0" max="100" value="60">
+    </div>
+
+    <div class="slider-group">
+      <label>Line Thickness <span id="lineVal">1.0</span></label>
+      <input type="range" id="lineWidth" min="5" max="30" value="10">
+    </div>
+
+    <div class="slider-group" id="chromaGroup" style="display:none">
+      <label>Key Tolerance <span id="chromaVal">40</span></label>
+      <input type="range" id="chromaTolerance" min="10" max="120" value="40">
+    </div>
+
+    <div class="slider-group">
+      <label>Scale <span id="scaleVal">100%</span></label>
+      <input type="range" id="scale" min="25" max="200" value="100">
+    </div>
+
+    <!-- Actions -->
+    <div class="section-label" style="margin-top:15px">Export</div>
+    <button class="btn btn-export" id="exportBtn">&#9733; Export as Overlay HTML</button>
+    <button class="btn" id="exportFrameBtn">&#128247; Export Current Frame</button>
+    <button class="btn" id="exportWebmBtn">&#127910; Export as WebM (alpha)</button>
+  </div>
+
+  <!-- Right: Preview -->
+  <div class="panel preview-panel">
+    <div class="section-label">Preview</div>
+    <div class="preview-container" id="previewContainer">
+      <canvas id="outputCanvas"></canvas>
+      <div class="preview-placeholder" id="placeholder">
+        <div class="big">&#127916;</div>
+        Drop a video file to start converting
+      </div>
+    </div>
+
+    <!-- Playback -->
+    <div class="playback-bar" id="playbackBar" style="display:none">
+      <button class="play-btn" id="playBtn">&#9654;</button>
+      <input type="range" id="seekBar" min="0" max="100" value="0" step="0.1">
+      <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+    </div>
+
+    <!-- Preview background -->
+    <div class="bg-row">
+      <div class="bg-option active" data-bg="checker" style="background:repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50%/10px 10px" title="Transparent"></div>
+      <div class="bg-option" data-bg="black" style="background:#000" title="Black"></div>
+      <div class="bg-option" data-bg="white" style="background:#fff" title="White"></div>
+      <div class="bg-option" data-bg="desktop" style="background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)" title="Desktop"></div>
+      <div class="bg-option" data-bg="gradient" style="background:linear-gradient(135deg,#667eea,#764ba2)" title="Gradient"></div>
+    </div>
+
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<video id="sourceVideo" crossorigin="anonymous"></video>
+
+<script>
+// ─── State ───
+const state = {
+  mode: 'wireframe',
+  color: '#00d4ff',
+  opacity: 0.7,
+  threshold: 30,
+  glowIntensity: 0.6,
+  lineWidth: 1.0,
+  chromaTolerance: 40,
+  scale: 1.0,
+  isPlaying: false,
+  hasVideo: false,
+  previewBg: 'checker',
+};
+
+// ─── Elements ───
+const video = document.getElementById('sourceVideo');
+const canvas = document.getElementById('outputCanvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const placeholder = document.getElementById('placeholder');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const playbackBar = document.getElementById('playbackBar');
+const playBtn = document.getElementById('playBtn');
+const seekBar = document.getElementById('seekBar');
+const timeDisplay = document.getElementById('timeDisplay');
+const statusEl = document.getElementById('status');
+
+// Work canvases (off-screen)
+let srcCanvas, srcCtx, prevFrame;
+
+// ─── File Input ───
+dropZone.onclick = () => fileInput.click();
+fileInput.onchange = (e) => { if (e.target.files[0]) loadVideo(e.target.files[0]); };
+
+dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+dropZone.ondrop = (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('video/')) loadVideo(file);
+};
+
+function loadVideo(file) {
+  const url = URL.createObjectURL(file);
+  video.src = url;
+  video.load();
+  statusEl.textContent = `Loading: ${file.name}...`;
+
+  video.onloadedmetadata = () => {
+    const w = Math.round(video.videoWidth * state.scale);
+    const h = Math.round(video.videoHeight * state.scale);
+    canvas.width = w;
+    canvas.height = h;
+
+    // Source canvas for processing
+    srcCanvas = document.createElement('canvas');
+    srcCanvas.width = w;
+    srcCanvas.height = h;
+    srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+    prevFrame = null;
+
+    placeholder.style.display = 'none';
+    playbackBar.style.display = 'flex';
+    state.hasVideo = true;
+
+    statusEl.textContent = `${file.name} — ${video.videoWidth}x${video.videoHeight} — ${formatTime(video.duration)}`;
+
+    // Draw first frame
+    video.currentTime = 0;
+    video.onseeked = () => { processFrame(); video.onseeked = null; };
+  };
+}
+
+// ─── Playback ───
+playBtn.onclick = () => {
+  if (!state.hasVideo) return;
+  if (state.isPlaying) {
+    video.pause();
+    state.isPlaying = false;
+    playBtn.innerHTML = '&#9654;';
+  } else {
+    video.play();
+    state.isPlaying = true;
+    playBtn.innerHTML = '&#9646;&#9646;';
+    renderLoop();
+  }
+};
+
+seekBar.oninput = () => {
+  if (!state.hasVideo) return;
+  video.currentTime = (seekBar.value / 100) * video.duration;
+  if (!state.isPlaying) {
+    video.onseeked = () => { processFrame(); video.onseeked = null; };
+  }
+};
+
+video.ontimeupdate = () => {
+  if (!state.hasVideo) return;
+  seekBar.value = (video.currentTime / video.duration) * 100;
+  timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+};
+
+video.onended = () => {
+  state.isPlaying = false;
+  playBtn.innerHTML = '&#9654;';
+};
+
+function renderLoop() {
+  if (!state.isPlaying) return;
+  processFrame();
+  requestAnimationFrame(renderLoop);
+}
+
+// ─── Core Frame Processor ───
+function processFrame() {
+  if (!state.hasVideo || !srcCanvas) return;
+
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Draw source video to work canvas
+  srcCtx.drawImage(video, 0, 0, w, h);
+  const srcData = srcCtx.getImageData(0, 0, w, h);
+  const src = srcData.data;
+
+  // Clear output
+  ctx.clearRect(0, 0, w, h);
+
+  switch (state.mode) {
+    case 'wireframe': applyWireframe(src, w, h); break;
+    case 'glow':      applyGlow(src, w, h); break;
+    case 'ghost':     applyGhost(src, w, h); break;
+    case 'silhouette': applySilhouette(src, w, h); break;
+    case 'particle':  applyParticle(src, w, h); break;
+    case 'chroma':    applyChromaKey(src, w, h); break;
+  }
+}
+
+// ─── MODE: Wireframe (Sobel Edge Detection) ───
+function applyWireframe(src, w, h) {
+  const out = ctx.createImageData(w, h);
+  const d = out.data;
+  const t = state.threshold;
+  const [cr, cg, cb] = hexToRgb(state.color);
+  const alpha = Math.round(state.opacity * 255);
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      // Sobel operator
+      const idx = (y * w + x) * 4;
+      const tl = gray(src, ((y-1)*w+(x-1))*4);
+      const tc = gray(src, ((y-1)*w+x)*4);
+      const tr = gray(src, ((y-1)*w+(x+1))*4);
+      const ml = gray(src, (y*w+(x-1))*4);
+      const mr = gray(src, (y*w+(x+1))*4);
+      const bl = gray(src, ((y+1)*w+(x-1))*4);
+      const bc = gray(src, ((y+1)*w+x)*4);
+      const br = gray(src, ((y+1)*w+(x+1))*4);
+
+      const gx = -tl - 2*ml - bl + tr + 2*mr + br;
+      const gy = -tl - 2*tc - tr + bl + 2*bc + br;
+      const mag = Math.sqrt(gx*gx + gy*gy);
+
+      if (mag > t) {
+        const intensity = Math.min(1, mag / (t * 4));
+        if (state.color === 'rainbow') {
+          const hue = (x + y + Date.now() * 0.01) % 360;
+          const [rr, gg, bb] = hslToRgb(hue/360, 1, 0.5);
+          d[idx]   = rr;
+          d[idx+1] = gg;
+          d[idx+2] = bb;
+        } else {
+          d[idx]   = cr;
+          d[idx+1] = cg;
+          d[idx+2] = cb;
+        }
+        d[idx+3] = Math.round(intensity * alpha);
+      }
+    }
+  }
+
+  ctx.putImageData(out, 0, 0);
+
+  // Glow pass
+  if (state.glowIntensity > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.filter = `blur(${Math.round(state.glowIntensity * 8)}px)`;
+    ctx.globalAlpha = state.glowIntensity * 0.5;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+  }
+}
+
+// ─── MODE: Glow (Luminance Key) ───
+function applyGlow(src, w, h) {
+  const out = ctx.createImageData(w, h);
+  const d = out.data;
+  const t = state.threshold;
+  const [cr, cg, cb] = hexToRgb(state.color);
+  const alpha = state.opacity;
+
+  for (let i = 0; i < src.length; i += 4) {
+    const lum = (src[i] * 0.299 + src[i+1] * 0.587 + src[i+2] * 0.114);
+    if (lum > t) {
+      const intensity = Math.min(1, (lum - t) / (255 - t));
+      if (state.color === 'rainbow') {
+        const px = (i / 4) % w;
+        const py = Math.floor(i / 4 / w);
+        const hue = (px * 0.5 + py * 0.5 + Date.now() * 0.02) % 360;
+        const [rr, gg, bb] = hslToRgb(hue/360, 1, 0.5);
+        d[i] = rr; d[i+1] = gg; d[i+2] = bb;
+      } else {
+        d[i] = cr; d[i+1] = cg; d[i+2] = cb;
+      }
+      d[i+3] = Math.round(intensity * alpha * 255);
+    }
+  }
+
+  ctx.putImageData(out, 0, 0);
+
+  if (state.glowIntensity > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.filter = `blur(${Math.round(state.glowIntensity * 12)}px)`;
+    ctx.globalAlpha = state.glowIntensity * 0.4;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+  }
+}
+
+// ─── MODE: Ghost (Semi-transparent apparition) ───
+function applyGhost(src, w, h) {
+  const out = ctx.createImageData(w, h);
+  const d = out.data;
+  const alpha = state.opacity * 0.6;
+  const [cr, cg, cb] = hexToRgb(state.color);
+
+  for (let i = 0; i < src.length; i += 4) {
+    const lum = (src[i] * 0.299 + src[i+1] * 0.587 + src[i+2] * 0.114) / 255;
+    // Ghost: blend original with tint color
+    const blend = 0.3 + lum * 0.7;
+    if (state.color === 'rainbow') {
+      const px = (i / 4) % w;
+      const hue = (px * 0.3 + Date.now() * 0.01) % 360;
+      const [rr, gg, bb] = hslToRgb(hue/360, 0.5, 0.5);
+      d[i]   = Math.round(src[i] * 0.3 + rr * 0.7);
+      d[i+1] = Math.round(src[i+1] * 0.3 + gg * 0.7);
+      d[i+2] = Math.round(src[i+2] * 0.3 + bb * 0.7);
+    } else {
+      d[i]   = Math.round(src[i] * 0.3 + cr * blend * 0.7);
+      d[i+1] = Math.round(src[i+1] * 0.3 + cg * blend * 0.7);
+      d[i+2] = Math.round(src[i+2] * 0.3 + cb * blend * 0.7);
+    }
+    d[i+3] = Math.round(lum * alpha * 255);
+  }
+
+  ctx.putImageData(out, 0, 0);
+
+  // Ethereal glow
+  if (state.glowIntensity > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.filter = `blur(${Math.round(state.glowIntensity * 15)}px)`;
+    ctx.globalAlpha = state.glowIntensity * 0.25;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+  }
+}
+
+// ─── MODE: Silhouette ───
+function applySilhouette(src, w, h) {
+  const out = ctx.createImageData(w, h);
+  const d = out.data;
+  const t = state.threshold;
+  const [cr, cg, cb] = hexToRgb(state.color);
+  const alpha = state.opacity;
+
+  for (let i = 0; i < src.length; i += 4) {
+    const lum = src[i] * 0.299 + src[i+1] * 0.587 + src[i+2] * 0.114;
+    if (lum > t) {
+      if (state.color === 'rainbow') {
+        const px = (i / 4) % w;
+        const py = Math.floor(i / 4 / w);
+        const hue = (px + py + Date.now() * 0.015) % 360;
+        const [rr, gg, bb] = hslToRgb(hue/360, 1, 0.5);
+        d[i] = rr; d[i+1] = gg; d[i+2] = bb;
+      } else {
+        d[i] = cr; d[i+1] = cg; d[i+2] = cb;
+      }
+      d[i+3] = Math.round(alpha * 255);
+    }
+  }
+
+  ctx.putImageData(out, 0, 0);
+}
+
+// ─── MODE: Particle Trace (motion-based) ───
+let particles = [];
+
+function applyParticle(src, w, h) {
+  // Detect motion between frames
+  const currentGray = new Float32Array(w * h);
+  for (let i = 0; i < src.length; i += 4) {
+    currentGray[i / 4] = src[i] * 0.299 + src[i+1] * 0.587 + src[i+2] * 0.114;
+  }
+
+  if (prevFrame) {
+    // Spawn particles at motion points
+    const step = 8;
+    for (let y = 0; y < h; y += step) {
+      for (let x = 0; x < w; x += step) {
+        const idx = y * w + x;
+        const diff = Math.abs(currentGray[idx] - prevFrame[idx]);
+        if (diff > state.threshold && particles.length < 3000) {
+          particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2 - 0.5,
+            life: 1.0,
+            decay: 0.01 + Math.random() * 0.02,
+            size: 1 + Math.random() * 2,
+          });
+        }
+      }
+    }
+  }
+
+  prevFrame = currentGray;
+
+  // Draw and update particles
+  const [cr, cg, cb] = hexToRgb(state.color);
+  ctx.clearRect(0, 0, w, h);
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= p.decay;
+
+    if (p.life <= 0 || p.x < 0 || p.x > w || p.y < 0 || p.y > h) {
+      particles.splice(i, 1);
+      continue;
+    }
+
+    ctx.globalAlpha = p.life * state.opacity;
+    if (state.color === 'rainbow') {
+      ctx.fillStyle = `hsl(${(p.x + p.y + Date.now() * 0.05) % 360}, 100%, 60%)`;
+    } else {
+      ctx.fillStyle = state.color;
+    }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Glow
+  if (state.glowIntensity > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.filter = `blur(${Math.round(state.glowIntensity * 6)}px)`;
+    ctx.globalAlpha = state.glowIntensity * 0.5;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+  }
+}
+
+// ─── MODE: Chroma Key ───
+function applyChromaKey(src, w, h) {
+  const out = ctx.createImageData(w, h);
+  const d = out.data;
+  const tol = state.chromaTolerance;
+  const alpha = state.opacity;
+  // Default: remove green
+  const keyR = 0, keyG = 177, keyB = 64;
+
+  for (let i = 0; i < src.length; i += 4) {
+    const dr = src[i] - keyR;
+    const dg = src[i+1] - keyG;
+    const db = src[i+2] - keyB;
+    const dist = Math.sqrt(dr*dr + dg*dg + db*db);
+
+    if (dist > tol) {
+      // Keep pixel, apply tint
+      const lum = (src[i] * 0.299 + src[i+1] * 0.587 + src[i+2] * 0.114) / 255;
+      if (state.color === 'rainbow') {
+        const px = (i / 4) % w;
+        const hue = (px * 0.5 + Date.now() * 0.01) % 360;
+        const [rr, gg, bb] = hslToRgb(hue/360, 0.7, 0.4 + lum * 0.3);
+        d[i] = rr; d[i+1] = gg; d[i+2] = bb;
+      } else {
+        const [cr, cg, cb] = hexToRgb(state.color);
+        d[i]   = Math.round(src[i] * 0.4 + cr * lum * 0.6);
+        d[i+1] = Math.round(src[i+1] * 0.4 + cg * lum * 0.6);
+        d[i+2] = Math.round(src[i+2] * 0.4 + cb * lum * 0.6);
+      }
+      d[i+3] = Math.round(alpha * 255);
+    }
+    // else: transparent (chroma keyed out)
+  }
+
+  ctx.putImageData(out, 0, 0);
+}
+
+// ─── Utilities ───
+function gray(data, i) {
+  return data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+}
+
+function hexToRgb(hex) {
+  if (hex === 'rainbow') return [0, 212, 255]; // fallback
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return [r, g, b];
+}
+
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q-p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q-p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// ─── UI Event Handlers ───
+
+// Mode buttons
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.mode = btn.dataset.mode;
+    particles = [];
+    prevFrame = null;
+    document.getElementById('chromaGroup').style.display = state.mode === 'chroma' ? 'block' : 'none';
+    if (state.hasVideo && !state.isPlaying) processFrame();
+  };
+});
+
+// Color swatches
+document.querySelectorAll('.color-swatch').forEach(sw => {
+  sw.onclick = () => {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    state.color = sw.dataset.color;
+    if (state.hasVideo && !state.isPlaying) processFrame();
+  };
+});
+
+// Sliders
+document.getElementById('opacity').oninput = function() {
+  state.opacity = this.value / 100;
+  document.getElementById('opacityVal').textContent = this.value + '%';
+  if (state.hasVideo && !state.isPlaying) processFrame();
+};
+document.getElementById('threshold').oninput = function() {
+  state.threshold = parseInt(this.value);
+  document.getElementById('thresholdVal').textContent = this.value;
+  if (state.hasVideo && !state.isPlaying) processFrame();
+};
+document.getElementById('glowIntensity').oninput = function() {
+  state.glowIntensity = this.value / 100;
+  document.getElementById('glowVal').textContent = this.value + '%';
+  if (state.hasVideo && !state.isPlaying) processFrame();
+};
+document.getElementById('lineWidth').oninput = function() {
+  state.lineWidth = this.value / 10;
+  document.getElementById('lineVal').textContent = (this.value / 10).toFixed(1);
+  if (state.hasVideo && !state.isPlaying) processFrame();
+};
+document.getElementById('chromaTolerance').oninput = function() {
+  state.chromaTolerance = parseInt(this.value);
+  document.getElementById('chromaVal').textContent = this.value;
+  if (state.hasVideo && !state.isPlaying) processFrame();
+};
+document.getElementById('scale').oninput = function() {
+  state.scale = this.value / 100;
+  document.getElementById('scaleVal').textContent = this.value + '%';
+  if (state.hasVideo) {
+    canvas.width = Math.round(video.videoWidth * state.scale);
+    canvas.height = Math.round(video.videoHeight * state.scale);
+    srcCanvas.width = canvas.width;
+    srcCanvas.height = canvas.height;
+    if (!state.isPlaying) processFrame();
+  }
+};
+
+// Preview backgrounds
+document.querySelectorAll('.bg-option').forEach(opt => {
+  opt.onclick = () => {
+    document.querySelectorAll('.bg-option').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    const container = document.getElementById('previewContainer');
+    const bg = opt.dataset.bg;
+    switch(bg) {
+      case 'checker': container.style.background = "repeating-conic-gradient(#1a1a2e 0% 25%, #12121f 0% 50%) 50%/20px 20px"; break;
+      case 'black': container.style.background = '#000'; break;
+      case 'white': container.style.background = '#fff'; break;
+      case 'desktop': container.style.background = 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)'; break;
+      case 'gradient': container.style.background = 'linear-gradient(135deg,#667eea,#764ba2)'; break;
+    }
+  };
+});
+
+// ─── Export: Overlay HTML ───
+document.getElementById('exportBtn').onclick = () => {
+  if (!state.hasVideo) return;
+
+  // Pause to capture settings
+  const wasPlaying = state.isPlaying;
+  if (wasPlaying) { video.pause(); state.isPlaying = false; }
+
+  statusEl.textContent = 'Generating overlay HTML...';
+
+  // Export as self-contained HTML with embedded video processing
+  const modeCode = getModeFunction(state.mode);
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ohverlay - Video Overlay</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: transparent; overflow: hidden; }
+  canvas { position: fixed; top: 0; left: 0; pointer-events: none; mix-blend-mode: screen; }
+  video { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<video id="v" loop muted autoplay></video>
+<script>
+// Ohverlay Video Overlay - Generated by Ohverlay Factory
+// Mode: ${state.mode} | Color: ${state.color} | Opacity: ${state.opacity}
+const config = ${JSON.stringify({
+    mode: state.mode,
+    color: state.color,
+    opacity: state.opacity,
+    threshold: state.threshold,
+    glowIntensity: state.glowIntensity,
+  })};
+
+const v = document.getElementById('v');
+const c = document.getElementById('c');
+const ctx = c.getContext('2d', { willReadFrequently: true });
+const sc = document.createElement('canvas');
+const sctx = sc.getContext('2d', { willReadFrequently: true });
+let prev = null;
+let particles = [];
+
+// User must set video source (or drag/drop)
+document.body.ondrop = (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f) { v.src = URL.createObjectURL(f); v.play(); }
+};
+document.body.ondragover = (e) => e.preventDefault();
+
+v.onloadedmetadata = () => {
+  c.width = sc.width = v.videoWidth;
+  c.height = sc.height = v.videoHeight;
+  render();
+};
+
+function render() {
+  if (v.paused || v.ended) { requestAnimationFrame(render); return; }
+  const w = c.width, h = c.height;
+  sctx.drawImage(v, 0, 0, w, h);
+  const src = sctx.getImageData(0, 0, w, h).data;
+  ctx.clearRect(0, 0, w, h);
+  process(src, w, h);
+  requestAnimationFrame(render);
+}
+
+${modeCode}
+<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ohverlay-${state.mode}-overlay.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  statusEl.textContent = 'Overlay HTML exported!';
+  if (wasPlaying) { video.play(); state.isPlaying = true; renderLoop(); }
+};
+
+// ─── Export: Current Frame as PNG ───
+document.getElementById('exportFrameBtn').onclick = () => {
+  if (!state.hasVideo) return;
+  canvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ohverlay-${state.mode}-frame.png`;
+    a.click();
+    statusEl.textContent = 'Frame exported as PNG!';
+  }, 'image/png');
+};
+
+// ─── Export: WebM with alpha ───
+document.getElementById('exportWebmBtn').onclick = () => {
+  if (!state.hasVideo) return;
+  statusEl.textContent = 'Recording WebM... (plays through video once)';
+
+  const stream = canvas.captureStream(30);
+  const recorder = new MediaRecorder(stream, {
+    mimeType: 'video/webm;codecs=vp9',
+    videoBitsPerSecond: 5000000,
+  });
+  const chunks = [];
+
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ohverlay-${state.mode}-overlay.webm`;
+    a.click();
+    statusEl.textContent = 'WebM exported!';
+  };
+
+  video.currentTime = 0;
+  video.play();
+  state.isPlaying = true;
+  recorder.start();
+  renderLoop();
+
+  video.onended = () => {
+    recorder.stop();
+    state.isPlaying = false;
+    playBtn.innerHTML = '&#9654;';
+    video.onended = null;
+  };
+};
+
+// ─── Generate mode-specific code for export ───
+function getModeFunction(mode) {
+  // Shared helpers
+  const helpers = `
+function gray(d,i){return d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;}
+function hexToRgb(h){if(h==='rainbow')return[0,212,255];return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function hslToRgb(h,s,l){let r,g,b;if(s===0){r=g=b=l;}else{const q=l<0.5?l*(1+s):l+s-l*s;const p=2*l-q;const h2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};r=h2r(p,q,h+1/3);g=h2r(p,q,h);b=h2r(p,q,h-1/3);}return[Math.round(r*255),Math.round(g*255),Math.round(b*255)];}
+`;
+
+  const modes = {
+    wireframe: `${helpers}
+function process(src,w,h){const out=ctx.createImageData(w,h);const d=out.data;const t=config.threshold;const[cr,cg,cb]=hexToRgb(config.color);const a=Math.round(config.opacity*255);for(let y=1;y<h-1;y++){for(let x=1;x<w-1;x++){const i=(y*w+x)*4;const gx=-gray(src,((y-1)*w+x-1)*4)-2*gray(src,(y*w+x-1)*4)-gray(src,((y+1)*w+x-1)*4)+gray(src,((y-1)*w+x+1)*4)+2*gray(src,(y*w+x+1)*4)+gray(src,((y+1)*w+x+1)*4);const gy=-gray(src,((y-1)*w+x-1)*4)-2*gray(src,((y-1)*w+x)*4)-gray(src,((y-1)*w+x+1)*4)+gray(src,((y+1)*w+x-1)*4)+2*gray(src,((y+1)*w+x)*4)+gray(src,((y+1)*w+x+1)*4);const m=Math.sqrt(gx*gx+gy*gy);if(m>t){const n=Math.min(1,m/(t*4));if(config.color==='rainbow'){const h=((x+y+Date.now()*0.01)%360)/360;const[rr,gg,bb]=hslToRgb(h,1,0.5);d[i]=rr;d[i+1]=gg;d[i+2]=bb;}else{d[i]=cr;d[i+1]=cg;d[i+2]=cb;}d[i+3]=Math.round(n*a);}}}ctx.putImageData(out,0,0);if(config.glowIntensity>0){ctx.save();ctx.globalCompositeOperation='screen';ctx.filter='blur('+Math.round(config.glowIntensity*8)+'px)';ctx.globalAlpha=config.glowIntensity*0.5;ctx.drawImage(c,0,0);ctx.restore();}}`,
+
+    glow: `${helpers}
+function process(src,w,h){const out=ctx.createImageData(w,h);const d=out.data;const t=config.threshold;const[cr,cg,cb]=hexToRgb(config.color);for(let i=0;i<src.length;i+=4){const l=src[i]*0.299+src[i+1]*0.587+src[i+2]*0.114;if(l>t){const n=Math.min(1,(l-t)/(255-t));if(config.color==='rainbow'){const h=(((i/4)%w*0.5+Math.floor(i/4/w)*0.5+Date.now()*0.02)%360)/360;const[r,g,b]=hslToRgb(h,1,0.5);d[i]=r;d[i+1]=g;d[i+2]=b;}else{d[i]=cr;d[i+1]=cg;d[i+2]=cb;}d[i+3]=Math.round(n*config.opacity*255);}}ctx.putImageData(out,0,0);if(config.glowIntensity>0){ctx.save();ctx.globalCompositeOperation='screen';ctx.filter='blur('+Math.round(config.glowIntensity*12)+'px)';ctx.globalAlpha=config.glowIntensity*0.4;ctx.drawImage(c,0,0);ctx.restore();}}`,
+
+    ghost: `${helpers}
+function process(src,w,h){const out=ctx.createImageData(w,h);const d=out.data;const a=config.opacity*0.6;const[cr,cg,cb]=hexToRgb(config.color);for(let i=0;i<src.length;i+=4){const l=(src[i]*0.299+src[i+1]*0.587+src[i+2]*0.114)/255;const b=0.3+l*0.7;d[i]=Math.round(src[i]*0.3+cr*b*0.7);d[i+1]=Math.round(src[i+1]*0.3+cg*b*0.7);d[i+2]=Math.round(src[i+2]*0.3+cb*b*0.7);d[i+3]=Math.round(l*a*255);}ctx.putImageData(out,0,0);if(config.glowIntensity>0){ctx.save();ctx.globalCompositeOperation='screen';ctx.filter='blur('+Math.round(config.glowIntensity*15)+'px)';ctx.globalAlpha=config.glowIntensity*0.25;ctx.drawImage(c,0,0);ctx.restore();}}`,
+
+    silhouette: `${helpers}
+function process(src,w,h){const out=ctx.createImageData(w,h);const d=out.data;const t=config.threshold;const[cr,cg,cb]=hexToRgb(config.color);for(let i=0;i<src.length;i+=4){const l=src[i]*0.299+src[i+1]*0.587+src[i+2]*0.114;if(l>t){if(config.color==='rainbow'){const h=(((i/4)%w+(i/4/w)+Date.now()*0.015)%360)/360;const[r,g,b]=hslToRgb(h,1,0.5);d[i]=r;d[i+1]=g;d[i+2]=b;}else{d[i]=cr;d[i+1]=cg;d[i+2]=cb;}d[i+3]=Math.round(config.opacity*255);}}ctx.putImageData(out,0,0);}`,
+
+    particle: `${helpers}
+function process(src,w,h){const cur=new Float32Array(w*h);for(let i=0;i<src.length;i+=4)cur[i/4]=src[i]*0.299+src[i+1]*0.587+src[i+2]*0.114;if(prev){const s=8;for(let y=0;y<h;y+=s)for(let x=0;x<w;x+=s){const d=Math.abs(cur[y*w+x]-prev[y*w+x]);if(d>config.threshold&&particles.length<3000)particles.push({x,y,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2-0.5,life:1,decay:0.01+Math.random()*0.02,size:1+Math.random()*2});}}prev=cur;for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;if(p.life<=0||p.x<0||p.x>w||p.y<0||p.y>h){particles.splice(i,1);continue;}ctx.globalAlpha=p.life*config.opacity;ctx.fillStyle=config.color==='rainbow'?'hsl('+((p.x+p.y+Date.now()*0.05)%360)+',100%,60%)':config.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;}`,
+
+    chroma: `${helpers}
+function process(src,w,h){const out=ctx.createImageData(w,h);const d=out.data;const tol=40;const[cr,cg,cb]=hexToRgb(config.color);for(let i=0;i<src.length;i+=4){const dr=src[i];const dg=src[i+1]-177;const db=src[i+2]-64;const dist=Math.sqrt(dr*dr+dg*dg+db*db);if(dist>tol){const l=(src[i]*0.299+src[i+1]*0.587+src[i+2]*0.114)/255;d[i]=Math.round(src[i]*0.4+cr*l*0.6);d[i+1]=Math.round(src[i+1]*0.4+cg*l*0.6);d[i+2]=Math.round(src[i+2]*0.4+cb*l*0.6);d[i+3]=Math.round(config.opacity*255);}}ctx.putImageData(out,0,0);}`,
+  };
+
+  return modes[mode] || modes.wireframe;
+}
+</script>
+</body>
+</html>

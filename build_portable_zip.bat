@@ -4,6 +4,10 @@ REM  OHVERLAY v4.0 - Portable ZIP Builder
 REM  By Futol Ethical Technology Ecosystems
 REM  Creates a single ZIP file you can share with anyone
 REM ============================================================
+
+REM Auto-navigate to the folder where this script lives
+cd /d "%~dp0"
+
 echo.
 echo   =============================================
 echo    OHVERLAY v4.0 - Portable ZIP Builder

@@ -72,10 +72,11 @@ DEFAULT_CONFIG = {
         "toggle_visibility": "ctrl+alt+h"
     },
     "app": {
-        "version": "1.0.0",
+        "version": "4.0.0",
         "support_email": "support@ohverlay.com",
-        "public_website_enabled": False,
-        "website_release_stage": "private_prelaunch",
+        "download_url": "https://ohverlay.com/download",
+        "public_website_enabled": True,
+        "website_release_stage": "beta",
         "auto_update_enabled": True,
         "update_check_hours": 6,
         "update_manifest_url": "https://ohverlay.com/updates/manifest.json",

@@ -55,6 +55,7 @@ from modules.news import NewsModule
 from modules.telegram_bridge import TelegramBridge
 from modules.webhook_server import WebhookServer
 from modules.updater import AppUpdater
+from modules.blue_vision_bridge import BlueVisionBridge
 from utils.logger import logger
 
 
@@ -88,6 +89,7 @@ class OhverlayApp:
         self._restore_fish_mode()
         self._init_main_loop()
         self._init_vision_foraging()
+        self._init_blue_vision_bridge()
 
         # Update tray status
         self._update_tray_status()
@@ -410,6 +412,37 @@ class OhverlayApp:
         self.vision_timer.timeout.connect(self._run_vision_foraging)
         self.vision_timer.start(interval_min * 60 * 1000)
         logger.info(f"Vision foraging enabled (every {interval_min} min).")
+
+    def _init_blue_vision_bridge(self):
+        """Connect Blue Vision to creature brain for context-aware behavior."""
+        import os
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass
+
+        groq_key = os.environ.get('GROQ_API_KEY', '')
+        scan_interval = max(60, int(self.config.get("vision", "scan_interval") or 300))
+        self.vision_bridge = BlueVisionBridge(api_key=groq_key, scan_interval=scan_interval)
+
+        if self.vision_bridge.available:
+            self.vision_bridge.start()
+            # Apply context to brain every 10 seconds
+            self._vision_bridge_timer = QTimer()
+            self._vision_bridge_timer.timeout.connect(self._apply_vision_context)
+            self._vision_bridge_timer.start(10000)
+            logger.info("Blue Vision Bridge active - creatures will react to screen context!")
+        else:
+            self._vision_bridge_timer = None
+            logger.info("Blue Vision Bridge: no Groq API key - creatures use default behavior")
+
+    def _apply_vision_context(self):
+        """Apply Blue Vision screen context to creature brain."""
+        if not hasattr(self, 'vision_bridge') or not self.vision_bridge.available:
+            return
+        self.brain.set_screen_context(self.vision_bridge.context)
+        self.vision_bridge.apply_to_brain(self.brain, self.bubble_system)
 
     def _run_vision_foraging(self):
         if not self.llm_brain.can_use_vision_foraging:
@@ -749,6 +782,10 @@ class OhverlayApp:
                 pass
         if self.vision_timer:
             self.vision_timer.stop()
+        if hasattr(self, 'vision_bridge'):
+            self.vision_bridge.stop()
+        if self._vision_bridge_timer:
+            self._vision_bridge_timer.stop()
         self.telegram_bridge.stop()
         self.webhook_server.stop()
         self.config.save()

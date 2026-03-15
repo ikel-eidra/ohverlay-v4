@@ -1,0 +1,999 @@
+<!--
+  OHVERLAY EXAM REVIEWER v1.0
+  ==============================
+  Glowing quiz overlay that appears periodically on your screen.
+
+  Features:
+  - Loads question sets from JSON or manual input
+  - Appears every X minutes (configurable)
+  - Shows question + multiple choice answers as wireframe glow
+  - Correct answer pulses/glows brighter after reveal
+  - Fades away after a few seconds
+  - Tracks score and progress
+  - Multiple subjects/decks supported
+  - Import/export question sets
+
+  By Futol Ethical Technology Ecosystems
+  Part of the Ohverlay Ecosystem
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ohverlay Exam Reviewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+  }
+
+  /* ─── Quiz Card ─── */
+  .quiz-card {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    width: 520px;
+    padding: 0;
+    border-radius: 16px;
+    background: rgba(5, 5, 15, 0.88);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    box-shadow:
+      0 0 40px rgba(0, 212, 255, 0.08),
+      0 0 80px rgba(0, 212, 255, 0.04),
+      inset 0 0 60px rgba(0, 212, 255, 0.02);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 99999;
+  }
+
+  .quiz-card.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: auto;
+  }
+
+  .quiz-card.fading {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.05);
+    filter: blur(4px);
+  }
+
+  /* ─── Header ─── */
+  .quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px 10px;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+  }
+
+  .quiz-subject {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: rgba(0, 212, 255, 0.6);
+  }
+
+  .quiz-progress {
+    font-size: 10px;
+    font-family: monospace;
+    color: rgba(0, 212, 255, 0.4);
+  }
+
+  .quiz-score {
+    font-size: 10px;
+    font-family: monospace;
+    color: rgba(0, 255, 150, 0.5);
+  }
+
+  /* ─── Question ─── */
+  .quiz-question {
+    padding: 22px 24px 16px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(220, 230, 255, 0.9);
+    text-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
+    min-height: 60px;
+  }
+
+  /* ─── Answer Options ─── */
+  .quiz-options {
+    padding: 0 20px 12px;
+    list-style: none;
+  }
+
+  .quiz-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 212, 255, 0.08);
+    background: rgba(0, 212, 255, 0.02);
+    cursor: pointer;
+    transition: all 0.4s;
+    pointer-events: auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .quiz-option:hover {
+    border-color: rgba(0, 212, 255, 0.25);
+    background: rgba(0, 212, 255, 0.06);
+  }
+
+  .quiz-option .letter {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(0, 212, 255, 0.5);
+    min-width: 20px;
+    text-align: center;
+    padding-top: 1px;
+  }
+
+  .quiz-option .text {
+    font-size: 13px;
+    color: rgba(200, 210, 230, 0.8);
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  /* Selected */
+  .quiz-option.selected {
+    border-color: rgba(0, 212, 255, 0.4);
+    background: rgba(0, 212, 255, 0.1);
+  }
+  .quiz-option.selected .letter { color: #00d4ff; }
+  .quiz-option.selected .text { color: #dde8ff; }
+
+  /* Correct answer glow */
+  .quiz-option.correct {
+    border-color: rgba(0, 255, 150, 0.5);
+    background: rgba(0, 255, 150, 0.08);
+    box-shadow: 0 0 20px rgba(0, 255, 150, 0.1), 0 0 40px rgba(0, 255, 150, 0.05);
+    animation: correctPulse 1.5s ease-in-out infinite;
+  }
+  .quiz-option.correct .letter { color: #00ff96; text-shadow: 0 0 10px rgba(0,255,150,0.5); }
+  .quiz-option.correct .text { color: #d0ffe0; text-shadow: 0 0 8px rgba(0,255,150,0.2); }
+
+  /* Wrong answer */
+  .quiz-option.wrong {
+    border-color: rgba(255, 60, 60, 0.3);
+    background: rgba(255, 60, 60, 0.05);
+  }
+  .quiz-option.wrong .letter { color: rgba(255, 80, 80, 0.6); }
+  .quiz-option.wrong .text { color: rgba(255, 150, 150, 0.6); text-decoration: line-through; }
+
+  /* Disabled after answer */
+  .quiz-option.locked {
+    pointer-events: none;
+    cursor: default;
+  }
+
+  @keyframes correctPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0,255,150,0.1), 0 0 40px rgba(0,255,150,0.05); }
+    50% { box-shadow: 0 0 30px rgba(0,255,150,0.2), 0 0 60px rgba(0,255,150,0.1); }
+  }
+
+  /* ─── Footer ─── */
+  .quiz-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px 14px;
+    border-top: 1px solid rgba(0, 212, 255, 0.06);
+  }
+
+  .quiz-timer {
+    font-size: 11px;
+    font-family: monospace;
+    color: rgba(0, 212, 255, 0.3);
+  }
+
+  .quiz-hint {
+    font-size: 10px;
+    color: rgba(150, 160, 180, 0.4);
+    font-style: italic;
+  }
+
+  /* ─── Settings Panel ─── */
+  .settings-panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 340px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: rgba(8, 8, 18, 0.95);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: 12px;
+    padding: 18px;
+    z-index: 100000;
+    pointer-events: auto;
+    display: none;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .settings-panel.open { display: block; }
+
+  .settings-panel h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #00d4ff;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+  }
+
+  .settings-panel label {
+    display: block;
+    font-size: 11px;
+    color: #889;
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+
+  .settings-panel input, .settings-panel select, .settings-panel textarea {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 212, 255, 0.12);
+    border-radius: 6px;
+    color: #dde;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+  }
+
+  .settings-panel textarea {
+    min-height: 200px;
+    font-family: monospace;
+    font-size: 11px;
+    resize: vertical;
+  }
+
+  .settings-panel input:focus, .settings-panel textarea:focus {
+    border-color: rgba(0, 212, 255, 0.3);
+  }
+
+  .settings-btn-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .settings-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 6px;
+    background: rgba(0, 212, 255, 0.06);
+    color: #00d4ff;
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    pointer-events: auto;
+  }
+
+  .settings-btn:hover {
+    background: rgba(0, 212, 255, 0.12);
+  }
+
+  .settings-btn.green {
+    border-color: rgba(0, 255, 150, 0.2);
+    color: #00ff96;
+    background: rgba(0, 255, 150, 0.06);
+  }
+
+  /* Toggle button */
+  .toggle-settings {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    background: rgba(5, 5, 15, 0.8);
+    color: rgba(0, 212, 255, 0.5);
+    font-size: 16px;
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 100001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+
+  .toggle-settings:hover {
+    border-color: #00d4ff;
+    color: #00d4ff;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+  }
+
+  /* ─── Canvas background particles ─── */
+  #bgCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 99998;
+    opacity: 0;
+    transition: opacity 0.8s;
+  }
+
+  #bgCanvas.active { opacity: 1; }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<div class="quiz-card" id="quizCard">
+  <div class="quiz-header">
+    <span class="quiz-subject" id="quizSubject">EXAM REVIEWER</span>
+    <span class="quiz-score" id="quizScore"></span>
+    <span class="quiz-progress" id="quizProgress"></span>
+  </div>
+  <div class="quiz-question" id="quizQuestion"></div>
+  <ul class="quiz-options" id="quizOptions"></ul>
+  <div class="quiz-footer">
+    <span class="quiz-timer" id="quizTimer"></span>
+    <span class="quiz-hint" id="quizHint">click an answer</span>
+  </div>
+</div>
+
+<button class="toggle-settings" id="toggleBtn">&#9881;</button>
+
+<div class="settings-panel" id="settingsPanel">
+  <h3>Exam Reviewer Settings</h3>
+
+  <label>Interval (minutes)</label>
+  <input type="number" id="intervalInput" value="5" min="1" max="120">
+
+  <label>Display Duration (seconds)</label>
+  <input type="number" id="durationInput" value="15" min="5" max="60">
+
+  <label>Subject / Deck Name</label>
+  <input type="text" id="subjectInput" value="General Review">
+
+  <label>Question Set (JSON)</label>
+  <textarea id="questionsInput">[
+  {
+    "q": "What is the capital of the Philippines?",
+    "options": ["Manila", "Cebu", "Davao", "Quezon City"],
+    "answer": 0
+  },
+  {
+    "q": "Which planet is known as the Red Planet?",
+    "options": ["Venus", "Mars", "Jupiter", "Saturn"],
+    "answer": 1
+  },
+  {
+    "q": "What does HTML stand for?",
+    "options": [
+      "Hyper Text Markup Language",
+      "High Tech Modern Language",
+      "Hyper Transfer Markup Language",
+      "Home Tool Markup Language"
+    ],
+    "answer": 0
+  },
+  {
+    "q": "In Python, which keyword defines a function?",
+    "options": ["func", "function", "def", "define"],
+    "answer": 2
+  },
+  {
+    "q": "What is 12 x 12?",
+    "options": ["124", "144", "132", "156"],
+    "answer": 1
+  },
+  {
+    "q": "Which gas do plants absorb from the atmosphere?",
+    "options": ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"],
+    "answer": 2
+  },
+  {
+    "q": "Who painted the Mona Lisa?",
+    "options": ["Michelangelo", "Leonardo da Vinci", "Raphael", "Donatello"],
+    "answer": 1
+  },
+  {
+    "q": "What is the powerhouse of the cell?",
+    "options": ["Nucleus", "Ribosome", "Mitochondria", "Golgi Body"],
+    "answer": 2
+  }
+]</textarea>
+
+  <div class="settings-btn-row">
+    <button class="settings-btn green" id="saveBtn">Save &amp; Start</button>
+    <button class="settings-btn" id="importBtn">Import JSON</button>
+    <button class="settings-btn" id="exportBtn">Export</button>
+  </div>
+
+  <div class="settings-btn-row">
+    <button class="settings-btn" id="showNowBtn">Show Question Now</button>
+    <button class="settings-btn" id="resetBtn">Reset Score</button>
+  </div>
+
+  <h3 style="margin-top:16px">PlumberPass Connection</h3>
+
+  <label>PlumberPass API URL</label>
+  <input type="text" id="apiUrlInput" value="http://localhost:8401" placeholder="http://localhost:8401">
+
+  <label>Subject Filter</label>
+  <select id="subjectFilter">
+    <option value="">All Subjects</option>
+    <option value="plumbing-code">Plumbing Code (RA 1378)</option>
+    <option value="sanitary-eng">Sanitary Engineering</option>
+    <option value="design-layout">Design & Layout</option>
+    <option value="water-supply">Water Supply Systems</option>
+    <option value="drainage">Drainage & Sewage</option>
+    <option value="fixtures">Fixtures & Materials</option>
+    <option value="mathematics">Plumbing Math</option>
+    <option value="environmental">Environmental Laws</option>
+    <option value="ethics">Ethics & Practice</option>
+    <option value="general">General Knowledge</option>
+  </select>
+
+  <div class="settings-btn-row">
+    <button class="settings-btn green" id="fetchBtn">Fetch from PlumberPass</button>
+    <button class="settings-btn" id="syncStatsBtn">Sync Stats</button>
+  </div>
+
+  <div id="apiStatus" style="font-size:10px;color:#556;margin-top:6px;min-height:14px;"></div>
+
+  <label>Upload PDF Reviewer</label>
+  <input type="file" id="pdfUpload" accept=".pdf" style="display:block;margin-top:4px;">
+  <div id="pdfStatus" style="font-size:10px;color:#556;margin-top:4px;min-height:14px;"></div>
+
+  <label style="margin-top:14px">Stats</label>
+  <div id="statsDisplay" style="font-size:11px;color:#667;font-family:monospace;padding:6px 0;"></div>
+</div>
+
+<input type="file" id="fileImport" accept=".json" style="display:none">
+
+<script>
+// ─── State ───
+const state = {
+  questions: [],
+  currentIdx: 0,
+  score: 0,
+  total: 0,
+  answered: new Set(),
+  interval: 5,
+  duration: 15,
+  subject: 'General Review',
+  isShowing: false,
+  timer: null,
+  autoHideTimer: null,
+  revealTimer: null,
+  shuffledOrder: [],
+};
+
+const STORAGE_KEY = 'ohverlay-exam-reviewer';
+
+// ─── Elements ───
+const card = document.getElementById('quizCard');
+const bgCanvas = document.getElementById('bgCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+// ─── Load saved state ───
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      state.questions = data.questions || state.questions;
+      state.score = data.score || 0;
+      state.total = data.total || 0;
+      state.answered = new Set(data.answered || []);
+      state.interval = data.interval || 5;
+      state.duration = data.duration || 15;
+      state.subject = data.subject || 'General Review';
+      document.getElementById('intervalInput').value = state.interval;
+      document.getElementById('durationInput').value = state.duration;
+      document.getElementById('subjectInput').value = state.subject;
+      document.getElementById('questionsInput').value = JSON.stringify(state.questions, null, 2);
+    }
+  } catch (e) {}
+  parseQuestions();
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    questions: state.questions,
+    score: state.score,
+    total: state.total,
+    answered: [...state.answered],
+    interval: state.interval,
+    duration: state.duration,
+    subject: state.subject,
+  }));
+}
+
+function parseQuestions() {
+  try {
+    const raw = document.getElementById('questionsInput').value.trim();
+    state.questions = JSON.parse(raw);
+    shuffleOrder();
+    updateStats();
+  } catch (e) {
+    // Keep existing questions
+  }
+}
+
+function shuffleOrder() {
+  state.shuffledOrder = state.questions.map((_, i) => i);
+  // Fisher-Yates shuffle
+  for (let i = state.shuffledOrder.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [state.shuffledOrder[i], state.shuffledOrder[j]] = [state.shuffledOrder[j], state.shuffledOrder[i]];
+  }
+  state.currentIdx = 0;
+}
+
+function getNextQuestion() {
+  // Find next unanswered question
+  for (let attempt = 0; attempt < state.questions.length; attempt++) {
+    const idx = state.shuffledOrder[state.currentIdx % state.shuffledOrder.length];
+    state.currentIdx++;
+    if (!state.answered.has(idx) || state.answered.size >= state.questions.length) {
+      // If all answered, reset and re-ask (spaced repetition)
+      if (state.answered.size >= state.questions.length) {
+        state.answered.clear();
+      }
+      return { index: idx, ...state.questions[idx] };
+    }
+  }
+  // Fallback: random question
+  const idx = Math.floor(Math.random() * state.questions.length);
+  return { index: idx, ...state.questions[idx] };
+}
+
+// ─── Show Question ───
+function showQuestion() {
+  if (state.isShowing || state.questions.length === 0) return;
+  state.isShowing = true;
+
+  const q = getNextQuestion();
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  // Set subject
+  document.getElementById('quizSubject').textContent = state.subject.toUpperCase();
+  document.getElementById('quizProgress').textContent =
+    `${Math.min(state.answered.size + 1, state.questions.length)}/${state.questions.length}`;
+  document.getElementById('quizScore').textContent =
+    state.total > 0 ? `${state.score}/${state.total} (${Math.round(state.score/state.total*100)}%)` : '';
+
+  // Set question
+  document.getElementById('quizQuestion').textContent = q.q;
+
+  // Build options
+  const optionsEl = document.getElementById('quizOptions');
+  optionsEl.innerHTML = '';
+
+  q.options.forEach((opt, i) => {
+    const li = document.createElement('li');
+    li.className = 'quiz-option';
+    li.innerHTML = `<span class="letter">${letters[i]}</span><span class="text">${opt}</span>`;
+    li.onclick = () => selectAnswer(q, i, li);
+    optionsEl.appendChild(li);
+  });
+
+  document.getElementById('quizHint').textContent = 'click an answer';
+  document.getElementById('quizTimer').textContent = `next in ${state.interval}m`;
+
+  // Show card
+  card.classList.remove('fading');
+  card.classList.add('visible');
+  bgCanvas.classList.add('active');
+
+  // Background particles
+  spawnQuizParticles();
+
+  // Auto-hide timer (if no answer given)
+  clearTimeout(state.autoHideTimer);
+  state.autoHideTimer = setTimeout(() => {
+    if (state.isShowing) {
+      // Reveal answer anyway
+      revealAnswer(q);
+    }
+  }, state.duration * 1000);
+}
+
+function selectAnswer(q, selectedIdx, element) {
+  // Lock all options
+  document.querySelectorAll('.quiz-option').forEach(o => o.classList.add('locked'));
+  clearTimeout(state.autoHideTimer);
+
+  element.classList.add('selected');
+  state.total++;
+  state.answered.add(q.index);
+
+  const isCorrect = selectedIdx === q.answer;
+  if (isCorrect) {
+    state.score++;
+    element.classList.add('correct');
+    document.getElementById('quizHint').textContent = 'correct!';
+  } else {
+    element.classList.add('wrong');
+    document.getElementById('quizHint').textContent = 'not quite...';
+  }
+
+  // Sync answer to PlumberPass (if connected)
+  if (q._id) {
+    plumberpass.recordAnswer(q._id, isCorrect, 0);
+  }
+
+  // Always reveal correct answer
+  revealAnswer(q, selectedIdx);
+}
+
+function revealAnswer(q, selectedIdx) {
+  const options = document.querySelectorAll('.quiz-option');
+  options.forEach((o, i) => {
+    o.classList.add('locked');
+    if (i === q.answer) {
+      o.classList.add('correct');
+    }
+  });
+
+  // Update score display
+  document.getElementById('quizScore').textContent =
+    `${state.score}/${state.total} (${Math.round(state.score/state.total*100)}%)`;
+
+  saveState();
+
+  // Fade out after showing correct answer
+  state.revealTimer = setTimeout(() => {
+    hideQuestion();
+  }, 4000);
+}
+
+function hideQuestion() {
+  card.classList.add('fading');
+  bgCanvas.classList.remove('active');
+
+  setTimeout(() => {
+    card.classList.remove('visible', 'fading');
+    state.isShowing = false;
+  }, 800);
+}
+
+// ─── Background Particles (during quiz) ───
+let quizParticles = [];
+
+function spawnQuizParticles() {
+  quizParticles = [];
+  const w = bgCanvas.width = window.innerWidth;
+  const h = bgCanvas.height = window.innerHeight;
+
+  for (let i = 0; i < 40; i++) {
+    quizParticles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -0.2 - Math.random() * 0.3,
+      size: 1 + Math.random() * 2,
+      opacity: 0.1 + Math.random() * 0.2,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+function drawParticles() {
+  const w = bgCanvas.width;
+  const h = bgCanvas.height;
+  bgCtx.clearRect(0, 0, w, h);
+
+  if (!bgCanvas.classList.contains('active')) {
+    requestAnimationFrame(drawParticles);
+    return;
+  }
+
+  for (const p of quizParticles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.phase += 0.02;
+    p.vx += Math.sin(p.phase) * 0.005;
+
+    if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+    if (p.x < -10) p.x = w + 10;
+    if (p.x > w + 10) p.x = -10;
+
+    bgCtx.globalAlpha = p.opacity * (0.7 + Math.sin(p.phase) * 0.3);
+    bgCtx.fillStyle = '#00d4ff';
+    bgCtx.shadowColor = '#00d4ff';
+    bgCtx.shadowBlur = 6;
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  }
+
+  bgCtx.shadowBlur = 0;
+  bgCtx.globalAlpha = 1;
+  requestAnimationFrame(drawParticles);
+}
+
+requestAnimationFrame(drawParticles);
+
+// ─── Interval Timer ───
+function startInterval() {
+  clearInterval(state.timer);
+  state.timer = setInterval(() => {
+    showQuestion();
+  }, state.interval * 60 * 1000);
+}
+
+// ─── Settings UI ───
+document.getElementById('toggleBtn').onclick = () => {
+  document.getElementById('settingsPanel').classList.toggle('open');
+};
+
+document.getElementById('saveBtn').onclick = () => {
+  state.interval = Math.max(1, parseInt(document.getElementById('intervalInput').value) || 5);
+  state.duration = Math.max(5, parseInt(document.getElementById('durationInput').value) || 15);
+  state.subject = document.getElementById('subjectInput').value || 'General Review';
+  parseQuestions();
+  saveState();
+  startInterval();
+  document.getElementById('settingsPanel').classList.remove('open');
+  updateStats();
+};
+
+document.getElementById('showNowBtn').onclick = () => {
+  document.getElementById('settingsPanel').classList.remove('open');
+  showQuestion();
+};
+
+document.getElementById('resetBtn').onclick = () => {
+  state.score = 0;
+  state.total = 0;
+  state.answered.clear();
+  shuffleOrder();
+  saveState();
+  updateStats();
+};
+
+document.getElementById('exportBtn').onclick = () => {
+  const data = JSON.stringify(state.questions, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${state.subject.toLowerCase().replace(/\s+/g, '-')}-questions.json`;
+  a.click();
+};
+
+document.getElementById('importBtn').onclick = () => {
+  document.getElementById('fileImport').click();
+};
+
+document.getElementById('fileImport').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      if (Array.isArray(data)) {
+        document.getElementById('questionsInput').value = JSON.stringify(data, null, 2);
+        parseQuestions();
+        saveState();
+        updateStats();
+      }
+    } catch (err) {}
+  };
+  reader.readAsText(file);
+};
+
+function updateStats() {
+  const el = document.getElementById('statsDisplay');
+  const pct = state.total > 0 ? Math.round(state.score / state.total * 100) : 0;
+  el.innerHTML = `
+    Questions: ${state.questions.length}<br>
+    Answered: ${state.answered.size}/${state.questions.length}<br>
+    Score: ${state.score}/${state.total} (${pct}%)<br>
+    Interval: every ${state.interval} min<br>
+    Next: appears in ${state.interval} min
+  `;
+}
+
+// ─── PlumberPass API Connection ───
+const plumberpass = {
+  apiUrl: localStorage.getItem('plumberpass-api-url') || 'http://localhost:8401',
+
+  async fetchQuestions(subject, count = 20) {
+    const url = new URL(`${this.apiUrl}/api/v1/questions/overlay`);
+    url.searchParams.set('count', count);
+    url.searchParams.set('smart', 'true');
+    if (subject) url.searchParams.set('subject', subject);
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      if (data.questions && data.questions.length > 0) {
+        // Convert PlumberPass format to overlay format
+        const converted = data.questions.map(q => ({
+          q: q.question,
+          options: q.options,
+          answer: q.answer,
+          explanation: q.explanation || '',
+          _id: q.id,  // Keep PlumberPass ID for syncing answers
+          _subject: q.subject_id,
+          _difficulty: q.difficulty,
+        }));
+        return converted;
+      }
+      return [];
+    } catch (e) {
+      console.warn('PlumberPass fetch failed:', e.message);
+      return [];
+    }
+  },
+
+  async recordAnswer(questionId, wasCorrect, timeTaken) {
+    if (!questionId) return;
+    try {
+      await fetch(`${this.apiUrl}/api/v1/questions/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: questionId,
+          was_correct: wasCorrect,
+          time_taken: timeTaken,
+        }),
+      });
+    } catch (e) {
+      // Silently fail — offline is OK
+    }
+  },
+
+  async getStats() {
+    try {
+      const resp = await fetch(`${this.apiUrl}/api/v1/stats`);
+      if (!resp.ok) return null;
+      return await resp.json();
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async uploadPDF(file) {
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const resp = await fetch(`${this.apiUrl}/api/v1/pdf/upload`, {
+        method: 'POST',
+        body: form,
+      });
+      return await resp.json();
+    } catch (e) {
+      return { status: 'error', error: e.message };
+    }
+  },
+
+  async checkHealth() {
+    try {
+      const resp = await fetch(`${this.apiUrl}/api/v1/health`, { signal: AbortSignal.timeout(3000) });
+      if (!resp.ok) return null;
+      return await resp.json();
+    } catch (e) {
+      return null;
+    }
+  },
+};
+
+// Fetch from PlumberPass button
+document.getElementById('fetchBtn').onclick = async () => {
+  const statusEl = document.getElementById('apiStatus');
+  statusEl.textContent = 'Connecting to PlumberPass...';
+  statusEl.style.color = '#00d4ff';
+
+  plumberpass.apiUrl = document.getElementById('apiUrlInput').value.replace(/\/$/, '');
+  localStorage.setItem('plumberpass-api-url', plumberpass.apiUrl);
+
+  const subject = document.getElementById('subjectFilter').value;
+  const questions = await plumberpass.fetchQuestions(subject, 30);
+
+  if (questions.length > 0) {
+    state.questions = questions;
+    state.answered.clear();
+    state.subject = subject
+      ? document.getElementById('subjectFilter').selectedOptions[0].text
+      : 'Master Plumber Review';
+    document.getElementById('subjectInput').value = state.subject;
+    document.getElementById('questionsInput').value = JSON.stringify(state.questions, null, 2);
+    shuffleOrder();
+    saveState();
+    updateStats();
+    statusEl.textContent = `Loaded ${questions.length} questions from PlumberPass!`;
+    statusEl.style.color = '#00ff96';
+  } else {
+    const health = await plumberpass.checkHealth();
+    if (health) {
+      statusEl.textContent = `Connected but no questions found. Upload PDF reviewers first! (${health.total_questions} in bank)`;
+    } else {
+      statusEl.textContent = 'Cannot connect to PlumberPass. Is the server running?';
+    }
+    statusEl.style.color = '#ff6666';
+  }
+};
+
+// Sync stats button
+document.getElementById('syncStatsBtn').onclick = async () => {
+  const stats = await plumberpass.getStats();
+  const statusEl = document.getElementById('apiStatus');
+  if (stats) {
+    statusEl.innerHTML =
+      `PlumberPass: ${stats.total_questions} questions | ` +
+      `${stats.accuracy}% accuracy | ${stats.coverage}% coverage`;
+    statusEl.style.color = '#00ff96';
+  } else {
+    statusEl.textContent = 'Cannot connect to PlumberPass.';
+    statusEl.style.color = '#ff6666';
+  }
+};
+
+// PDF upload
+document.getElementById('pdfUpload').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const pdfStatus = document.getElementById('pdfStatus');
+  pdfStatus.textContent = `Uploading ${file.name}... (AI is extracting questions)`;
+  pdfStatus.style.color = '#00d4ff';
+
+  plumberpass.apiUrl = document.getElementById('apiUrlInput').value.replace(/\/$/, '');
+  const result = await plumberpass.uploadPDF(file);
+
+  if (result.status === 'done') {
+    pdfStatus.textContent =
+      `Done! Extracted ${result.questions_added} questions from ${result.pages_processed} pages (${result.duration}s)`;
+    pdfStatus.style.color = '#00ff96';
+    // Auto-fetch new questions
+    document.getElementById('fetchBtn').click();
+  } else {
+    pdfStatus.textContent = `Error: ${result.error || 'Upload failed'}`;
+    pdfStatus.style.color = '#ff6666';
+  }
+};
+
+// Load saved API URL
+document.getElementById('apiUrlInput').value = plumberpass.apiUrl;
+
+// Override selectAnswer to also sync to PlumberPass
+const _originalSelectAnswer = selectAnswer;
+// (we patch inline below)
+
+// ─── Initialize ───
+loadState();
+startInterval();
+updateStats();
+
+// Show first question after 3 seconds
+setTimeout(() => showQuestion(), 3000);
+
+// Handle resize
+window.addEventListener('resize', () => {
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+[
+  {
+    "id": "betta-fish",
+    "name": "Betta Fish Companion",
+    "description": "Beautiful betta fish swimming on your desktop with realistic AI behavior",
+    "category": "ambient",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/betta-fish",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["fish", "pet", "ambient", "ai", "bundled"]
+  },
+  {
+    "id": "jellyfish-cyan",
+    "name": "Cyan Jellyfish",
+    "description": "Ethereal glowing jellyfish floating across your screen",
+    "category": "ambient",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/jellyfish-cyan",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["jellyfish", "glow", "ambient", "bundled"]
+  },
+  {
+    "id": "manta-ray",
+    "name": "Wireframe Manta Ray",
+    "description": "Graceful wireframe manta ray gliding with neon glow",
+    "category": "ambient",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/manta-ray",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["manta", "wireframe", "neon", "bundled"]
+  },
+  {
+    "id": "aurora",
+    "name": "Aurora Borealis",
+    "description": "Northern lights dancing across your desktop",
+    "category": "ambient",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/aurora",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["aurora", "lights", "ambient", "bundled"]
+  },
+  {
+    "id": "fairy-dandelion",
+    "name": "Fairy & Dandelion",
+    "description": "Wireframe fairy with floating dandelion seeds",
+    "category": "creative",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/fairy-dandelion",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["fairy", "wireframe", "magical", "bundled"]
+  },
+  {
+    "id": "sticky-note",
+    "name": "Smart Sticky Note",
+    "description": "Draggable sticky note with countdown timer and deadline tracking",
+    "category": "productivity",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/sticky-note",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["note", "timer", "productivity", "bundled"]
+  },
+  {
+    "id": "blue-chatbox",
+    "name": "Blue AI Assistant",
+    "description": "AI chatbox overlay powered by free LLMs with memory and vision",
+    "category": "productivity",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/blue-chatbox",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["ai", "chat", "blue", "assistant", "bundled"]
+  },
+  {
+    "id": "ghost-woman",
+    "name": "Ghost Woman on Bicycle",
+    "description": "Spectral wireframe woman riding a bicycle with flowing dress, multi-color glow and ghostly trail",
+    "category": "ambient",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/ghost-woman",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["ghost", "wireframe", "bicycle", "multicolor", "bundled"]
+  }
+]

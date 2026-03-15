@@ -13,7 +13,7 @@
 #define MyAppName "Ohverlay"
 #define MyAppVersion "4.0.0"
 #define MyAppPublisher "Futol Ethical Technology Ecosystems"
-#define MyAppURL "https://github.com/ikel-eidra/ohverlay-v4"
+#define MyAppURL "https://ohverlay.com"
 #define MyAppExeName "Ohverlay.exe"
 
 [Setup]
