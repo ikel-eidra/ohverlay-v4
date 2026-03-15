@@ -5,6 +5,7 @@ All user settings are stored locally and loaded on startup.
 
 import json
 import os
+from copy import deepcopy
 from utils.logger import logger
 
 DEFAULT_CONFIG = {
@@ -75,8 +76,8 @@ DEFAULT_CONFIG = {
         "version": "4.0.0",
         "support_email": "support@ohverlay.com",
         "download_url": "https://ohverlay.com/download",
-        "public_website_enabled": True,
-        "website_release_stage": "beta",
+        "public_website_enabled": False,
+        "website_release_stage": "private_prelaunch",
         "auto_update_enabled": True,
         "update_check_hours": 6,
         "update_manifest_url": "https://ohverlay.com/updates/manifest.json",
@@ -112,6 +113,11 @@ class Settings:
         self._config = {}
         self.load()
 
+    @staticmethod
+    def _clone_config(config):
+        """Return an isolated deep copy of a config dictionary."""
+        return deepcopy(config)
+
     def load(self):
         """Load config from disk, merging with defaults for any missing keys."""
         if os.path.exists(CONFIG_PATH):
@@ -122,9 +128,9 @@ class Settings:
                 logger.info(f"Configuration loaded from {CONFIG_PATH}")
             except (json.JSONDecodeError, IOError) as e:
                 logger.warning(f"Config load failed ({e}), using defaults.")
-                self._config = json.loads(json.dumps(DEFAULT_CONFIG))
+                self._config = self._clone_config(DEFAULT_CONFIG)
         else:
-            self._config = json.loads(json.dumps(DEFAULT_CONFIG))
+            self._config = self._clone_config(DEFAULT_CONFIG)
             self.save()
             logger.info(f"Default configuration created at {CONFIG_PATH}")
 
@@ -153,7 +159,7 @@ class Settings:
     @staticmethod
     def _deep_merge(base, override):
         """Recursively merge override into base, keeping base keys as defaults."""
-        result = json.loads(json.dumps(base))
+        result = Settings._clone_config(base)
         for key, value in override.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = Settings._deep_merge(result[key], value)
