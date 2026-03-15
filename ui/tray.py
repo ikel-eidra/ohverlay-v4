@@ -1,56 +1,41 @@
 """
-System tray icon and menu for OHVERLAY.
-Provides settings, module toggles, color picker, sanctuary controls, and exit.
+System tray icon and menu for OHVERLAY v4.0.
+Professional overlay platform — toggle overlays, manage modules and integrations.
 """
 
 from PySide6.QtWidgets import (
-    QSystemTrayIcon, QMenu, QColorDialog, QInputDialog,
-    QMessageBox, QApplication
+    QSystemTrayIcon, QMenu, QInputDialog,
+    QApplication
 )
-from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QAction, QRadialGradient, QBrush
+from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QRadialGradient, QBrush, QPen
 from PySide6.QtCore import Qt, Signal, QObject
 from utils.logger import logger
 
 
 class TraySignals(QObject):
-    """Signals emitted by tray actions for the main loop to handle."""
-    color_changed = Signal(list, list, list)  # primary, secondary, accent
+    """Signals emitted by tray actions."""
     sanctuary_toggled = Signal()
     sanctuary_add_monitor = Signal(int)
     sanctuary_clear = Signal()
     module_toggled = Signal(str, bool)
-    feed_fish = Signal()
     toggle_visibility = Signal()
     quit_app = Signal()
     love_notes_path_set = Signal(str)
-    size_changed = Signal(float)
-    speed_changed = Signal(str)  # "super_slow", "slow", "normal", "fast"
-    species_changed = Signal(str, int)  # species_name, count
     telegram_token_set = Signal(str)
     webhook_toggled = Signal(bool)
     llm_key_set = Signal(str, str)  # provider, key
+    overlay_toggled = Signal(str)   # overlay_id
 
 
 class SystemTray(QSystemTrayIcon):
-    """System tray icon with full settings menu."""
+    """System tray icon with overlay management menu."""
 
-    # Preset color themes for the betta fish
-    COLOR_PRESETS = {
-        # Sought-after betta strains (popular in high-end hobby circles)
-        "Nemo Galaxy": ([255, 118, 54], [35, 84, 170], [255, 240, 235]),
-        "Mustard Gas": ([26, 95, 195], [244, 190, 52], [255, 244, 184]),
-        "Koi Candy": ([240, 78, 62], [248, 244, 236], [35, 38, 42]),
-        "Black Orchid": ([34, 30, 56], [94, 70, 180], [210, 152, 255]),
-        "Copper Dragon": ([130, 82, 30], [212, 150, 67], [255, 229, 162]),
-        "Lavender Halfmoon": ([141, 95, 226], [230, 184, 255], [255, 238, 255]),
-        "Turquoise Butterfly": ([42, 176, 204], [18, 87, 154], [233, 247, 255]),
-        "Royal Blue": ([30, 80, 220], [60, 20, 180], [120, 140, 255]),
-    }
-
-    def __init__(self, config=None, parent=None):
+    def __init__(self, config=None, overlay_manager=None, parent=None):
         super().__init__(parent)
         self.signals = TraySignals()
         self.config = config
+        self.overlay_manager = overlay_manager
+        self._overlay_actions = {}  # overlay_id -> QAction
         self._module_states = {
             "health": True,
             "love_notes": True,
@@ -65,36 +50,34 @@ class SystemTray(QSystemTrayIcon):
 
         self._create_icon()
         self._create_menu()
-        self.setToolTip("Ohverlay v4.0")
+        self.setToolTip("Ohverlay v4.0 — Desktop Overlay Platform")
 
     def _create_icon(self):
-        """Generate a simple creature icon for the tray."""
+        """Generate the Ohverlay tray icon — a stylized 'O' with glow."""
         pixmap = QPixmap(32, 32)
         pixmap.fill(Qt.transparent)
 
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Fish body
-        grad = QRadialGradient(14, 16, 12)
-        grad.setColorAt(0.0, QColor(60, 120, 255, 230))
-        grad.setColorAt(1.0, QColor(30, 60, 180, 200))
-        painter.setBrush(QBrush(grad))
+        # Outer glow
+        glow = QRadialGradient(16, 16, 16)
+        glow.setColorAt(0.0, QColor(80, 160, 255, 60))
+        glow.setColorAt(0.7, QColor(60, 120, 255, 30))
+        glow.setColorAt(1.0, QColor(40, 80, 200, 0))
+        painter.setBrush(QBrush(glow))
         painter.setPen(Qt.NoPen)
-        painter.drawEllipse(6, 10, 20, 12)
+        painter.drawEllipse(2, 2, 28, 28)
 
-        # Tail
-        painter.setBrush(QColor(100, 160, 255, 200))
-        from PySide6.QtGui import QPolygon
-        from PySide6.QtCore import QPoint
-        tail = QPolygon([QPoint(6, 16), QPoint(0, 8), QPoint(2, 16), QPoint(0, 24)])
-        painter.drawPolygon(tail)
+        # Ring (the "O")
+        painter.setPen(QPen(QColor(100, 180, 255, 230), 2.5))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(7, 7, 18, 18)
 
-        # Eye
-        painter.setBrush(QColor(255, 255, 255, 230))
-        painter.drawEllipse(20, 13, 5, 5)
-        painter.setBrush(QColor(10, 10, 10, 240))
-        painter.drawEllipse(22, 14, 3, 3)
+        # Inner accent dot
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(140, 200, 255, 200))
+        painter.drawEllipse(13, 13, 6, 6)
 
         painter.end()
         self.setIcon(QIcon(pixmap))
@@ -103,84 +86,45 @@ class SystemTray(QSystemTrayIcon):
         """Build the tray context menu."""
         menu = QMenu()
 
-        # --- Header ---
-        header = menu.addAction("🐟 Ohverlay v4.0")
+        # ── Header ──
+        header = menu.addAction("Ohverlay v4.0")
         header.setEnabled(False)
         menu.addSeparator()
 
-        # --- Fish Controls ---
-        feed_action = menu.addAction("Drop Pellets (Ctrl+Alt+F)")
-        feed_action.triggered.connect(self.signals.feed_fish.emit)
+        # ── Overlays ──
+        overlay_menu = menu.addMenu("Overlays")
 
-        visibility_action = menu.addAction("Toggle Visibility (Ctrl+Alt+H)")
+        if self.overlay_manager:
+            # Productivity overlays
+            prod_header = overlay_menu.addAction("— Productivity —")
+            prod_header.setEnabled(False)
+
+            for ov in self.overlay_manager.get_registry():
+                if ov["category"] == "productivity":
+                    self._add_overlay_action(overlay_menu, ov)
+
+            overlay_menu.addSeparator()
+
+            # Ambient overlays
+            amb_header = overlay_menu.addAction("— Ambient —")
+            amb_header.setEnabled(False)
+
+            for ov in self.overlay_manager.get_registry():
+                if ov["category"] == "ambient":
+                    self._add_overlay_action(overlay_menu, ov)
+        else:
+            no_engine = overlay_menu.addAction("Install PySide6-WebEngine for overlays")
+            no_engine.setEnabled(False)
+
+        menu.addSeparator()
+
+        # ── Quick Actions ──
+        visibility_action = menu.addAction("Toggle All Overlays (Ctrl+Alt+H)")
         visibility_action.triggered.connect(self.signals.toggle_visibility.emit)
 
         menu.addSeparator()
 
-        # --- Color Submenu ---
-        color_menu = menu.addMenu("Fish Colors")
-
-        for name, (primary, secondary, accent) in self.COLOR_PRESETS.items():
-            action = color_menu.addAction(name)
-            action.triggered.connect(
-                lambda checked, p=primary, s=secondary, a=accent:
-                    self.signals.color_changed.emit(p, s, a)
-            )
-
-        color_menu.addSeparator()
-        custom_action = color_menu.addAction("Custom Color...")
-        custom_action.triggered.connect(self._pick_custom_color)
-
-        # --- Size Submenu ---
-        size_menu = menu.addMenu("Fish Size")
-        for label, scale in [("Small", 0.7), ("Medium", 1.0), ("Large", 1.5), ("Extra Large", 2.0)]:
-            action = size_menu.addAction(label)
-            action.triggered.connect(
-                lambda checked, s=scale: self.signals.size_changed.emit(s)
-            )
-
-        # --- Speed Submenu ---
-        speed_menu = menu.addMenu("Swimming Speed")
-        for label, speed_key in [
-            ("Super Slow (Zen)", "super_slow"),
-            ("Slow (Calm)", "slow"),
-            ("Normal", "normal"),
-            ("Fast (Energetic)", "fast"),
-        ]:
-            action = speed_menu.addAction(label)
-            action.triggered.connect(
-                lambda checked, s=speed_key: self.signals.speed_changed.emit(s)
-            )
-
-        # --- Species / School Mode ---
-        species_menu = menu.addMenu("Fish Species")
-
-        solo_action = species_menu.addAction("Solo Betta (default)")
-        solo_action.triggered.connect(
-            lambda: self.signals.species_changed.emit("betta", 1)
-        )
-
-        duo_betta_action = species_menu.addAction("Dual Betta x2 (independent)")
-        duo_betta_action.triggered.connect(
-            lambda: self.signals.species_changed.emit("betta", 2)
-        )
-
-        species_menu.addSeparator()
-        species_menu.addAction("--- School Mode ---").setEnabled(False)
-
-        for label, sp, count in [
-            ("Neon Tetra x6", "neon_tetra", 6),
-            ("Neon Tetra x10", "neon_tetra", 10),
-            ("Neon Tetra x12", "neon_tetra", 12),
-        ]:
-            action = species_menu.addAction(label)
-            action.triggered.connect(
-                lambda checked, s=sp, c=count: self.signals.species_changed.emit(s, c)
-            )
-
-        menu.addSeparator()
-
-        # --- Sanctuary Mode ---
+        # ── Sanctuary Mode ──
         sanctuary_menu = menu.addMenu("Sanctuary Mode")
 
         self._sanctuary_toggle = sanctuary_menu.addAction("Enable Sanctuary")
@@ -192,7 +136,6 @@ class SystemTray(QSystemTrayIcon):
 
         sanctuary_menu.addSeparator()
 
-        # Add monitor zones
         screens = QApplication.screens()
         for i, screen in enumerate(screens):
             geo = screen.geometry()
@@ -209,8 +152,8 @@ class SystemTray(QSystemTrayIcon):
 
         menu.addSeparator()
 
-        # --- Module Toggles ---
-        modules_menu = menu.addMenu("Bubble Modules")
+        # ── Notifications ──
+        modules_menu = menu.addMenu("Notifications")
 
         for mod_key, mod_label in [
             ("health", "Health Reminders"),
@@ -231,14 +174,12 @@ class SystemTray(QSystemTrayIcon):
 
         menu.addSeparator()
 
-        # --- Integrations ---
+        # ── Integrations ──
         integrations_menu = menu.addMenu("Integrations")
 
-        # Telegram
         telegram_action = integrations_menu.addAction("Set Telegram Bot Token...")
         telegram_action.triggered.connect(self._set_telegram_token)
 
-        # Webhook
         self._webhook_toggle = integrations_menu.addAction("Enable Webhook Server (port 7277)")
         self._webhook_toggle.setCheckable(True)
         self._webhook_toggle.setChecked(
@@ -250,7 +191,6 @@ class SystemTray(QSystemTrayIcon):
 
         integrations_menu.addSeparator()
 
-        # LLM Brain
         llm_menu = integrations_menu.addMenu("LLM Brain")
         anthropic_action = llm_menu.addAction("Set Anthropic API Key...")
         anthropic_action.triggered.connect(
@@ -261,42 +201,41 @@ class SystemTray(QSystemTrayIcon):
             lambda: self._set_llm_key("openai")
         )
 
-        # Status indicator
         integrations_menu.addSeparator()
         self._status_action = integrations_menu.addAction("Status: Initializing...")
         self._status_action.setEnabled(False)
 
         menu.addSeparator()
 
-        # --- Quit ---
-        quit_action = menu.addAction("Quit ZenFish")
+        # ── Quit ──
+        quit_action = menu.addAction("Quit Ohverlay")
         quit_action.triggered.connect(self.signals.quit_app.emit)
 
         self.setContextMenu(menu)
 
-    def _pick_custom_color(self):
-        """Open color picker for custom primary color."""
-        color = QColorDialog.getColor(
-            QColor(*self.COLOR_PRESETS["Nemo Galaxy"][0]),
-            None, "Choose Primary Fish Color"
+    def _add_overlay_action(self, menu, overlay_info):
+        """Add a checkable overlay toggle to the menu."""
+        action = menu.addAction(overlay_info["name"])
+        action.setCheckable(True)
+        action.setToolTip(overlay_info.get("description", ""))
+
+        # Check if overlay is currently active
+        if self.overlay_manager:
+            action.setChecked(self.overlay_manager.is_active(overlay_info["id"]))
+
+        overlay_id = overlay_info["id"]
+        action.triggered.connect(
+            lambda checked, oid=overlay_id: self.signals.overlay_toggled.emit(oid)
         )
-        if color.isValid():
-            primary = [color.red(), color.green(), color.blue()]
-            # Generate complementary secondary and accent
-            secondary = [
-                max(0, primary[0] - 40),
-                max(0, primary[1] - 40),
-                min(255, primary[2] + 20)
-            ]
-            accent = [
-                min(255, primary[0] + 60),
-                min(255, primary[1] + 60),
-                min(255, primary[2] + 40)
-            ]
-            self.signals.color_changed.emit(primary, secondary, accent)
+
+        self._overlay_actions[overlay_info["id"]] = action
+
+    def update_overlay_state(self, overlay_id, active):
+        """Update the checkmark state of an overlay in the menu."""
+        if overlay_id in self._overlay_actions:
+            self._overlay_actions[overlay_id].setChecked(active)
 
     def _set_love_notes_path(self):
-        """Prompt user for love notes JSON file path."""
         path, ok = QInputDialog.getText(
             None, "Love Notes",
             "Enter path to love notes JSON file:"
@@ -305,7 +244,6 @@ class SystemTray(QSystemTrayIcon):
             self.signals.love_notes_path_set.emit(path)
 
     def _set_telegram_token(self):
-        """Prompt user for Telegram bot token."""
         token, ok = QInputDialog.getText(
             None, "Telegram Bot",
             "Enter your Telegram Bot token (from @BotFather):"
@@ -314,7 +252,6 @@ class SystemTray(QSystemTrayIcon):
             self.signals.telegram_token_set.emit(token.strip())
 
     def _set_llm_key(self, provider):
-        """Prompt user for LLM API key."""
         label = "Anthropic" if provider == "anthropic" else "OpenAI"
         key, ok = QInputDialog.getText(
             None, f"{label} API Key",
@@ -324,10 +261,8 @@ class SystemTray(QSystemTrayIcon):
             self.signals.llm_key_set.emit(provider, key.strip())
 
     def update_sanctuary_toggle(self, enabled):
-        """Update the sanctuary toggle state in the menu."""
         self._sanctuary_toggle.setChecked(enabled)
 
     def update_status(self, text):
-        """Update the status indicator in integrations menu."""
         if hasattr(self, '_status_action'):
             self._status_action.setText(f"Status: {text}")

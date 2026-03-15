@@ -1,8 +1,9 @@
-# Ohverlay v4.0 - ZenFish Desktop Companion
+# Ohverlay v4.0 - Desktop Overlay Platform
 # By Futol Ethical Technology Ecosystems
 
 # Core UI Framework
 PySide6>=6.5.0
+PySide6-WebEngine>=6.5.0
 shiboken6>=6.5.0
 
 # Math & Physics

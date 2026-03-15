@@ -69,6 +69,7 @@ a = Analysis(
         'modules.blue_realtime',
         'modules.blue_vision',
         'modules.blue_vision_bridge',
+        'modules.overlay_manager',
         # Config
         'config.settings',
         # Utils
@@ -78,6 +79,8 @@ a = Analysis(
         'PySide6.QtGui',
         'PySide6.QtWidgets',
         'PySide6.QtNetwork',
+        'PySide6.QtWebEngineWidgets',
+        'PySide6.QtWebEngineCore',
         # Third-party
         'numpy',
         'loguru',
