@@ -27,6 +27,7 @@ a = Analysis(
         ('manta-ray-overlay.html', '.'),
         ('aurora.html', '.'),
         ('exam-reviewer-overlay.html', '.'),
+        ('ghost-woman-overlay.html', '.'),
         # Include version info
         ('windows_file_version_info.txt', '.'),
     ],

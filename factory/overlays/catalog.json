@@ -75,5 +75,16 @@
     "is_free": true,
     "is_daily": false,
     "tags": ["ai", "chat", "blue", "assistant", "bundled"]
+  },
+  {
+    "id": "ghost-woman",
+    "name": "Ghost Woman on Bicycle",
+    "description": "Spectral wireframe woman riding a bicycle with flowing dress, multi-color glow and ghostly trail",
+    "category": "ambient",
+    "version": "4.0.0",
+    "download_url": "https://ohverlay.com/overlays/ghost-woman",
+    "is_free": true,
+    "is_daily": false,
+    "tags": ["ghost", "wireframe", "bicycle", "multicolor", "bundled"]
   }
 ]
