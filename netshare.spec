@@ -1,12 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 #
 # PyInstaller spec for NetShare standalone .exe
-# Build with:  pyinstaller netshare.spec --noconfirm
+# Developed by Futol Ethical Technology Ecosystems
+# For: Sarah Attaqnia Contracting Company
 #
-# Produces:  dist/NetShare/NetShare.exe
-# No admin rights required. Runs silently in the system tray on Windows.
-
-import os
+# Build:   pyinstaller netshare.spec --noconfirm
+# Output:  dist\NetShare\NetShare.exe
+#
+# Requirements:
+#   pip install pyinstaller PySide6 loguru
+#
+# No admin rights, no console window, no network ports opened.
 
 block_cipher = None
 
@@ -16,35 +20,32 @@ a = Analysis(
     binaries=[],
     datas=[],
     hiddenimports=[
+        # PySide6 core
         'PySide6.QtWidgets',
         'PySide6.QtGui',
         'PySide6.QtCore',
-        'modules.network_folder_watcher',
-        'modules.network_notifier',
-        'ui.bubbles',
-        'utils.logger',
+        'PySide6.QtNetwork',
+        # NetShare modules
         'netshare_settings',
         'netshare_overlay',
+        'netshare_card',
+        'netshare_console',
         'netshare_tray',
+        # Shared modules
+        'modules.network_folder_watcher',
+        'modules.network_notifier',
+        # Utilities
+        'utils.logger',
+        'loguru',
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # Exclude all Ohverlay creature/fish UI (not needed for standalone)
-        'ui.jellyfish_skin',
-        'ui.jellyfish_cyan_skin',
-        'ui.jellyfish_iridescent_skin',
-        'ui.betta_skin',
-        'ui.geometric_skin',
-        'ui.energy_orb_skin',
-        'ui.holographic_skin',
-        'ui.airplane_skin',
-        'ui.train_skin',
-        'ui.submarine_skin',
-        'ui.balloon_skin',
-        'ui.tray',
-        # Exclude heavy AI/comms modules
+        # ---- All Ohverlay creature / fish skins (not needed) ----
+        'ui',
+        'engine',
+        # ---- AI / comms modules (not needed) ----
         'modules.health',
         'modules.love_notes',
         'modules.news',
@@ -55,11 +56,24 @@ a = Analysis(
         'modules.blue_vision_bridge',
         'modules.updater',
         'modules.factory_client',
-        'engine',
+        # ---- Heavy third-party libraries (not used) ----
         'openai',
         'anthropic',
         'pdfplumber',
         'groq',
+        'numpy',
+        'PIL',
+        'cv2',
+        'scipy',
+        'matplotlib',
+        'pandas',
+        'IPython',
+        'notebook',
+        'tk',
+        'tkinter',
+        'wx',
+        'PyQt5',
+        'PyQt6',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -83,12 +97,21 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    # windowed=True hides the console window — runs silently in tray
+    # console=False  → no black cmd window; runs silently in system tray
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon='netshare_icon.ico',  # uncomment and add icon file if desired
+    version_info={
+        'FileVersion':     '1, 0, 0, 0',
+        'ProductVersion':  '1, 0, 0, 0',
+        'CompanyName':     'Futol Ethical Technology Ecosystems',
+        'FileDescription': 'NetShare Network Folder Notification Overlay',
+        'ProductName':     'NetShare',
+        'LegalCopyright':  'Futol Ethical Technology Ecosystems',
+        'OriginalFilename':'NetShare.exe',
+    } if False else None,   # set to True once you have a version_info.txt
+    # icon='netshare_icon.ico',  # uncomment + add .ico file for a custom icon
 )

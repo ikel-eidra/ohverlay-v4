@@ -1,61 +1,102 @@
 @echo off
 :: ============================================================
-:: NetShare Standalone Build Script
-:: Produces a single .exe at dist\NetShare\NetShare.exe
-:: No admin rights required. Runs on Windows 10/11.
+:: NetShare Build Script
+:: Developed by:  Futol Ethical Technology Ecosystems
+:: For:           Sarah Attaqnia Contracting Company
 ::
-:: Prerequisites (install once):
+:: Produces:  dist\NetShare\NetShare.exe
+::   - No admin rights required
+::   - No console window
+::   - No network ports opened
+::   - Runs silently in the system tray
+::
+:: Prerequisites (run once):
 ::   pip install pyinstaller PySide6 loguru
 ::
 :: Usage:
-::   Double-click build_netshare.bat
-::   OR from terminal:  build_netshare.bat
+::   Double-click this file   OR
+::   From terminal:  build_netshare.bat
 :: ============================================================
 
+setlocal enabledelayedexpansion
+
 echo.
-echo ===========================
-echo  Building NetShare.exe
-echo ===========================
+echo  ============================================================
+echo   NetShare Build
+echo   Futol Ethical Technology Ecosystems
+echo   Sarah Attaqnia Contracting Company
+echo  ============================================================
 echo.
 
-:: Check Python is available
+:: --- Check Python ---
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ERROR: Python not found. Please install Python 3.10+ and add it to PATH.
+    echo  [ERROR] Python not found.
+    echo  Please install Python 3.10+ and add it to PATH.
     pause
     exit /b 1
 )
+for /f "tokens=*" %%v in ('python --version') do set PYVER=%%v
+echo  [OK] %PYVER%
 
-:: Check PyInstaller is available
-pyinstaller --version >nul 2>&1
+:: --- Check / Install dependencies ---
+echo.
+echo  Checking dependencies...
+
+pip show PySide6 >nul 2>&1
 if errorlevel 1 (
-    echo Installing PyInstaller...
+    echo  Installing PySide6...
+    pip install PySide6
+)
+
+pip show loguru >nul 2>&1
+if errorlevel 1 (
+    echo  Installing loguru...
+    pip install loguru
+)
+
+pip show pyinstaller >nul 2>&1
+if errorlevel 1 (
+    echo  Installing PyInstaller...
     pip install pyinstaller
 )
 
-:: Clean previous build artifacts
-if exist build\NetShare rmdir /s /q build\NetShare
-if exist dist\NetShare  rmdir /s /q dist\NetShare
+echo  [OK] All dependencies present.
 
-:: Run PyInstaller
-echo Running PyInstaller...
+:: --- Clean previous build ---
+echo.
+echo  Cleaning previous build artefacts...
+if exist build\NetShare  rmdir /s /q build\NetShare  2>nul
+if exist dist\NetShare   rmdir /s /q dist\NetShare   2>nul
+
+:: --- Build ---
+echo.
+echo  Running PyInstaller...
+echo.
 pyinstaller netshare.spec --noconfirm
 
 if errorlevel 1 (
     echo.
-    echo BUILD FAILED. Check the output above for errors.
+    echo  [FAILED] Build failed. Review errors above.
     pause
     exit /b 1
 )
 
 echo.
-echo ===========================
-echo  Build complete!
-echo  Executable: dist\NetShare\NetShare.exe
-echo ===========================
+echo  ============================================================
+echo   BUILD COMPLETE
+echo   Output:  dist\NetShare\NetShare.exe
+echo  ============================================================
 echo.
-echo To distribute: copy the entire dist\NetShare\ folder to each PC.
-echo Each user runs NetShare.exe once, right-clicks the tray icon,
-echo and chooses "Configure My Shared Folder..." to set up their path.
+echo  Distribution:
+echo    Copy the entire  dist\NetShare\  folder to each PC.
+echo    Run NetShare.exe (no installation wizard needed).
+echo    Right-click the tray icon to configure.
+echo.
+echo  First-time setup on each PC:
+echo    1. Right-click tray -> Configure My Shared Folder
+echo    2. Enter your network folder path + username + peers
+echo    3. Right-click -> Enable Notifications
 echo.
 pause
+endlocal
