@@ -99,6 +99,14 @@ DEFAULT_CONFIG = {
     "webhook": {
         "enabled": False,
         "port": 7277
+    },
+    "network_sharing": {
+        "enabled": False,
+        "my_folder": "",
+        "my_username": "",
+        "peers": [],
+        "check_interval_seconds": 30,
+        "log_path": ""
     }
 }
 

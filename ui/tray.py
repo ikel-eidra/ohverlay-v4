@@ -29,6 +29,10 @@ class TraySignals(QObject):
     telegram_token_set = Signal(str)
     webhook_toggled = Signal(bool)
     llm_key_set = Signal(str, str)  # provider, key
+    network_notify_peer = Signal(str, str, str)  # peer_name, filename, message
+    network_setup = Signal(str, str, list)        # my_folder, my_username, peers
+    network_open_log = Signal()
+    network_toggled = Signal(bool)
 
 
 class SystemTray(QSystemTrayIcon):
@@ -62,6 +66,17 @@ class SystemTray(QSystemTrayIcon):
             mods = config.get("modules")
             if isinstance(mods, dict):
                 self._module_states.update(mods)
+
+        # Peer names for "Notify Peer" submenu (populated after init via set_peer_names)
+        self._peer_names = []
+        self._network_enabled = False
+        if config:
+            net_cfg = config.get("network_sharing")
+            if isinstance(net_cfg, dict):
+                self._network_enabled = net_cfg.get("enabled", False)
+                self._peer_names = [
+                    p.get("name", "") for p in net_cfg.get("peers", []) if p.get("name")
+                ]
 
         self._create_icon()
         self._create_menu()
@@ -268,6 +283,32 @@ class SystemTray(QSystemTrayIcon):
 
         menu.addSeparator()
 
+        # --- Network Share ---
+        net_menu = menu.addMenu("Network Share")
+
+        self._network_toggle = net_menu.addAction("Enable Network Notifications")
+        self._network_toggle.setCheckable(True)
+        self._network_toggle.setChecked(self._network_enabled)
+        self._network_toggle.triggered.connect(
+            lambda checked: self.signals.network_toggled.emit(checked)
+        )
+
+        net_menu.addSeparator()
+
+        # "Notify a Peer" submenu — populated from configured peers
+        self._notify_peer_menu = net_menu.addMenu("Notify a Peer")
+        self._rebuild_notify_peer_menu()
+
+        net_setup_action = net_menu.addAction("Configure My Shared Folder...")
+        net_setup_action.triggered.connect(self._configure_network_sharing)
+
+        net_menu.addSeparator()
+
+        net_log_action = net_menu.addAction("View Activity Log...")
+        net_log_action.triggered.connect(self.signals.network_open_log.emit)
+
+        menu.addSeparator()
+
         # --- Quit ---
         quit_action = menu.addAction("Quit ZenFish")
         quit_action.triggered.connect(self.signals.quit_app.emit)
@@ -322,6 +363,90 @@ class SystemTray(QSystemTrayIcon):
         )
         if ok and key.strip():
             self.signals.llm_key_set.emit(provider, key.strip())
+
+    def set_peer_names(self, names):
+        """
+        Update the list of network peers and rebuild the 'Notify a Peer' submenu.
+        Called by main.py after network module initialisation.
+        """
+        self._peer_names = [n for n in names if n]
+        self._rebuild_notify_peer_menu()
+
+    def _rebuild_notify_peer_menu(self):
+        """Clear and repopulate the 'Notify a Peer' submenu."""
+        self._notify_peer_menu.clear()
+        if not self._peer_names:
+            placeholder = self._notify_peer_menu.addAction("(No peers configured)")
+            placeholder.setEnabled(False)
+            return
+        for peer_name in self._peer_names:
+            action = self._notify_peer_menu.addAction(peer_name)
+            action.triggered.connect(
+                lambda checked, pn=peer_name: self._send_notify_dialog(pn)
+            )
+
+    def _send_notify_dialog(self, peer_name):
+        """Show dialogs to collect filename and optional message, then emit signal."""
+        filename, ok1 = QInputDialog.getText(
+            None,
+            "Notify Peer",
+            f"File/folder name you're sharing with {peer_name}:\n"
+            "(leave blank if you just want to send a message)",
+        )
+        if not ok1:
+            return
+        message, ok2 = QInputDialog.getText(
+            None,
+            "Notify Peer",
+            f"Optional message to {peer_name}:",
+        )
+        if not ok2:
+            return
+        self.signals.network_notify_peer.emit(peer_name, filename.strip(), message.strip())
+
+    def _configure_network_sharing(self):
+        """Simple multi-step dialog to set up my_folder, my_username, and peers."""
+        my_folder, ok1 = QInputDialog.getText(
+            None,
+            "Network Share Setup",
+            "Your own shared folder path (e.g. \\\\server\\shared\\yourname):",
+        )
+        if not ok1 or not my_folder.strip():
+            return
+
+        my_username, ok2 = QInputDialog.getText(
+            None,
+            "Network Share Setup",
+            "Your username on this network (others will address files to this name):",
+        )
+        if not ok2 or not my_username.strip():
+            return
+
+        peers_raw, ok3 = QInputDialog.getText(
+            None,
+            "Network Share Setup",
+            "Peer list — enter as  name=\\\\path  pairs, one per line.\n"
+            "Example:  maria=\\\\server\\shared\\maria\n"
+            "(You can add more peers later by editing ~/.zenfish/config.json)",
+        )
+        if not ok3:
+            return
+
+        peers = []
+        for line in peers_raw.strip().splitlines():
+            if "=" in line:
+                parts = line.split("=", 1)
+                name = parts[0].strip()
+                folder = parts[1].strip()
+                if name and folder:
+                    peers.append({"name": name, "folder": folder})
+
+        self.signals.network_setup.emit(my_folder.strip(), my_username.strip(), peers)
+
+    def update_network_toggle(self, enabled):
+        """Sync the network toggle checkbox with current state."""
+        if hasattr(self, "_network_toggle"):
+            self._network_toggle.setChecked(enabled)
 
     def update_sanctuary_toggle(self, enabled):
         """Update the sanctuary toggle state in the menu."""

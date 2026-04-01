@@ -56,6 +56,8 @@ from modules.telegram_bridge import TelegramBridge
 from modules.webhook_server import WebhookServer
 from modules.updater import AppUpdater
 from modules.blue_vision_bridge import BlueVisionBridge
+from modules.network_folder_watcher import NetworkFolderWatcher
+from modules.network_notifier import NetworkNotifier
 from utils.logger import logger
 
 
@@ -280,6 +282,15 @@ class OhverlayApp:
         self.brain.add_module(self.schedule_module)
         self.brain.add_module(self.news_module)
 
+        # Network shared-folder notifications
+        self.network_watcher = NetworkFolderWatcher(config=self.config)
+        self.network_notifier = NetworkNotifier(config=self.config)
+        self.network_watcher.on_notification_received = self._on_network_notification_received
+        # Store the most recent pending notification for tray balloon click handling
+        self._last_network_notification = None
+        self.brain.add_module(self.network_watcher)
+        self.brain.add_module(self.network_notifier)
+
     def _init_tray(self):
         """Create system tray icon with settings menu."""
         self.tray = SystemTray(config=self.config)
@@ -298,6 +309,13 @@ class OhverlayApp:
         self.tray.signals.webhook_toggled.connect(self._on_webhook_toggled)
         self.tray.signals.llm_key_set.connect(self._on_llm_key_set)
         self.tray.signals.species_changed.connect(self._on_species_changed)
+        self.tray.signals.network_notify_peer.connect(self._on_network_notify_peer)
+        self.tray.signals.network_setup.connect(self._on_network_setup)
+        self.tray.signals.network_open_log.connect(self._on_network_open_log)
+        self.tray.signals.network_toggled.connect(self._on_network_toggled)
+        self.tray.set_peer_names(self.network_notifier.get_peer_names())
+        # Wire tray balloon click to open the sender's folder
+        self.tray.messageClicked.connect(self._on_network_balloon_clicked)
         self.tray.show()
 
     def _init_hotkeys(self):
@@ -564,6 +582,100 @@ class OhverlayApp:
             module_map[module_key].enabled = enabled
             self.config.set("modules", module_key, enabled)
             logger.info(f"Module '{module_key}' {'enabled' if enabled else 'disabled'}")
+
+    # ------------------------------------------------------------------
+    # Network Share handlers
+    # ------------------------------------------------------------------
+
+    def _on_network_notification_received(self, notification, peer_folder):
+        """
+        Called immediately when NetworkFolderWatcher detects a new notification.
+        Shows a tray balloon so the user can click to open the sender's folder.
+        """
+        self._last_network_notification = notification
+        sender = notification.get("sender", "someone")
+        filename = notification.get("filename", "")
+        if filename:
+            title = f"File ready from {sender}"
+            body = f"'{filename}' — click to open their folder"
+        else:
+            msg = notification.get("message", "")
+            title = f"Message from {sender}"
+            body = msg if msg else "Click to open their shared folder"
+        self.tray.showMessage(title, body, self.tray.icon(), 8000)
+
+    def _on_network_balloon_clicked(self):
+        """User clicked the tray balloon notification — open the sender's folder."""
+        if self._last_network_notification:
+            self.network_watcher.open_sender_folder(self._last_network_notification)
+            self._last_network_notification = None
+
+    def _on_network_notify_peer(self, peer_name, filename, message):
+        """Send a notification to a peer (triggered from tray submenu)."""
+        ok = self.network_notifier.send_notification(peer_name, filename, message)
+        if ok:
+            self.bubble_system.queue_message(
+                f"\U0001f4e4 Notified {peer_name}" + (f": {filename}" if filename else ""),
+                "network",
+            )
+        else:
+            self.tray.showMessage(
+                "Network Share",
+                "Could not send notification. Check your shared folder config.",
+                self.tray.icon(),
+                5000,
+            )
+
+    def _on_network_toggled(self, enabled):
+        """Enable or disable network sharing notifications."""
+        self.network_watcher.enabled = enabled
+        self.network_notifier.enabled = enabled
+        self.config.set("network_sharing", "enabled", enabled)
+        self.tray.update_network_toggle(enabled)
+        logger.info(f"Network sharing {'enabled' if enabled else 'disabled'}")
+
+    def _on_network_setup(self, my_folder, my_username, peers):
+        """Persist network sharing config entered via the setup dialog."""
+        net_cfg = self.config.get("network_sharing") or {}
+        net_cfg["my_folder"] = my_folder
+        net_cfg["my_username"] = my_username
+        net_cfg["peers"] = peers
+        # Persist each key individually so Settings._deep_merge keeps other keys
+        self.config.set("network_sharing", "my_folder", my_folder)
+        self.config.set("network_sharing", "my_username", my_username)
+        self.config.set("network_sharing", "peers", peers)
+        # Apply live
+        self.network_watcher.my_folder = my_folder
+        self.network_watcher.my_username = my_username.lower().strip()
+        self.network_watcher.peers = peers
+        self.network_notifier.my_folder = my_folder
+        self.network_notifier.my_username = my_username.lower().strip()
+        self.network_notifier.peers = peers
+        self.tray.set_peer_names(self.network_notifier.get_peer_names())
+        self.bubble_system.queue_message(
+            f"\U0001f4c1 Network share configured for {my_username}", "network"
+        )
+        logger.info(f"Network sharing configured: folder={my_folder}, user={my_username}, peers={peers}")
+
+    def _on_network_open_log(self):
+        """Open the network activity log file in the default text editor."""
+        log_path = self.network_watcher.log_path
+        import os
+        import subprocess
+        if os.path.exists(log_path):
+            try:
+                subprocess.Popen(["notepad", log_path])
+            except Exception:
+                pass
+        else:
+            self.tray.showMessage(
+                "Network Share Log",
+                "No activity logged yet. Log will appear after first notification.",
+                self.tray.icon(),
+                4000,
+            )
+
+    # ------------------------------------------------------------------
 
     def _on_feed_fish(self):
         """Trigger creature special effect (Ctrl+Alt+F)"""
