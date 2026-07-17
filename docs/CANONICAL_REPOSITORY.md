@@ -1,7 +1,7 @@
 # Canonical Repository
 
-**Repository:** `michaelfutol/ohverlay-v4`
-**URL:** `https://github.com/michaelfutol/ohverlay-v4`
+**Repository:** `michaelfutol/ohverlay`
+**URL:** `https://github.com/michaelfutol/ohverlay`
 
 This is the sole authoritative source for the entire Ohverlay ecosystem. All development, releases, and documentation originate here.
 
@@ -13,7 +13,7 @@ This is the sole authoritative source for the entire Ohverlay ecosystem. All dev
 
 ## Previous Repository URLs
 The following URLs are historical and should not be used:
-- `https://github.com/ikel-eidra/ohverlay-v4` (old org)
+- `https://github.com/michaelfutol/ohverlay` (old org)
 
 ## Contact
 Maintainer: Michael Futol

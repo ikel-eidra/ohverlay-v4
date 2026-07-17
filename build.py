@@ -86,12 +86,12 @@ def build_zip():
     output_dir.mkdir(exist_ok=True)
 
     shutil.make_archive(
-        str(output_dir / 'Ohverlay-v4.0-Portable'),
+        str(output_dir / 'Ohverlay-Portable'),
         'zip',
         'dist',
         'Ohverlay'
     )
-    print(f'\n  ZIP created: installer_output/Ohverlay-v4.0-Portable.zip')
+    print(f'\n  ZIP created: installer_output/Ohverlay-Portable.zip')
     return True
 
 
@@ -129,7 +129,7 @@ def build_installer():
     print(f'  Found Inno Setup: {iscc}')
     ret = run(f'"{iscc}" installer.iss')
     if ret == 0:
-        print('\n  Installer created: installer_output/Ohverlay-v4.0-Setup.exe')
+        print('\n  Installer created: installer_output/Ohverlay-Setup.exe')
     return ret == 0
 
 

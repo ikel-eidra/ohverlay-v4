@@ -33,7 +33,7 @@
 ## Known Issues (Resolved in Cleanup)
 - **README Inaccuracies**: Removed fabricated metrics (10,000+ downloads, 85% stress reduction)
 - **Placeholder Branding**: Removed generic placeholders (`via.placeholder.com`) and replaced legacy support emails
-- **Obsolete URLs**: Removed defunct `ikel-eidra` repository links
+- **Obsolete URLs**: Removed defunct `michaelfutol` repository links
 - **Dead Code**: Purged unused scripts, scratch files, and `.txt` dumps
 - **Git Ignore**: Updated to exclude caches, logs, and build artifacts
 - **Docker Weak Defaults**: Hardcoded DB passwords in compose files flagged for production removal

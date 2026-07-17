@@ -31,7 +31,7 @@ REM Create output directory
 if not exist "installer_output" mkdir installer_output
 
 REM Use PowerShell to create ZIP (available on Windows 10+)
-powershell -Command "Compress-Archive -Path 'dist\Ohverlay\*' -DestinationPath 'installer_output\Ohverlay-v4.0-Portable.zip' -Force"
+powershell -Command "Compress-Archive -Path 'dist\Ohverlay\*' -DestinationPath 'installer_output\Ohverlay-Portable.zip' -Force"
 
 if errorlevel 1 (
     echo  [ERROR] ZIP creation failed.
@@ -44,7 +44,7 @@ echo  =============================================
 echo   Portable ZIP Ready!
 echo  =============================================
 echo.
-echo   File: installer_output\Ohverlay-v4.0-Portable.zip
+echo   File: installer_output\Ohverlay-Portable.zip
 echo.
 echo   To use:
 echo     1. Extract the ZIP anywhere

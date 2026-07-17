@@ -13,7 +13,7 @@
 #define MyAppName "Ohverlay"
 #define MyAppVersion "4.0.0"
 #define MyAppPublisher "Futol Ethical Technology Ecosystems"
-#define MyAppURL "https://github.com/ikel-eidra/ohverlay-v4"
+#define MyAppURL "https://github.com/michaelfutol/ohverlay"
 #define MyAppExeName "Ohverlay.exe"
 
 [Setup]
@@ -32,7 +32,7 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=commandline
 UsedUserAreasWarning=no
 OutputDir=installer_output
-OutputBaseFilename=Ohverlay-v4.0-Setup
+OutputBaseFilename=Ohverlay-Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern

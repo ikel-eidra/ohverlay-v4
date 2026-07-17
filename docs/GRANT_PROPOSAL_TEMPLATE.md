@@ -282,7 +282,7 @@ By funding Ohverlay, [Funder] will support:
 
 📧 hello@futol.tech  
 🌐 https://futol.tech  
-🐙 github.com/ikel-eidra/ohverlay-v4  
+🐙 github.com/michaelfutol/ohverlay  
 
 *Building calm technology for better digital workspaces.*
 

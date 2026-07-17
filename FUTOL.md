@@ -90,7 +90,7 @@ A comprehensive desktop ecosystem built around technical coordination, desktop l
 - Transparent, click-through HTML overlays
 - MIT Licensed
 
-🔗 [github.com/michaelfutol/ohverlay-v4](https://github.com/michaelfutol/ohverlay-v4)
+🔗 [github.com/michaelfutol/ohverlay](https://github.com/michaelfutol/ohverlay)
 
 ---
 

@@ -97,7 +97,7 @@ echo  =============================================
 echo   Windows Installer Ready!
 echo  =============================================
 echo.
-echo   Installer: installer_output\Ohverlay-v4.0-Setup.exe
+echo   Installer: installer_output\Ohverlay-Setup.exe
 echo.
 echo   This installer:
 echo     - Works without admin (installs to user folder)

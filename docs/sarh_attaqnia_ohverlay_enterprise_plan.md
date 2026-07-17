@@ -165,7 +165,7 @@ The current repo already has a workable desktop structure:
 The next step is to formalize it into a modular platform layout without breaking the current app.
 
 ```text
-OHVERLAY-V4.0/
+ohverlay/
   main.py
   engine/
     app_runtime.py

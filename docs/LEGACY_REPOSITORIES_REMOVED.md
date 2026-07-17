@@ -12,4 +12,4 @@ The following repositories have been permanently deleted to eliminate confusion,
 Deletion pending manual action by repository owner.
 
 ## Policy
-All future development happens exclusively in `michaelfutol/ohverlay-v4`. No code from the deleted repositories should be referenced or migrated unless explicitly approved.
+All future development happens exclusively in `michaelfutol/ohverlay`. No code from the deleted repositories should be referenced or migrated unless explicitly approved.

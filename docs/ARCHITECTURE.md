@@ -16,7 +16,7 @@ Ohverlay v4 is built on a hybrid architecture combining a native desktop applica
 Following the consolidation directive, the repository will gradually migrate to a monorepo structure without breaking the runnable state:
 
 ```text
-ohverlay-v4/
+ohverlay/
 ├── apps/
 │   ├── desktop/             # Current main.py and core desktop app
 │   ├── technical-office/    # Future supervisor dashboard apps

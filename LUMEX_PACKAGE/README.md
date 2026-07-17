@@ -1,7 +1,7 @@
 # LUMEX PACKAGE - Betta Fish & Plants Division
 
 **Owner:** Lumex  
-**Source:** OHVERLAY-V4.0 Split
+**Source:** ohverlay Split
 
 This package contains all biological creatures and plants that are now maintained by Lumex.
 
@@ -108,7 +108,7 @@ LUMEX_PACKAGE/
 
 ## 📝 Notes
 
-- These files were extracted from OHVERLAY-V4.0 main branch
+- These files were extracted from ohverlay main branch
 - Plants code is fully functional with 3-day growth cycle
 - Betta skins include all recent improvements
 - Compatible with the bubble system and sanctuary zones
@@ -116,4 +116,4 @@ LUMEX_PACKAGE/
 ---
 
 **Maintained by:** Lumex  
-**Original Project:** OHVERLAY-V4.0
+**Original Project:** ohverlay

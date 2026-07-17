@@ -2,7 +2,7 @@
 
 ## Setup Installer
 
-- `Ohverlay-v4.0-Setup.exe` installs per-user to `%LOCALAPPDATA%\Programs\Ohverlay`.
+- `Ohverlay-Setup.exe` installs per-user to `%LOCALAPPDATA%\Programs\Ohverlay`.
 - Administrator approval is not required for the standard install path.
 - The installer is unsigned, so Windows SmartScreen may still show a warning.
 

@@ -1,145 +1,144 @@
-<div align="center">
+# Ohverlay
 
-# OHVERLAY v4.0
+**Ohverlay is a privacy-conscious desktop overlay platform for productivity, technical-office coordination, ambient digital companions, learning tools, and user-installable overlay experiences.**
 
-[![Version](https://img.shields.io/badge/version-4.0.0-purple.svg?style=for-the-badge)](https://github.com/michaelfutol/ohverlay-v4)
-[![Python](https://img.shields.io/badge/python-3.10+-3776ab.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![PySide6](https://img.shields.io/badge/PySide6-6.5+-green.svg?style=for-the-badge)](https://wiki.qt.io/Qt_for_Python)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Maintainer](https://img.shields.io/badge/maintainer-Michael%20Futol-9333EA.svg?style=for-the-badge)](https://github.com/michaelfutol)
-
-**A professional desktop overlay platform**
-
-*Calm your workspace, ethically.*
-
-</div>
+*Useful information and living experiences, gently layered over your workspace.*
 
 ---
 
-## ✨ What is Ohverlay?
+## Executive Overview
 
-**Ohverlay** is an ethical AI desktop companion ecosystem. It renders fully transparent, click-through HTML overlays directly on your desktop across multiple monitors. 
+Ohverlay solves the problem of disruptive digital environments by placing useful, calm, and context-aware tools directly onto your desktop without requiring you to switch away from your active work. Unlike traditional widgets or aggressive notification systems, Ohverlay operates as a transparent, click-through layer that floats above your wallpaper and behind (or alongside) your open windows.
 
-### Core Product Lanes
-1. **Technical Office**: Professional coordination and local communication via sticky notes and timers.
-2. **Desktop Living Overlays**: Ambient, non-distracting environmental life (e.g., Dragonflies, Fireflies).
-3. **Productivity Overlays**: Workspace enhancement, exam reviewers, and schedule reminders.
-4. **Blue AI**: Ethical, user-controlled artificial intelligence with optional screen awareness (Blue Vision).
-5. **Marketplace**: A central catalog for discovering and installing overlay packages.
-6. **Future OHVER Ecosystem**: Internal entitlement architecture based on the "OHVER" concept.
+Built with local-first, privacy-conscious principles, Ohverlay does not monitor employees silently and requires explicit consent for any screen-awareness features. It serves as a unified ecosystem blending technical-office coordination, personal productivity, learning aids, and ambient digital companions.
 
----
+## Product Areas
 
-## 🚀 Key Features
+### Technical Office
+Coordinate team operations with clear, non-disruptive overlays:
+- **Verified:** Draggable sticky notes, countdown timers, elapsed timers, deadlines.
+- **Implemented (Testing):** Local-network shared-folder coordination, staff-to-supervisor reporting, opened and acknowledged status.
+- **Planned:** Supervisor dashboard, consent-aware workplace deployment rules.
 
-| Feature | Description | Tech |
-|---------|-------------|------|
-| 🖥️ **Multi-Monitor** | Seamless overlay rendering across 2-3+ screens | PySide6 |
-| 👆 **Click-Through** | Works behind your windows | Transparent Qt Widgets |
-| 🌐 **HTML Overlays** | Build overlays with standard web tech | QWebEngineView |
-| 🧠 **Blue AI** | Optional AI assistant with memory | LLM (Anthropic/OpenAI) |
-| 👁️ **Blue Vision** | Screen analysis via Groq | Vision APIs |
-| 🔔 **Notifications** | Health reminders, Love Notes, Schedule Alerts | State machine |
+### Productivity
+Tools to keep you focused and organized on modest hardware:
+- **Verified:** Notes, timers, reminders, break prompts, schedule overlays.
 
----
+### Living and Ambient Overlays
+Bring your workspace to life with responsive, non-distracting motion:
+- **Verified:** Dragonflies, dandelions, fireflies, ladybugs, aquarium creatures, volumetric clouds, paper lanterns.
+- **Features:** Click-through behavior, multi-monitor motion, configurable transparency.
 
-## 🧠 Technical Architecture
+### Learning
+Passive educational tools integrated into your daily workflow:
+- **Verified:** Exam-review overlays (PlumberPass prototype).
+- **Planned:** Passive quizzes, study reminders, educational packs.
 
-Ohverlay v4 is built on a hybrid architecture combining a native desktop application with web technologies.
+### Blue AI
+An optional, privacy-respecting intelligence layer:
+- **Verified:** Optional assistant, user-controlled memory.
+- **Testing:** Explicitly authorized screen awareness.
+- **Core Principle:** Local-first operation where practical. No silent monitoring, no hidden employee surveillance.
 
-- **Desktop Host**: Python + PySide6 (Qt). Handles OS integration, system tray, hotkeys, window management, and global config.
-- **Rendering Engine**: PySide6-WebEngine (Chromium). HTML overlays are rendered as transparent, borderless, always-on-top, click-through windows.
-- **Entry Point**: `main.py` instantiates the `OhverlayApp` controller.
+### Marketplace and Creator Ecosystem
+A growing library of installable experiences:
+- **Prototype:** Installable overlay packages, free packs, preview/install workflows.
+- **Planned:** Creator entitlements, paid packs.
 
-For more details, see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+## Why Ohverlay Matters
 
----
+Ohverlay delivers calm, non-disruptive information delivery for engineering offices, remote teams, and students. By running efficiently on modest hardware, it provides accessible productivity support and creates future opportunities for Filipino developers and digital creators. Crucially, it serves as an ethical, privacy-conscious alternative to intrusive monitoring software, ensuring staff coordination never crosses into surveillance.
 
-## 📥 Installation
+## Current Status
 
-### Quick Start (Windows)
+| Area | Status | Evidence | Limitations |
+| ---- | ------ | -------- | ----------- |
+| **Desktop Runtime** | Verified | Application launches, multi-monitor geometry works, transparent PySide6 windows render correctly. | Heavy DOM manipulation can spike CPU on low-end hardware. |
+| **Living Overlays** | Verified | Dragonflies, Dandelions, Fireflies, Lanterns load and animate. | Interactions (feeding) require hotkeys rather than direct clicks. |
+| **Productivity** | Verified | Sticky notes, timers, reminders load. | Network sync for notes is in testing. |
+| **Technical Office** | Testing | Staff-to-supervisor reporting scaffolded. | Full supervisor dashboard UI incomplete. |
+| **Blue AI** | Prototype | Anthropic/Groq integration exists. | Requires user-provided API keys; local models not yet optimized. |
+| **Marketplace** | Prototype | Local catalog parsing works. | Remote downloads and authentication not yet live. |
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/michaelfutol/ohverlay-v4.git
-cd ohverlay-v4
+## Architecture
 
-# 2. Install dependencies
-pip install -r requirements.txt
+At its core, Ohverlay uses a PySide6 frameless window containing a QWebEngineView. The Python backend handles OS-level geometry, global hotkeys, AI bridging, and configuration persistence, while the frontend renders standard HTML/CSS/JS overlays (using a custom vanilla JS engine).
 
-# 3. Run Ohverlay
-python main.py
-```
+- **Desktop Runtime:** PySide6, Python 3.11+
+- **Overlay Engine:** HTML5, CSS3, Vanilla JS
+- **AI Bridge:** LiteLLM / Custom Blue AI router
+- **Future Backend:** Supabase (planned for Marketplace/Updates)
 
-### Portable Distribution
+For deeper technical details, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-For Windows testing, especially on office PCs:
+## Privacy and Ethics
 
-1. Run `build_installer.bat` to create a per-user installer in `installer_output\`.
-2. Or run `build_portable_zip.bat` to generate a portable ZIP bundle.
+Ohverlay is fundamentally built on consent:
+- **Local-first defaults:** Your configuration and logs stay on your machine.
+- **Explicit consent:** Screen analysis requires manual authorization.
+- **No silent monitoring:** We reject hidden employee surveillance and silent screenshots.
+- **User control:** You control your data and update behavior.
 
-### Configuration
+Read our full [PRIVACY.md](PRIVACY.md) and [docs/ETHICAL_DESIGN.md](docs/ETHICAL_DESIGN.md) for details.
 
-Configuration is managed via `~/.ohverlay/config.json`.
-You can access settings from the System Tray icon.
+## Installation and Development
 
----
+### Requirements
+- **OS:** Windows 10/11
+- **Runtime:** Python 3.11.9+
 
-## 🎮 Usage
-
-### Hotkeys
-
-| Shortcut | Action | Description |
-|----------|--------|-------------|
-| `Ctrl+Alt+H` | Toggle Overlays | Show or hide all active overlays |
-| `Ctrl+Alt+I` | Toggle Interactivity | Make overlays clickable vs click-through |
-| `Ctrl+Alt+F` | Interact | Trigger context-specific interactions |
-
-### System Tray
-
-Right-click tray icon for:
-- Overlays toggle
-- Notifications settings
-- Integrations
-- Quit
-
----
-
-## Bundled Overlays
-
-- Ecosystem (Dragonflies, Dandelions, Fireflies)
-- Paper Lanterns
-- Volumetric Clouds
-- Sticky Notes
-- AI Chatbox
-- Exam Reviewer
-- Ghost Woman
-- Screensaver
-
----
-
-## Development
-
-```bash
+### Development Setup
+```powershell
+git clone https://github.com/michaelfutol/ohverlay.git
+cd ohverlay
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements-dev.txt
-python -m pytest tests/test_config.py
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### Running the App
+```powershell
 python main.py
 ```
 
----
+### Running Tests
+```powershell
+pytest tests/
+```
 
-## Documentation
+### Building (Portable & Installer)
+```powershell
+python build.py
+```
 
-See the `docs/` directory for full details on architecture, product doctrine, and current status:
-- [Canonical Repository Policy](docs/CANONICAL_REPOSITORY.md)
-- [Current Status](docs/CURRENT_STATUS.md)
-- [Product Doctrine](docs/PRODUCT_DOCTRINE.md)
-- [Roadmap](docs/ROADMAP.md)
+## Roadmap
 
----
+1. Canonical repository stabilization
+2. Technical-office workflow restoration
+3. Privacy and consent framework
+4. Overlay package manager
+5. Website and marketplace
+6. Optional accounts and entitlements
+7. Automated builds and releases
+8. Creator ecosystem
+9. OHVER feasibility research
 
-## License & Distribution Status
+See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed planning.
 
-See [LICENSE](LICENSE). Builds are currently unsigned, so Windows reputation prompts are expected until code signing is added.
+## Governance and Contribution
+
+We welcome contributions that align with our ethical principles and technical standards.
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [SECURITY.md](SECURITY.md)
+- [GOVERNANCE.md](GOVERNANCE.md)
+
+## Licensing and Ownership
+
+**Copyright © FutolTech Engineering & Project Systems**
+
+*All Rights Reserved.*
+
+Ohverlay is currently provided under a proprietary/source-available notice. Access to this source code does not grant authorization for redistribution, commercial reuse, or repackaging without explicit permission. Licensing may change in a future public release.
+
+See [LICENSE](LICENSE) for the full notice.
