@@ -61,7 +61,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "ok", "service": "zenfish"}).encode())
+            self.wfile.write(json.dumps({"status": "ok", "service": "ohverlay"}).encode())
         else:
             self.send_response(404)
             self.end_headers()
@@ -71,12 +71,14 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "ok", "service": "zenfish"}).encode())
+            self.wfile.write(json.dumps({"status": "ok", "service": "ohverlay"}).encode())
         else:
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
             self.end_headers()
-            self.wfile.write(b"ZenFish Webhook Server. POST /message with {\"text\": \"...\", \"sender\": \"...\"}")
+            self.wfile.write(
+                b"Ohverlay Webhook Server. POST /message with {\"text\": \"...\", \"sender\": \"...\"}"
+            )
 
     def log_message(self, format, *args):
         """Suppress default HTTP logging - we use our own logger."""

@@ -19,19 +19,15 @@ echo    Futol Ethical Technology Ecosystems
 echo   =============================================
 echo.
 
-REM Step 1: Build the portable app first
-if not exist "dist\Ohverlay\Ohverlay.exe" (
-    echo  [Step 1] Building portable app first...
-    echo.
-    call build_windows.bat
-    if errorlevel 1 (
-        echo  [ERROR] Portable build failed. Cannot create installer.
-        pause
-        exit /b 1
-    )
-) else (
-    echo  [Step 1] Portable build already exists, skipping...
-    echo           (Delete dist\Ohverlay\ to force rebuild)
+echo  [Step 1] Rebuilding portable app...
+echo.
+set "OHVERLAY_NO_PAUSE=1"
+call build_windows.bat
+set "OHVERLAY_NO_PAUSE="
+if errorlevel 1 (
+    echo  [ERROR] Portable build failed. Cannot create installer.
+    pause
+    exit /b 1
 )
 
 echo.
@@ -41,16 +37,38 @@ REM Try common Inno Setup install locations
 set ISCC=
 if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" (
     set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
-) else if exist "%ProgramFiles%\Inno Setup 6\ISCC.exe" (
+)
+if "%ISCC%"=="" if exist "%ProgramFiles%\Inno Setup 6\ISCC.exe" (
     set "ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe"
-) else if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" (
+)
+if "%ISCC%"=="" if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" (
     set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
+)
+
+if "%ISCC%"=="" (
+    winget --version >nul 2>&1
+    if not errorlevel 1 (
+        echo.
+        echo  [INFO] Inno Setup not found. Attempting user-scope install with winget...
+        winget install --id JRSoftware.InnoSetup --scope user --accept-source-agreements --accept-package-agreements
+
+        if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" (
+            set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
+        )
+        if "%ISCC%"=="" if exist "%ProgramFiles%\Inno Setup 6\ISCC.exe" (
+            set "ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe"
+        )
+        if "%ISCC%"=="" if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" (
+            set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
+        )
+    )
 )
 
 if "%ISCC%"=="" (
     echo.
     echo  [INFO] Inno Setup not found.
     echo         Download it free from: https://jrsoftware.org/isdl.php
+    echo         Or run: winget install --id JRSoftware.InnoSetup --scope user
     echo         Then run this script again.
     echo.
     echo  [ALTERNATIVE] You can also just ZIP the dist\Ohverlay\ folder
@@ -88,4 +106,5 @@ echo     - Optional desktop shortcut
 echo     - Optional Windows startup entry
 echo     - Clean uninstaller included
 echo.
+if /I "%OHVERLAY_NO_PAUSE%"=="1" exit /b 0
 pause

@@ -7,8 +7,11 @@ import json
 import os
 from utils.logger import logger
 
+APP_DIR_NAME = ".ohverlay"
+LEGACY_APP_DIR_NAME = ".zenfish"
+
 DEFAULT_CONFIG = {
-    "creature_type": "jellyfish",
+    "creature_type": "overlay-platform",
     "fish": {
         "primary_color": [255, 118, 54],
         "secondary_color": [35, 84, 170],
@@ -22,7 +25,9 @@ DEFAULT_CONFIG = {
         "silhouette_strength": 1.0,
         "eye_tracking_strength": 0.75,
         "eye_tracking_damping": 0.18,
-        "motion_profile": "realistic_v2"
+        "motion_profile": "realistic_v2",
+        "school_size": 5,
+        "size": "medium"
     },
     "sanctuary": {
         "enabled": False,
@@ -36,6 +41,11 @@ DEFAULT_CONFIG = {
         "news": False,
         "love_notes": True,
         "schedule": True
+    },
+    "overlays": {
+        "glass-fish": False,
+        "betta-fish": False,
+        "paper-lanterns": True
     },
     "health": {
         "water_reminder_minutes": 30,
@@ -69,7 +79,8 @@ DEFAULT_CONFIG = {
     "hotkeys": {
         "feed_fish": "ctrl+alt+f",
         "toggle_sanctuary": "ctrl+alt+s",
-        "toggle_visibility": "ctrl+alt+h"
+        "toggle_visibility": "ctrl+alt+h",
+        "toggle_interactivity": "ctrl+alt+i"
     },
     "app": {
         "version": "4.0.0",
@@ -101,8 +112,39 @@ DEFAULT_CONFIG = {
     }
 }
 
-CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".zenfish")
-CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
+
+def get_app_data_dir():
+    """Return the writable application data directory."""
+    override = os.environ.get("OHVERLAY_HOME", "").strip()
+    if override:
+        return os.path.abspath(os.path.expanduser(override))
+    return os.path.join(os.path.expanduser("~"), APP_DIR_NAME)
+
+
+def get_legacy_app_data_dir():
+    """Return the legacy ZenFish data directory used by older builds."""
+    return os.path.join(os.path.expanduser("~"), LEGACY_APP_DIR_NAME)
+
+
+def get_config_path(config_dir=None):
+    """Return the JSON settings file path for the active app data directory."""
+    target_dir = os.path.abspath(config_dir or get_app_data_dir())
+    return os.path.join(target_dir, "config.json")
+
+
+def get_legacy_config_path():
+    """Return the old ZenFish config path for one-time migration."""
+    return os.path.join(get_legacy_app_data_dir(), "config.json")
+
+
+def get_updates_dir(config_dir=None):
+    """Return the update download directory for the active app data directory."""
+    target_dir = os.path.abspath(config_dir or get_app_data_dir())
+    return os.path.join(target_dir, "updates")
+
+
+CONFIG_DIR = get_app_data_dir()
+CONFIG_PATH = get_config_path(CONFIG_DIR)
 
 
 class Settings:
@@ -110,29 +152,45 @@ class Settings:
 
     def __init__(self):
         self._config = {}
+        self.config_dir = get_app_data_dir()
+        self.config_path = get_config_path(self.config_dir)
+        self.legacy_config_path = get_legacy_config_path()
         self.load()
 
     def load(self):
         """Load config from disk, merging with defaults for any missing keys."""
-        if os.path.exists(CONFIG_PATH):
+        source_path = self.config_path
+        migrating_legacy = False
+
+        if not os.path.exists(source_path) and os.path.exists(self.legacy_config_path):
+            source_path = self.legacy_config_path
+            migrating_legacy = True
+
+        if os.path.exists(source_path):
             try:
-                with open(CONFIG_PATH, "r") as f:
+                with open(source_path, "r", encoding="utf-8") as f:
                     saved = json.load(f)
                 self._config = self._deep_merge(DEFAULT_CONFIG, saved)
-                logger.info(f"Configuration loaded from {CONFIG_PATH}")
+                if migrating_legacy:
+                    self.save()
+                    logger.info(
+                        f"Configuration migrated from {source_path} to {self.config_path}"
+                    )
+                else:
+                    logger.info(f"Configuration loaded from {source_path}")
             except (json.JSONDecodeError, IOError) as e:
                 logger.warning(f"Config load failed ({e}), using defaults.")
                 self._config = json.loads(json.dumps(DEFAULT_CONFIG))
         else:
             self._config = json.loads(json.dumps(DEFAULT_CONFIG))
             self.save()
-            logger.info(f"Default configuration created at {CONFIG_PATH}")
+            logger.info(f"Default configuration created at {self.config_path}")
 
     def save(self):
         """Persist current config to disk."""
-        os.makedirs(CONFIG_DIR, exist_ok=True)
+        os.makedirs(self.config_dir, exist_ok=True)
         try:
-            with open(CONFIG_PATH, "w") as f:
+            with open(self.config_path, "w", encoding="utf-8") as f:
                 json.dump(self._config, f, indent=2)
         except IOError as e:
             logger.error(f"Failed to save config: {e}")

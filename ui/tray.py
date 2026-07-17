@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QSystemTrayIcon, QMenu, QInputDialog,
     QApplication
 )
-from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QRadialGradient, QBrush, QPen
+from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QRadialGradient, QBrush, QPen, QActionGroup
 from PySide6.QtCore import Qt, Signal, QObject
 from utils.logger import logger
 
@@ -25,6 +25,8 @@ class TraySignals(QObject):
     webhook_toggled = Signal(bool)
     llm_key_set = Signal(str, str)  # provider, key
     overlay_toggled = Signal(str)   # overlay_id
+    fish_settings_changed = Signal()
+    debug_canvas_extents = Signal()
 
 
 class SystemTray(QSystemTrayIcon):
@@ -94,19 +96,9 @@ class SystemTray(QSystemTrayIcon):
         # ── Overlays ──
         overlay_menu = menu.addMenu("Overlays")
 
-        if self.overlay_manager:
-            # Productivity overlays
-            prod_header = overlay_menu.addAction("— Productivity —")
-            prod_header.setEnabled(False)
-
-            for ov in self.overlay_manager.get_registry():
-                if ov["category"] == "productivity":
-                    self._add_overlay_action(overlay_menu, ov)
-
-            overlay_menu.addSeparator()
-
+        if self.overlay_manager and self.overlay_manager.available:
             # Ambient overlays
-            amb_header = overlay_menu.addAction("— Ambient —")
+            amb_header = overlay_menu.addAction("— Nature Overlays —")
             amb_header.setEnabled(False)
 
             for ov in self.overlay_manager.get_registry():
@@ -116,11 +108,22 @@ class SystemTray(QSystemTrayIcon):
             no_engine = overlay_menu.addAction("Install PySide6-WebEngine for overlays")
             no_engine.setEnabled(False)
 
-        menu.addSeparator()
+        # ── Overlay Settings ──
+        settings_menu = menu.addMenu("Overlay Settings")
+        size_menu = settings_menu.addMenu("Object Size")
+        
+        self._setup_size_submenu(size_menu, "Ecosystem Mode", "ecosystem")
+        self._setup_size_submenu(size_menu, "Dragonflies", "dragonflies")
+        self._setup_size_submenu(size_menu, "Dandelions", "dandelions")
+        self._setup_size_submenu(size_menu, "Fireflies", "fireflies")
+        self._setup_size_submenu(size_menu, "Hornwort", "hornwort")
 
-        # ── Quick Actions ──
+        menu.addSeparator()
         visibility_action = menu.addAction("Toggle All Overlays (Ctrl+Alt+H)")
         visibility_action.triggered.connect(self.signals.toggle_visibility.emit)
+
+        debug_action = menu.addAction("Debug: Show Canvas Extent")
+        debug_action.triggered.connect(self.signals.debug_canvas_extents.emit)
 
         menu.addSeparator()
 
@@ -234,6 +237,38 @@ class SystemTray(QSystemTrayIcon):
         """Update the checkmark state of an overlay in the menu."""
         if overlay_id in self._overlay_actions:
             self._overlay_actions[overlay_id].setChecked(active)
+
+    def _setup_size_submenu(self, parent_menu, label_text, overlay_id):
+        sub_menu = parent_menu.addMenu(label_text)
+        group = QActionGroup(sub_menu)
+        
+        # Read the specific scale, fallback to global_scale or 1.0
+        current_scale = 1.0
+        if self.config:
+            scale_val = self.config.get("overlays", f"{overlay_id}_scale")
+            if scale_val is None:
+                scale_val = self.config.get("overlays", "global_scale")
+            current_scale = float(scale_val or 1.0)
+            
+        for label, val in [("Small (50%)", 0.5), ("Normal (100%)", 1.0), ("Large (150%)", 1.5)]:
+            action = sub_menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(abs(current_scale - val) < 0.01)
+            group.addAction(action)
+            action.triggered.connect(lambda checked, v=val, oid=overlay_id: self._set_scale_config(oid, v))
+
+    def _set_scale_config(self, overlay_id, scale):
+        """Update specific overlay scale and restart it to apply."""
+        if self.config:
+            self.config.set("overlays", f"{overlay_id}_scale", scale)
+            self.config.save()
+            
+        if self.overlay_manager:
+            # Reopen the active overlay to apply the new scale parameter
+            active_ids = self.overlay_manager.get_active_ids()
+            if overlay_id in active_ids:
+                self.overlay_manager.close_overlay(overlay_id)
+                self.overlay_manager.open_overlay(overlay_id)
 
     def _set_love_notes_path(self):
         path, ok = QInputDialog.getText(

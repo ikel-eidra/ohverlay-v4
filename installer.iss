@@ -13,7 +13,7 @@
 #define MyAppName "Ohverlay"
 #define MyAppVersion "4.0.0"
 #define MyAppPublisher "Futol Ethical Technology Ecosystems"
-#define MyAppURL "https://ohverlay.com"
+#define MyAppURL "https://github.com/ikel-eidra/ohverlay-v4"
 #define MyAppExeName "Ohverlay.exe"
 
 [Setup]
@@ -25,11 +25,12 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 ; No admin required - installs to user's AppData by default
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequiredOverridesAllowed=commandline
+UsedUserAreasWarning=no
 OutputDir=installer_output
 OutputBaseFilename=Ohverlay-v4.0-Setup
 Compression=lzma2/ultra64
@@ -68,5 +69,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
+Type: filesandordirs; Name: "{userprofile}\.ohverlay"
+Type: filesandordirs; Name: "{userprofile}\.zenfish"
 Type: filesandordirs; Name: "{localappdata}\Ohverlay"
 Type: filesandordirs; Name: "{userappdata}\Ohverlay"

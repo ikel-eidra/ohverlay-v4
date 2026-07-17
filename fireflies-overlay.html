@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Six Fireflies — Black Screen</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      cursor: none;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="night" aria-label="Six realistic fireflies flying and flashing independently on a pitch-black screen"></canvas>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('night');
+      const context = canvas.getContext('2d', { alpha: true });
+      const parameters = new URLSearchParams(location.search);
+      const FIREFLY_COUNT = Math.round(clamp(Number(parameters.get('count')) || 12, 5, 100));
+      const globalScale = parseFloat(parameters.get('scale')) || 1.0;
+      const TAU = Math.PI * 2;
+
+      let width = 1;
+      let height = 1;
+      let pixelRatio = 1;
+      let elapsed = 0;
+      let lastTime = performance.now();
+      let paused = false;
+      let gust = 0;
+      let disturbance = 0;
+
+      const pointer = {
+        x: -10000,
+        y: -10000,
+        previousX: -10000,
+        previousY: -10000,
+        velocityX: 0,
+        velocityY: 0,
+        active: false,
+        down: false,
+        lastMove: performance.now()
+      };
+
+      function clamp(value, minimum, maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+      }
+
+      function smoothstep(edge0, edge1, value) {
+        const amount = clamp((value - edge0) / Math.max(0.000001, edge1 - edge0), 0, 1);
+        return amount * amount * (3 - 2 * amount);
+      }
+
+      function seeded(index, salt = 0) {
+        const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453123;
+        return value - Math.floor(value);
+      }
+
+      function makeGlowSprite() {
+        const sprite = document.createElement('canvas');
+        sprite.width = 256;
+        sprite.height = 256;
+        const spriteContext = sprite.getContext('2d');
+        const gradient = spriteContext.createRadialGradient(128, 128, 1, 128, 128, 128);
+        gradient.addColorStop(0, 'rgba(255,255,197,1)');
+        gradient.addColorStop(0.035, 'rgba(239,255,123,0.98)');
+        gradient.addColorStop(0.12, 'rgba(174,255,55,0.55)');
+        gradient.addColorStop(0.31, 'rgba(112,235,22,0.19)');
+        gradient.addColorStop(0.62, 'rgba(76,190,8,0.045)');
+        gradient.addColorStop(1, 'rgba(25,90,0,0)');
+        spriteContext.fillStyle = gradient;
+        spriteContext.fillRect(0, 0, 256, 256);
+        return sprite;
+      }
+
+      const glowSprite = makeGlowSprite();
+
+      function createFirefly(index) {
+        const depth = 0.32 + seeded(index, 1) * 0.68;
+        const cycle = 2.35 + seeded(index, 2) * 2.10;
+        return {
+          x: 0.10 + seeded(index, 3) * 0.80,
+          y: 0.15 + seeded(index, 4) * 0.70,
+          z: depth,
+          vx: (seeded(index, 5) - 0.5) * 0.035,
+          vy: (seeded(index, 6) - 0.5) * 0.025,
+          vz: (seeded(index, 7) - 0.5) * 0.012,
+          targetX: -0.05 + seeded(index, 8) * 1.10,
+          targetY: -0.05 + seeded(index, 9) * 1.10,
+          targetZ: 0.30 + seeded(index, 10) * 0.70,
+          targetTimer: 0.5 + seeded(index, 11) * 2.4,
+          wanderPhase: seeded(index, 12) * TAU,
+          wanderRate: 0.41 + seeded(index, 13) * 0.39,
+          wingPhase: seeded(index, 14) * TAU,
+          facing: seeded(index, 15) * TAU,
+          bank: 0,
+          flashCycle: 2.10 + seeded(index, 6) * 1.45,
+          flashOffset: seeded(index, 7) * 4.0,
+          flashShape: 0.85 + seeded(index, 8) * 0.30,
+          speedMult: 0.4 + seeded(index, 11) * 0.8,
+          restTimer: seeded(index, 12) * 5,
+          glowWarmth: seeded(index, 18),
+          startled: 0,
+          seed: index + 1
+        };
+      }
+
+      const fireflies = Array.from({ length: FIREFLY_COUNT }, (_, index) => createFirefly(index));
+
+      function chooseTarget(firefly) {
+        const timeSeed = Math.floor(elapsed * 0.7) + firefly.seed * 19;
+        // Fly widely across the whole screen, not clustered in the center
+        firefly.targetX = -0.1 + seeded(timeSeed, 21) * 1.20;
+        firefly.targetY = -0.1 + seeded(timeSeed, 22) * 1.20;
+        firefly.targetZ = 0.28 + seeded(timeSeed, 23) * 0.72;
+        firefly.targetTimer = 1.2 + seeded(timeSeed, 24) * 3.8;
+        
+        // 25% chance to rest
+        if (seeded(timeSeed, 25) > 0.75) {
+            firefly.restTimer = 2.0 + seeded(timeSeed, 26) * 4.0;
+        }
+      }
+
+      function flashIntensity(firefly) {
+        const phase = ((elapsed + firefly.flashOffset) % firefly.flashCycle) / firefly.flashCycle;
+        // A quick organic ignition, a short living plateau, then a slower fade.
+        const rise = smoothstep(0.035, 0.105, phase);
+        const fall = 1 - smoothstep(0.17, 0.36, phase);
+        const primary = rise * fall;
+        const afterglow =
+          smoothstep(0.20, 0.25, phase) *
+          (1 - smoothstep(0.25, 0.43, phase)) *
+          0.16;
+        const livingFlicker = 0.94 + Math.sin(elapsed * 17.0 + firefly.seed * 5.7) * 0.06;
+        return clamp((primary + afterglow) * livingFlicker * firefly.flashShape, 0, 1);
+      }
+
+      function disturbAt(x, y, radius, force) {
+        disturbance = Math.max(disturbance, force);
+        for (const firefly of fireflies) {
+          const dx = firefly.x * width - x;
+          const dy = firefly.y * height - y;
+          const distance = Math.max(18, Math.hypot(dx, dy));
+          if (distance >= radius) continue;
+          const amount = (1 - distance / radius) * force;
+          firefly.vx += (dx / distance) * amount * 0.085;
+          firefly.vy += (dy / distance) * amount * 0.085;
+          firefly.vz += (seeded(firefly.seed, Math.floor(elapsed * 10)) - 0.5) * amount * 0.055;
+          firefly.startled = Math.max(firefly.startled, amount);
+          firefly.targetTimer = Math.min(firefly.targetTimer, 0.12);
+        }
+      }
+
+      function updateFirefly(firefly, dt, index) {
+        firefly.targetTimer -= dt;
+        if (firefly.targetTimer <= 0) chooseTarget(firefly);
+
+        const dx = firefly.targetX - firefly.x;
+        const dy = firefly.targetY - firefly.y;
+        const dz = firefly.targetZ - firefly.z;
+        const wander = elapsed * firefly.wanderRate + firefly.wanderPhase;
+        const nervousness = 1 + firefly.startled * 1.8;
+
+        let ax = dx * 0.08 + Math.sin(wander * 1.37) * 0.012 * nervousness;
+        let ay = dy * 0.08 + Math.cos(wander * 1.11 + 0.7) * 0.010 * nervousness;
+        let az = dz * 0.05 + Math.sin(wander * 0.83 + 1.4) * 0.005;
+
+        if (firefly.restTimer > 0 && firefly.startled < 0.1) {
+            firefly.restTimer -= dt;
+            ax = 0; ay = 0; az = 0; // stop moving when resting
+        }
+
+        // Fireflies do not occupy the exact same pocket of air.
+        for (let otherIndex = 0; otherIndex < fireflies.length; otherIndex++) {
+          if (otherIndex === index) continue;
+          const other = fireflies[otherIndex];
+          const separationX = firefly.x - other.x;
+          const separationY = firefly.y - other.y;
+          const separationSquared = separationX * separationX + separationY * separationY;
+          if (separationSquared > 0.00001 && separationSquared < 0.010) {
+            const separation = Math.sqrt(separationSquared);
+            const push = (0.10 - separation) * 0.3;
+            ax += (separationX / separation) * push;
+            ay += (separationY / separation) * push;
+          }
+        }
+
+        if (pointer.active) {
+          const screenX = firefly.x * width;
+          const screenY = firefly.y * height;
+          const pointerDx = screenX - pointer.x;
+          const pointerDy = screenY - pointer.y;
+          const pointerDistance = Math.max(14, Math.hypot(pointerDx, pointerDy));
+          const radius = pointer.down ? 250 : 155;
+          if (pointerDistance < radius) {
+            const closeness = 1 - pointerDistance / radius;
+            const airSpeed = Math.min(1.7, Math.hypot(pointer.velocityX, pointer.velocityY) / 900);
+            const pressure = closeness * (0.065 + airSpeed * 0.11 + (pointer.down ? 0.07 : 0));
+            ax += (pointerDx / pointerDistance) * pressure;
+            ay += (pointerDy / pointerDistance) * pressure;
+            // The passing hand also drags a small wake behind it.
+            ax += pointer.velocityX / Math.max(1, width) * closeness * 0.055;
+            ay += pointer.velocityY / Math.max(1, height) * closeness * 0.055;
+            firefly.startled = Math.max(firefly.startled, closeness * 0.9);
+          }
+        }
+
+        const margin = -0.03;
+        if (firefly.x < margin) ax += (margin - firefly.x) * 2.15;
+        if (firefly.x > 1 - margin) ax -= (firefly.x - (1 - margin)) * 2.15;
+        if (firefly.y < margin) ay += (margin - firefly.y) * 2.15;
+        if (firefly.y > 1 - margin) ay -= (firefly.y - (1 - margin)) * 2.15;
+        if (firefly.z < 0.24) az += (0.24 - firefly.z) * 0.8;
+        if (firefly.z > 1.04) az -= (firefly.z - 1.04) * 0.8;
+
+        const flutter = 1 + Math.sin(elapsed * 3.1 + firefly.seed) * 0.08;
+        firefly.vx += (ax + gust * 0.022 * flutter) * dt;
+        firefly.vy += (ay + gust * Math.sin(wander) * 0.004) * dt;
+        firefly.vz += az * dt;
+
+        const drag = firefly.restTimer > 0 && firefly.startled < 0.1 ? Math.exp(-4.5 * dt) : Math.exp(-1.15 * dt);
+        firefly.vx *= drag;
+        firefly.vy *= drag;
+        firefly.vz *= drag;
+
+        const speed = Math.hypot(firefly.vx, firefly.vy);
+        const maximumSpeed = (0.07 * firefly.speedMult) + firefly.startled * 0.15;
+        if (speed > maximumSpeed) {
+          firefly.vx *= maximumSpeed / speed;
+          firefly.vy *= maximumSpeed / speed;
+        }
+
+        firefly.x += firefly.vx * dt;
+        firefly.y += firefly.vy * dt;
+        firefly.z += firefly.vz * dt;
+        firefly.x = clamp(firefly.x, -0.05, 1.05);
+        firefly.y = clamp(firefly.y, -0.05, 1.05);
+        firefly.z = clamp(firefly.z, 0.20, 1.08);
+
+        if (speed > 0.002) {
+          const desiredFacing = Math.atan2(firefly.vy, firefly.vx) + Math.PI;
+          let turn = desiredFacing - firefly.facing;
+          turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+          firefly.facing += turn * Math.min(1, dt * (3.4 + firefly.startled * 2.0));
+          firefly.bank += (clamp(turn * 1.8, -0.8, 0.8) - firefly.bank) * Math.min(1, dt * 4.5);
+        }
+
+        firefly.wingPhase = (firefly.wingPhase + dt * (45 + speed * 260 + firefly.startled * 22)) % TAU;
+        firefly.startled *= Math.exp(-1.15 * dt);
+      }
+
+      function drawWing(ctx, side, length, widthValue, beat, alpha) {
+        ctx.save();
+        ctx.scale(1, side);
+        ctx.rotate(-0.24 - beat * 0.24);
+        ctx.beginPath();
+        ctx.moveTo(-length * 0.05, 0);
+        ctx.bezierCurveTo(length * 0.18, -widthValue * 0.36, length * 0.83, -widthValue * 0.22, length, 0);
+        ctx.bezierCurveTo(length * 0.72, widthValue * 0.42, length * 0.20, widthValue * 0.40, -length * 0.05, 0);
+        const wingGradient = ctx.createLinearGradient(0, 0, length, 0);
+        wingGradient.addColorStop(0, `rgba(178,153,103,${alpha * 0.50})`);
+        wingGradient.addColorStop(0.45, `rgba(224,214,178,${alpha * 0.28})`);
+        wingGradient.addColorStop(1, 'rgba(195,210,188,0)');
+        ctx.fillStyle = wingGradient;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(218,210,175,${alpha * 0.22})`;
+        ctx.lineWidth = 0.42;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawFirefly(firefly) {
+        const x = firefly.x * width;
+        const y = firefly.y * height;
+        const depthScale = 0.62 + firefly.z * 0.78;
+        const bodyLength = clamp(Math.min(width, height) * 0.0135 * depthScale, 7.2, 17.5) * globalScale;
+        const flash = flashIntensity(firefly);
+        const speed = Math.hypot(firefly.vx, firefly.vy);
+        const perspectiveOpacity = 0.42 + firefly.z * 0.54;
+
+        if (flash > 0.006) {
+          const glowSize = bodyLength * (5.8 + flash * 4.8);
+          const tailX = x + Math.cos(firefly.facing) * bodyLength * 0.43;
+          const tailY = y + Math.sin(firefly.facing) * bodyLength * 0.43;
+          context.save();
+          context.globalCompositeOperation = 'lighter';
+          context.globalAlpha = flash * perspectiveOpacity * 0.82;
+          context.drawImage(glowSprite, tailX - glowSize, tailY - glowSize, glowSize * 2, glowSize * 2);
+          context.restore();
+        }
+
+        context.save();
+        context.translate(x, y);
+        context.rotate(firefly.facing);
+        context.scale(depthScale, depthScale * (1 - Math.abs(firefly.bank) * 0.14));
+
+        const wingBeat = Math.sin(firefly.wingPhase);
+        const wingAlpha = clamp(0.16 + speed * 4.8 + firefly.startled * 0.12, 0.15, 0.43) * perspectiveOpacity;
+        drawWing(context, -1, bodyLength * 0.86, bodyLength * 0.42, wingBeat, wingAlpha);
+        drawWing(context, 1, bodyLength * 0.86, bodyLength * 0.42, -wingBeat, wingAlpha);
+
+        // Six threadlike legs; subtle because the insect remains in flight.
+        context.strokeStyle = `rgba(76,55,31,${0.38 * perspectiveOpacity})`;
+        context.lineWidth = Math.max(0.45, bodyLength * 0.045);
+        context.lineCap = 'round';
+        for (let pair = -1; pair <= 1; pair++) {
+          const legX = pair * bodyLength * 0.12;
+          context.beginPath();
+          context.moveTo(legX, -bodyLength * 0.09);
+          context.lineTo(legX + bodyLength * (0.12 + pair * 0.02), -bodyLength * 0.30);
+          context.stroke();
+          context.beginPath();
+          context.moveTo(legX, bodyLength * 0.09);
+          context.lineTo(legX + bodyLength * (0.12 + pair * 0.02), bodyLength * 0.30);
+          context.stroke();
+        }
+
+        // Dark convex wing covers and thorax preserve the body volume.
+        const shellGradient = context.createLinearGradient(0, -bodyLength * 0.16, 0, bodyLength * 0.16);
+        shellGradient.addColorStop(0, '#120d08');
+        shellGradient.addColorStop(0.40, '#49301a');
+        shellGradient.addColorStop(0.68, '#1d130c');
+        shellGradient.addColorStop(1, '#070504');
+        context.fillStyle = shellGradient;
+        context.beginPath();
+        context.ellipse(bodyLength * 0.05, 0, bodyLength * 0.43, bodyLength * 0.16, 0, 0, TAU);
+        context.fill();
+
+        context.strokeStyle = 'rgba(126,82,39,0.42)';
+        context.lineWidth = Math.max(0.35, bodyLength * 0.028);
+        context.beginPath();
+        context.moveTo(-bodyLength * 0.02, -bodyLength * 0.145);
+        context.lineTo(bodyLength * 0.38, -bodyLength * 0.04);
+        context.stroke();
+
+        const thoraxGradient = context.createRadialGradient(
+          -bodyLength * 0.28,
+          -bodyLength * 0.07,
+          0,
+          -bodyLength * 0.22,
+          0,
+          bodyLength * 0.28
+        );
+        thoraxGradient.addColorStop(0, '#6f4721');
+        thoraxGradient.addColorStop(0.38, '#2f1c0e');
+        thoraxGradient.addColorStop(1, '#090604');
+        context.fillStyle = thoraxGradient;
+        context.beginPath();
+        context.ellipse(-bodyLength * 0.27, 0, bodyLength * 0.27, bodyLength * 0.20, 0, 0, TAU);
+        context.fill();
+
+        context.fillStyle = '#080604';
+        context.beginPath();
+        context.ellipse(-bodyLength * 0.53, 0, bodyLength * 0.14, bodyLength * 0.13, 0, 0, TAU);
+        context.fill();
+
+        // Thin antennae become visible only when this individual is near camera depth.
+        context.strokeStyle = `rgba(104,75,41,${0.34 * perspectiveOpacity})`;
+        context.lineWidth = Math.max(0.28, bodyLength * 0.018);
+        for (const side of [-1, 1]) {
+          context.beginPath();
+          context.moveTo(-bodyLength * 0.60, side * bodyLength * 0.035);
+          context.quadraticCurveTo(
+            -bodyLength * 0.78,
+            side * bodyLength * 0.12,
+            -bodyLength * 0.89,
+            side * bodyLength * 0.20
+          );
+          context.stroke();
+        }
+
+        // The terminal abdominal lantern is emissive but still has a solid casing.
+        const lanternGradient = context.createLinearGradient(
+          bodyLength * 0.23,
+          -bodyLength * 0.12,
+          bodyLength * 0.54,
+          bodyLength * 0.12
+        );
+        const lanternAlpha = 0.32 + flash * 0.68;
+        lanternGradient.addColorStop(0, `rgba(91,84,22,${lanternAlpha})`);
+        lanternGradient.addColorStop(0.48, `rgba(211,241,62,${lanternAlpha})`);
+        lanternGradient.addColorStop(0.78, `rgba(244,255,144,${lanternAlpha})`);
+        lanternGradient.addColorStop(1, `rgba(68,55,12,${lanternAlpha})`);
+        context.fillStyle = lanternGradient;
+        context.beginPath();
+        context.ellipse(bodyLength * 0.39, 0, bodyLength * 0.18, bodyLength * 0.125, 0, 0, TAU);
+        context.fill();
+
+        if (flash > 0.04) {
+          context.globalCompositeOperation = 'lighter';
+          context.fillStyle = `rgba(235,255,126,${flash * 0.72})`;
+          context.beginPath();
+          context.ellipse(bodyLength * 0.43, 0, bodyLength * 0.105, bodyLength * 0.075, 0, 0, TAU);
+          context.fill();
+        }
+
+        context.restore();
+      }
+
+      function resize() {
+        width = Math.max(1, innerWidth);
+        height = Math.max(1, innerHeight);
+        pixelRatio = Math.min(devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      function reset() {
+        elapsed = 0;
+        gust = 0;
+        disturbance = 0;
+        for (let index = 0; index < fireflies.length; index++) {
+          Object.assign(fireflies[index], createFirefly(index));
+        }
+      }
+
+      function frame(now) {
+        const dt = Math.min(0.04, Math.max(0, (now - lastTime) / 1000));
+        lastTime = now;
+        if (!paused) {
+          elapsed += dt;
+          gust *= Math.exp(-0.72 * dt);
+          disturbance *= Math.exp(-1.65 * dt);
+          pointer.velocityX *= Math.exp(-7.5 * dt);
+          pointer.velocityY *= Math.exp(-7.5 * dt);
+          fireflies.forEach((firefly, index) => updateFirefly(firefly, dt, index));
+        }
+
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.globalCompositeOperation = 'source-over';
+        context.globalAlpha = 1;
+        context.clearRect(0, 0, width, height);
+
+        // Farther individuals render first, maintaining believable occlusion.
+        const renderOrder = [...fireflies].sort((a, b) => a.z - b.z);
+        for (const firefly of renderOrder) drawFirefly(firefly);
+
+        requestAnimationFrame(frame);
+      }
+
+      function movePointer(event) {
+        const now = performance.now();
+        const dt = clamp((now - pointer.lastMove) / 1000, 0.008, 0.08);
+        const x = clamp(event.clientX, 0, width);
+        const y = clamp(event.clientY, 0, height);
+        if (pointer.active) {
+          pointer.velocityX = (x - pointer.x) / dt;
+          pointer.velocityY = (y - pointer.y) / dt;
+          const speed = Math.hypot(pointer.velocityX, pointer.velocityY);
+          if (speed > 120) {
+            disturbAt(x, y, clamp(115 + speed * 0.035, 120, 235), clamp(speed / 1350, 0.12, 0.82));
+          }
+        }
+        pointer.previousX = pointer.x;
+        pointer.previousY = pointer.y;
+        pointer.x = x;
+        pointer.y = y;
+        pointer.active = true;
+        pointer.lastMove = now;
+      }
+
+      addEventListener('resize', resize, { passive: true });
+      addEventListener('pointermove', movePointer, { passive: true });
+      addEventListener('pointerdown', event => {
+        movePointer(event);
+        pointer.down = true;
+        canvas.setPointerCapture?.(event.pointerId);
+        disturbAt(pointer.x, pointer.y, 280, 1.0);
+      }, { passive: true });
+      addEventListener('pointerup', event => {
+        movePointer(event);
+        pointer.down = false;
+        canvas.releasePointerCapture?.(event.pointerId);
+      }, { passive: true });
+      addEventListener('pointercancel', () => {
+        pointer.down = false;
+        pointer.active = false;
+      }, { passive: true });
+      addEventListener('pointerleave', event => {
+        if (event.pointerType === 'mouse' && !pointer.down) pointer.active = false;
+      }, { passive: true });
+      addEventListener('keydown', event => {
+        const key = event.key.toLowerCase();
+        if (event.code === 'Space') {
+          paused = !paused;
+          event.preventDefault();
+        } else if (key === 'g') {
+          gust = Math.max(gust, 1.0);
+        } else if (key === 'r') {
+          reset();
+        } else if (key === 'f') {
+          document.documentElement.requestFullscreen?.();
+        }
+      });
+
+      resize();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

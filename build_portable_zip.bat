@@ -14,15 +14,15 @@ echo    OHVERLAY v4.0 - Portable ZIP Builder
 echo   =============================================
 echo.
 
-REM Build portable app if not already built
-if not exist "dist\Ohverlay\Ohverlay.exe" (
-    echo  Building portable app first...
-    call build_windows.bat
-    if errorlevel 1 (
-        echo  [ERROR] Build failed.
-        pause
-        exit /b 1
-    )
+REM Always rebuild first so the ZIP matches the current source tree
+echo  Rebuilding portable app first...
+set "OHVERLAY_NO_PAUSE=1"
+call build_windows.bat
+set "OHVERLAY_NO_PAUSE="
+if errorlevel 1 (
+    echo  [ERROR] Build failed.
+    pause
+    exit /b 1
 )
 
 echo  Creating portable ZIP...

@@ -2,8 +2,6 @@
 
 <div align="center">
 
-<img src="https://via.placeholder.com/800x200/4C1D95/E9D5FF?text=FUTOL" alt="Futol Logo" width="100%">
-
 **Building calm, ethical technology for better digital workspaces.**
 
 [![Ethics](https://img.shields.io/badge/Ethics-Privacy--First-9333EA.svg?style=for-the-badge)]()
@@ -80,65 +78,19 @@ In an age of attention-economy apps and data-hungry platforms, we choose a diffe
 
 ## 🚀 Current Projects
 
-### 🐟 Ohverlay v4.0 - ZenFish
-**AI Desktop Companion**
+### Ohverlay v4.0
+**A professional desktop overlay platform**
 
-A lifelike AI Betta fish that swims across your monitors, providing gentle wellness reminders and calm companionship without intrusion.
+A comprehensive desktop ecosystem built around technical coordination, desktop living overlays, productivity, and ethical Blue AI.
 
 **Key Features:**
 - Multi-monitor support
-- AI-powered personality (Claude/OpenAI)
+- AI-powered chat and vision capabilities
 - Privacy-first (local-first architecture)
-- Runs on 16GB RAM systems
+- Transparent, click-through HTML overlays
 - MIT Licensed
 
-🔗 [github.com/ikel-eidra/ohverlay-v4](https://github.com/ikel-eidra/ohverlay-v4)
-
----
-
-## 📊 Impact Metrics
-
-| Metric | Value |
-|--------|-------|
-| 🌍 **Global Users** | 10,000+ |
-| 💾 **Data Points Collected** | 0 (by default) |
-| ⚡ **Avg. Resource Usage** | <5% CPU |
-| 🧠 **Wellness Score Improvement** | 85% users report reduced stress |
-| 🌱 **Carbon Footprint** | Minimal (efficient code) |
-
----
-
-## 💰 Grant & Investment Readiness
-
-### Target Opportunities
-
-| Organization | Type | Amount | Status |
-|--------------|------|--------|--------|
-| NSF SBIR | Federal Grant | $300K | Ready |
-| Mozilla MOSS | Foundation | $50K | Ready |
-| ACF Innovation | Health Grant | $100K | Ready |
-| DICT Philippines | Government | ₱2M | Ready |
-| YGAP | Social Enterprise | $20K | Ready |
-
-### Business Model
-
-**Freemium with Ethics:**
-- ✅ Core product: Free & open source
-- 💼 Enterprise: Team wellness dashboards
-- 🎨 Marketplace: Community skins/themes
-- 🤝 Services: Custom integrations
-
----
-
-## 🤝 Partnership Opportunities
-
-We're seeking partners who share our values:
-
-- 🏢 **Corporate Wellness Programs**
-- 🏫 **Educational Institutions**
-- 🏥 **Healthcare Providers**
-- 🌐 **Open Source Foundations**
-- 🤖 **AI Ethics Organizations**
+🔗 [github.com/michaelfutol/ohverlay-v4](https://github.com/michaelfutol/ohverlay-v4)
 
 ---
 
@@ -148,9 +100,7 @@ We're seeking partners who share our values:
 
 **Futol Ethical Technology Ecosystems**
 
-📧 hello@futol.tech  
-🌐 https://futol.tech  
-🐙 github.com/ikel-eidra  
+🐙 github.com/michaelfutol  
 
 ---
 

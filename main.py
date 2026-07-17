@@ -9,9 +9,11 @@ By Futol Ethical Technology Ecosystems
 
 import sys
 import signal
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTimer, QBuffer, QByteArray
-from PySide6.QtGui import QGuiApplication, QCursor
+from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
+from PySide6.QtGui import QGuiApplication, QCursor, QIcon, QAction
+from PySide6.QtCore import QTimer, QBuffer, QByteArray, QThread, Qt
+
+from modules.inactivity_tracker import InactivityTracker
 
 from engine.brain import BehavioralReactor
 from engine.aquarium import MonitorManager
@@ -35,6 +37,15 @@ class OhverlayApp:
     """Main application controller — Overlay Platform."""
 
     def __init__(self):
+        # Fix transparent window rendering bugs on Windows with Chromium QWebEngine
+        sys.argv.extend([
+            "--disable-gpu-compositing",
+            "--enable-gpu-rasterization",
+            "--ignore-gpu-blocklist",
+            "--num-raster-threads=4",
+            "--allow-file-access-from-files",
+            "--autoplay-policy=no-user-gesture-required"
+        ])
         self.app = QApplication(sys.argv)
         self.app.setApplicationName("Ohverlay v4.0")
         self.app.setOrganizationName("Futol Ethical Technology Ecosystems")
@@ -91,6 +102,7 @@ class OhverlayApp:
     def _init_updater(self):
         """Initialize auto-update checker."""
         self.updater = AppUpdater(config=self.config)
+        self.updater.enabled = False # FORCE DISABLED FOR LOCAL DEV
         self._update_timer = None
 
         if not self.updater.enabled:
@@ -152,8 +164,26 @@ class OhverlayApp:
             # Restore previously active overlays
             self.overlay_manager.restore_state()
             logger.info("Overlay Manager ready — HTML overlays available")
+            
+            # Setup screensaver
+            self._init_screensaver()
         else:
             logger.warning("Overlay Manager: QWebEngine not installed — HTML overlays disabled")
+
+    def _init_screensaver(self):
+        # 30 minutes (1800 seconds) inactivity timeout
+        self.inactivity_tracker = InactivityTracker(timeout_seconds=1800, parent=None)
+        self.inactivity_tracker.screensaver_triggered.connect(self._on_screensaver_triggered)
+        self.inactivity_tracker.screensaver_dismissed.connect(self._on_screensaver_dismissed)
+        logger.info("Screensaver inactive tracking started (30m timeout)")
+
+    def _on_screensaver_triggered(self):
+        logger.info("Screensaver triggered by inactivity")
+        self.overlay_manager.open_overlay("fireflies")
+
+    def _on_screensaver_dismissed(self):
+        logger.info("Screensaver dismissed by user activity")
+        self.overlay_manager.close_overlay("fireflies")
 
     def _init_tray(self):
         """Create system tray icon with settings menu."""
@@ -169,6 +199,8 @@ class OhverlayApp:
         self.tray.signals.webhook_toggled.connect(self._on_webhook_toggled)
         self.tray.signals.llm_key_set.connect(self._on_llm_key_set)
         self.tray.signals.overlay_toggled.connect(self._on_overlay_toggled)
+        self.tray.signals.fish_settings_changed.connect(self._on_fish_settings_changed)
+        self.tray.signals.debug_canvas_extents.connect(self._on_debug_canvas_extents)
         self.tray.show()
 
     def _init_hotkeys(self):
@@ -183,15 +215,42 @@ class OhverlayApp:
             def on_sanctuary():
                 QTimer.singleShot(0, self._on_sanctuary_toggled)
 
+            def on_interactivity():
+                QTimer.singleShot(0, self._on_toggle_interactivity)
+
+            def on_feed():
+                QTimer.singleShot(0, self._on_feed_hotkey)
+
+            def format_hotkey(hotkey_str):
+                # pynput expects '<ctrl>+<alt>+h' not '<ctrl>+<alt>+<h>'
+                parts = hotkey_str.split('+')
+                formatted = []
+                for p in parts:
+                    if p in ('ctrl', 'alt', 'shift', 'cmd'):
+                        formatted.append(f"<{p}>")
+                    else:
+                        formatted.append(p)
+                return "+".join(formatted)
+
+            hotkey_vis = format_hotkey(self.config.get('hotkeys', 'toggle_visibility'))
+            hotkey_sanc = format_hotkey(self.config.get('hotkeys', 'toggle_sanctuary'))
+            raw_int = self.config.get('hotkeys', 'toggle_interactivity')
+            if not raw_int:
+                raw_int = 'ctrl+alt+i'
+            hotkey_int = format_hotkey(raw_int)
+            hotkey_feed = format_hotkey(self.config.get('hotkeys', 'feed_fish') or 'ctrl+alt+f')
+
             hotkeys = {
-                '<ctrl>+<alt>+h': on_visibility,
-                '<ctrl>+<alt>+s': on_sanctuary,
+                hotkey_vis: on_visibility,
+                hotkey_sanc: on_sanctuary,
+                hotkey_int: on_interactivity,
+                hotkey_feed: on_feed,
             }
 
             self._hotkey_listener = keyboard.GlobalHotKeys(hotkeys)
             self._hotkey_listener.daemon = True
             self._hotkey_listener.start()
-            logger.info("Global hotkeys registered (Ctrl+Alt+H=Toggle Overlays, S=Sanctuary)")
+            logger.info("Global hotkeys registered (Ctrl+Alt+H=Toggle Overlays, S=Sanctuary, I=Interact)")
         except ImportError:
             logger.warning("pynput not available — global hotkeys disabled")
         except Exception as e:
@@ -281,9 +340,32 @@ class OhverlayApp:
         else:
             self.bubble_system.queue_message(f"{name} overlay closed", "ambient")
 
+    def _on_fish_settings_changed(self):
+        """Handle fish settings changes from the tray menu and reload overlays."""
+        logger.info("Fish settings changed. Reloading active fish overlays...")
+        for overlay_id in ["neon-tetra", "glass-fish"]:
+            if self.overlay_manager.is_active(overlay_id):
+                self.overlay_manager.close_overlay(overlay_id, save_state=False)
+                self.overlay_manager.open_overlay(overlay_id)
+
+    def _on_feed_hotkey(self):
+        """Handle Ctrl+Alt+F to activate interactive spoon feeding mode."""
+        logger.info("Feeding hotkey triggered.")
+        if self.overlay_manager:
+            self.overlay_manager.start_feeding_mode()
+            self.bubble_system.queue_message("Feeding mode active! Click to drop food.", "ambient")
+
     def _on_toggle_visibility(self):
         """Toggle visibility of all overlays."""
         self.overlay_manager.toggle_all_visibility()
+
+    def _on_toggle_interactivity(self):
+        """Toggle interactivity for interactive overlays."""
+        new_state = self.overlay_manager.toggle_interactivity()
+        if new_state:
+            self.bubble_system.queue_message("Interaction Mode ON", "ambient")
+        else:
+            self.bubble_system.queue_message("Interaction Mode OFF", "ambient")
 
     def _on_sanctuary_toggled(self):
         enabled = self.sanctuary.toggle()
@@ -383,6 +465,26 @@ class OhverlayApp:
     def run(self):
         """Start the application event loop."""
         return self.app.exec()
+
+
+    def _on_debug_canvas_extents(self):
+        """Inject CSS into all active overlays to visualize their canvas boundaries."""
+        logger.info("Executing debug canvas extent script on all overlays")
+        js_code = """
+        if (!window.__debug_border_active) {
+            window.document.body.style.border = "5px solid rgba(255, 0, 0, 0.5)";
+            window.document.body.style.backgroundColor = "rgba(255, 0, 0, 0.1)";
+            window.document.body.style.boxSizing = "border-box";
+            window.__debug_border_active = true;
+        } else {
+            window.document.body.style.border = "none";
+            window.document.body.style.backgroundColor = "transparent";
+            window.__debug_border_active = false;
+        }
+        """
+        for win in self.overlay_manager._active.values():
+            if win.web_view and win.web_view.page():
+                win.web_view.page().runJavaScript(js_code)
 
 
 def main():

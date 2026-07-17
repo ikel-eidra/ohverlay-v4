@@ -16,7 +16,7 @@ VSVersionInfo(
         '040904B0',
         [
           StringStruct('CompanyName', 'Futol Ethical Technology Ecosystems'),
-          StringStruct('FileDescription', 'Ohverlay - ZenFish Desktop Companion'),
+          StringStruct('FileDescription', 'Ohverlay Desktop Overlay Platform'),
           StringStruct('FileVersion', '4.0.0.0'),
           StringStruct('InternalName', 'Ohverlay'),
           StringStruct('LegalCopyright', '© Futol Ethical Technology Ecosystems, Sta. Magdalena, Sorsogon'),

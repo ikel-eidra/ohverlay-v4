@@ -205,3 +205,12 @@ temp/
 # Ohverlay runtime
 ohverlay.pid
 ohverlay.lock
+
+# Node
+node_modules/
+package-lock.json
+
+# Ohverlay specific
+ecosystem.js
+*.rar
+.venv*/

@@ -1,4 +1,12 @@
-from config.settings import Settings, DEFAULT_CONFIG
+import json
+
+import config.settings as settings_module
+from config.settings import (
+    DEFAULT_CONFIG,
+    Settings,
+    get_app_data_dir,
+    get_updates_dir,
+)
 
 
 def test_default_config_structure():
@@ -20,10 +28,12 @@ def test_settings_deep_merge():
     assert result["e"] == 5
 
 
-def test_settings_get_set():
+def test_settings_get_set(tmp_path, monkeypatch):
+    monkeypatch.setenv("OHVERLAY_HOME", str(tmp_path / ".ohverlay"))
     settings = Settings()
     settings.set("fish", "primary_color", [255, 0, 0])
     assert settings.get("fish", "primary_color") == [255, 0, 0]
+    assert (tmp_path / ".ohverlay" / "config.json").exists()
 
 
 def test_default_betta_palette_present():
@@ -36,9 +46,9 @@ def test_fish_visual_tuning_defaults_present():
     assert DEFAULT_CONFIG["fish"]["eye_tracking_damping"] == 0.18
 
 
-def test_app_prelaunch_defaults_present():
-    assert DEFAULT_CONFIG["app"]["public_website_enabled"] is False
-    assert DEFAULT_CONFIG["app"]["website_release_stage"] == "private_prelaunch"
+def test_app_release_defaults_present():
+    assert DEFAULT_CONFIG["app"]["public_website_enabled"] is True
+    assert DEFAULT_CONFIG["app"]["website_release_stage"] == "beta"
 
 
 def test_ambient_leaf_defaults_present():
@@ -46,3 +56,30 @@ def test_ambient_leaf_defaults_present():
     assert DEFAULT_CONFIG["ambient"]["falling_leaves_interval_seconds"] == 300
     assert DEFAULT_CONFIG["ambient"]["falling_leaves_burst_min"] == 6
     assert DEFAULT_CONFIG["ambient"]["falling_leaves_burst_max"] == 8
+
+
+def test_app_data_helpers_respect_env_override(tmp_path, monkeypatch):
+    app_home = tmp_path / "custom-ohverlay-home"
+    monkeypatch.setenv("OHVERLAY_HOME", str(app_home))
+    assert get_app_data_dir() == str(app_home)
+    assert get_updates_dir() == str(app_home / "updates")
+
+
+def test_settings_migrate_from_legacy_zenfish_dir(tmp_path, monkeypatch):
+    new_dir = tmp_path / ".ohverlay"
+    legacy_dir = tmp_path / ".zenfish"
+    legacy_dir.mkdir()
+    legacy_config = legacy_dir / "config.json"
+    legacy_config.write_text(
+        json.dumps({"modules": {"news": True}, "overlays": {"aurora": True}}),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(settings_module, "get_app_data_dir", lambda: str(new_dir))
+    monkeypatch.setattr(settings_module, "get_legacy_app_data_dir", lambda: str(legacy_dir))
+
+    settings = Settings()
+
+    assert settings.get("modules", "news") is True
+    assert settings.get("overlays", "aurora") is True
+    assert (new_dir / "config.json").exists()

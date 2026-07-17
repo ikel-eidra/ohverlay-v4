@@ -1,0 +1,1600 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ecosystem</title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    canvas { display: block; width: 100%; height: 100%; cursor: none; }
+  </style>
+</head>
+<body>
+  <canvas id="ecosystem"></canvas>
+  <script>
+    'use strict';
+    const canvas = document.getElementById('ecosystem');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    const context = ctx;
+    
+    let shared = {
+      width: 1, height: 1, dpr: 1, elapsed: 0,
+      pointer: { x: -1000, y: -1000, active: false, down: false, velocityX: 0, velocityY: 0 },
+      // physics sharing
+      dragonflies: [],
+      fireflies: [],
+      dandelions: []
+    };
+    
+    // utility functions
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+    function lerp(a, b, amount) { return a + (b - a) * amount; }
+    function seeded(seed, offset) {
+      let x = Math.sin(seed * 29.3 + offset * 17.1) * 10000;
+      return x - Math.floor(x);
+    }
+    function angleDifference(a, b) {
+      const TAU = Math.PI * 2;
+      let diff = (b - a) % TAU;
+      if (diff < -Math.PI) diff += TAU;
+      if (diff > Math.PI) diff -= TAU;
+      return diff;
+    }
+
+    // Insert combined JS here
+    function init_dandelion(shared) {
+
+
+      
+      
+      const BLACK = '#000000';
+      const PX_PER_MM = 96 / 25.4;
+      const DISPLAY_HEIGHT = 17 * 2 * PX_PER_MM;
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const globalScale = parseFloat(urlParams.get('scale')) || 1.0;
+      
+      const UNIT = (DISPLAY_HEIGHT / 136) * 0.8 * globalScale;
+      const TAU = Math.PI * 2;
+      const REFERENCE_FILAMENTS = [{"c1":[-10.48,-3.83],"c2":[-35.67,-7.79],"e":[-50.7,-12.09],"a":0.5,"w":0.29,"p":0.0,"k":0.7},{"c1":[-10.36,-4.34],"c2":[-36.97,-6.58],"e":[-50.7,-14.43],"a":0.87,"w":0.31,"p":2.4,"k":0.99},{"c1":[-9.0,-4.69],"c2":[-30.85,-11.19],"e":[-44.07,-15.99],"a":0.83,"w":0.33,"p":4.8,"k":0.94},{"c1":[-11.12,-6.06],"c2":[-42.46,-7.81],"e":[-50.7,-22.23],"a":0.79,"w":0.35,"p":0.917,"k":0.89},{"c1":[-10.52,-6.4],"c2":[-38.82,-11.91],"e":[-50.7,-23.79],"a":0.75,"w":0.37,"p":3.317,"k":0.84},{"c1":[-8.26,-6.4],"c2":[-26.14,-17.75],"e":[-38.22,-23.79],"a":0.71,"w":0.39,"p":5.717,"k":0.79},{"c1":[-8.24,-7.26],"c2":[-34.09,-14.64],"e":[-41.34,-27.69],"a":0.67,"w":0.41,"p":1.834,"k":0.74},{"c1":[-9.61,-7.69],"c2":[-47.01,-14.98],"e":[-42.12,-29.64],"a":0.63,"w":0.43,"p":4.234,"k":1.03},{"c1":[-9.24,-8.72],"c2":[-41.53,-17.71],"e":[-44.85,-34.32],"a":0.59,"w":0.45,"p":0.351,"k":0.98},{"c1":[-8.49,-8.12],"c2":[-27.56,-22.13],"e":[-39.39,-31.59],"a":0.55,"w":0.3,"p":2.751,"k":0.93},{"c1":[-8.55,-8.29],"c2":[-29.89,-19.87],"e":[-38.22,-32.37],"a":0.51,"w":0.32,"p":5.151,"k":0.88},{"c1":[-9.26,-8.72],"c2":[-29.38,-21.7],"e":[-38.22,-34.32],"a":0.88,"w":0.34,"p":1.268,"k":0.83},{"c1":[-7.33,-8.98],"c2":[-27.26,-23.41],"e":[-36.66,-35.49],"a":0.84,"w":0.36,"p":3.668,"k":0.78},{"c1":[-6.45,-9.49],"c2":[-29.13,-23.25],"e":[-32.37,-37.83],"a":0.8,"w":0.38,"p":6.068,"k":0.73},{"c1":[-4.64,-7.43],"c2":[-23.4,-17.41],"e":[-23.4,-28.47],"a":0.76,"w":0.4,"p":2.184,"k":1.02},{"c1":[-5.82,-7.52],"c2":[-11.62,-28.86],"e":[-22.62,-28.86],"a":0.72,"w":0.42,"p":4.584,"k":0.97},{"c1":[-5.98,-10.26],"c2":[-23.61,-27.23],"e":[-29.25,-41.34],"a":0.68,"w":0.44,"p":0.701,"k":0.92},{"c1":[-4.73,-10.01],"c2":[-22.56,-26.2],"e":[-25.35,-40.17],"a":0.64,"w":0.29,"p":3.101,"k":0.87},{"c1":[-6.13,-11.21],"c2":[-26.91,-29.74],"e":[-26.91,-45.63],"a":0.6,"w":0.31,"p":5.501,"k":0.82},{"c1":[-4.0,-8.46],"c2":[-15.06,-22.27],"e":[-18.33,-33.15],"a":0.56,"w":0.33,"p":1.618,"k":0.77},{"c1":[-4.27,-10.18],"c2":[-13.02,-28.06],"e":[-15.6,-40.95],"a":0.52,"w":0.35,"p":4.018,"k":0.72},{"c1":[-2.03,-8.12],"c2":[-16.93,-23.92],"e":[-10.53,-31.59],"a":0.89,"w":0.37,"p":0.135,"k":1.01},{"c1":[-3.0,-8.03],"c2":[-3.62,-23.54],"e":[-9.75,-31.2],"a":0.85,"w":0.39,"p":2.535,"k":0.96},{"c1":[-2.99,-10.18],"c2":[-8.49,-28.38],"e":[-9.75,-40.95],"a":0.81,"w":0.41,"p":4.935,"k":0.91},{"c1":[-0.16,-8.63],"c2":[-2.96,-23.78],"e":[-1.95,-33.93],"a":0.77,"w":0.43,"p":1.052,"k":0.86},{"c1":[1.7,-8.03],"c2":[2.05,-21.95],"e":[3.9,-31.2],"a":0.73,"w":0.45,"p":3.452,"k":0.81},{"c1":[2.34,-10.09],"c2":[6.15,-28.57],"e":[9.75,-40.56],"a":0.69,"w":0.3,"p":5.852,"k":0.76},{"c1":[2.08,-9.66],"c2":[6.7,-27.14],"e":[10.14,-38.61],"a":0.65,"w":0.32,"p":1.969,"k":0.71},{"c1":[4.0,-9.58],"c2":[14.27,-27.4],"e":[21.84,-38.22],"a":0.61,"w":0.34,"p":4.369,"k":1.0},{"c1":[4.96,-9.24],"c2":[18.11,-25.25],"e":[24.96,-36.66],"a":0.57,"w":0.36,"p":0.486,"k":0.95},{"c1":[5.77,-7.61],"c2":[16.13,-21.2],"e":[24.18,-29.25],"a":0.53,"w":0.38,"p":2.886,"k":0.9},{"c1":[6.34,-7.26],"c2":[17.48,-19.38],"e":[24.96,-27.69],"a":0.9,"w":0.4,"p":5.286,"k":0.85},{"c1":[4.46,-4.6],"c2":[12.49,-10.04],"e":[16.38,-15.6],"a":0.86,"w":0.42,"p":1.403,"k":0.8},{"c1":[5.48,-5.29],"c2":[14.78,-13.07],"e":[21.06,-18.72],"a":0.82,"w":0.44,"p":3.803,"k":0.75},{"c1":[5.66,-5.03],"c2":[15.9,-11.61],"e":[21.84,-17.55],"a":0.78,"w":0.29,"p":6.203,"k":0.7},{"c1":[6.48,-6.32],"c2":[21.79,-17.28],"e":[31.98,-23.4],"a":0.74,"w":0.31,"p":2.32,"k":0.99},{"c1":[8.6,-6.49],"c2":[25.67,-17.35],"e":[37.05,-24.18],"a":0.7,"w":0.33,"p":4.72,"k":0.94},{"c1":[10.12,-6.15],"c2":[29.29,-16.21],"e":[42.12,-22.62],"a":0.66,"w":0.35,"p":0.837,"k":0.89},{"c1":[9.08,-4.52],"c2":[27.52,-10.11],"e":[39.0,-15.21],"a":0.62,"w":0.37,"p":3.237,"k":0.84},{"c1":[8.49,-3.92],"c2":[24.44,-8.37],"e":[34.71,-12.48],"a":0.58,"w":0.39,"p":5.637,"k":0.79},{"c1":[9.42,-4.26],"c2":[30.5,-8.03],"e":[42.51,-14.04],"a":0.54,"w":0.41,"p":1.754,"k":0.74},{"c1":[8.11,-3.57],"c2":[27.68,-10.92],"e":[40.17,-10.92],"a":0.5,"w":0.43,"p":4.153,"k":1.03},{"c1":[8.88,-2.8],"c2":[31.23,-3.56],"e":[44.07,-7.41],"a":0.87,"w":0.45,"p":0.27,"k":0.98},{"c1":[8.69,-2.03],"c2":[28.18,-2.19],"e":[40.17,-3.9],"a":0.83,"w":0.3,"p":2.67,"k":0.93},{"c1":[7.86,-1.08],"c2":[23.12,2.32],"e":[32.76,0.39],"a":0.79,"w":0.32,"p":5.07,"k":0.88},{"c1":[7.42,-0.83],"c2":[22.42,0.6],"e":[31.98,1.56],"a":0.75,"w":0.34,"p":1.187,"k":0.83},{"c1":[8.32,-0.23],"c2":[26.68,4.29],"e":[38.22,4.29],"a":0.71,"w":0.36,"p":3.587,"k":0.78},{"c1":[5.51,0.8],"c2":[18.4,8.97],"e":[26.91,8.97],"a":0.67,"w":0.38,"p":5.987,"k":0.73}];
+
+      let width = 1;
+      let height = 1;
+      let dpr = 1;
+      let elapsed = 0;
+      let lastTime = performance.now();
+      let paused = false;
+      let globalGust = 0;
+      let fitScale = 1;
+      let seeds = [];
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function lerp(a, b, amount) {
+        return a + (b - a) * amount;
+      }
+
+      function makeSeed(x, y, vx, vy, phase, size, angle) {
+        const variation = Math.random(); // Used to make each seed unique
+        shared.dandelions = seeds; shared.addDandelionGust = (g) => { globalGust += g; }; return {
+          x, y, vx, vy, phase, size, angle, variation,
+          angularVelocity: 0,
+          filaments: REFERENCE_FILAMENTS.map((source, index) => {
+            // Apply slight random noise to each fiber's endpoints based on the seed's variation
+            const scale = 0.85 + (variation * 0.3) + (Math.sin(index * 1.7 + phase) * 0.15);
+            shared.dandelions = seeds; shared.addDandelionGust = (g) => { globalGust += g; }; return {
+              ...source,
+              e: [source.e[0] * scale, source.e[1] * scale],
+              c1: [source.c1[0] * scale, source.c1[1] * scale],
+              c2: [source.c2[0] * scale, source.c2[1] * scale],
+              depth: Math.sin(source.p + phase * 0.19),
+              deflection: 0,
+              deflectionVelocity: 0,
+              index
+            };
+          })
+        };
+      }
+
+      function seedScale(seed) {
+        return UNIT * fitScale * seed.size;
+      }
+
+      function createSeeds() {
+        seeds = [
+          makeSeed(width * 0.23, height * 0.31, 8.5, 3.5, 0.2, 0.94, -0.11),
+          makeSeed(width * 0.56, height * 0.57, -6.0, 4.0, 2.6, 1.03, 0.16),
+          makeSeed(width * 0.79, height * 0.27, 4.0, 5.5, 4.8, 0.89, -0.04)
+        ];
+        for (const seed of seeds) constrainSeed(seed);
+      }
+
+      function resize() {
+        const oldWidth = width || innerWidth;
+        const oldHeight = height || innerHeight;
+        const positions = seeds.map(seed => [seed.x / oldWidth, seed.y / oldHeight]);
+
+        width = Math.max(1, innerWidth);
+        height = Math.max(1, innerHeight);
+        dpr = Math.min(devicePixelRatio || 1, 2.5);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        fitScale = Math.min(1, width / 620, height / 480);
+
+        if (!seeds.length) {
+          createSeeds();
+        } else {
+          seeds.forEach((seed, index) => {
+            seed.x = positions[index][0] * width;
+            seed.y = positions[index][1] * height;
+            constrainSeed(seed);
+          });
+        }
+      }
+
+      function reset() {
+        elapsed = 0;
+        globalGust = 0;
+        createSeeds();
+      }
+
+      function extents(seed) {
+        const s = seedScale(seed);
+        shared.dandelions = seeds; shared.addDandelionGust = (g) => { globalGust += g; }; return { x: 56 * s, top: 52 * s, bottom: 102 * s };
+      }
+
+      function constrainSeed(seed) {
+        const e = extents(seed);
+        seed.x = clamp(seed.x, e.x, width - e.x);
+        seed.y = clamp(seed.y, e.top, height - e.bottom);
+      }
+
+      function airAt(seed) {
+        const nx = seed.x / Math.max(width, 1);
+        const ny = seed.y / Math.max(height, 1);
+        const t = elapsed + seed.phase;
+        shared.dandelions = seeds; shared.addDandelionGust = (g) => { globalGust += g; }; return {
+          x:
+            7.6 * Math.sin(t * 0.31 + ny * 5.4) +
+            4.1 * Math.sin(t * 0.79 - nx * 6.0 + seed.phase) +
+            1.7 * Math.sin(t * 1.53 + nx * 3.1),
+          y:
+            4.2 * Math.sin(t * 0.27 + nx * 5.0 + 0.5) +
+            2.3 * Math.sin(t * 0.89 + ny * 6.7 + seed.phase) +
+            1.1 * Math.sin(t * 1.47 - nx * 2.6)
+        };
+      }
+
+      function updateSeed(seed, dt) {
+        const air = airAt(seed);
+        const gust = globalGust * (0.80 + 0.20 * Math.sin(elapsed * 3.8 + seed.phase));
+        const personalDrift = Math.sin(seed.phase * 1.9) * 3.2;
+        const desiredVx = personalDrift + air.x + gust;
+        const desiredVy = 5.8 + air.y;
+        const response = 1 - Math.exp(-0.82 * dt);
+
+        seed.vx += (desiredVx - seed.vx) * response;
+        seed.vy += (desiredVy - seed.vy) * response;
+
+        const thermal = Math.max(0, Math.sin(elapsed * 0.21 + seed.phase + seed.x / Math.max(width, 1) * 5.1));
+        seed.vy -= thermal * 4.3 * dt;
+
+        const e = extents(seed);
+        const edgeBand = Math.max(84, Math.min(width, height) * 0.13);
+        const left = seed.x - e.x;
+        const right = width - e.x - seed.x;
+        const top = seed.y - e.top;
+        const bottom = height - e.bottom - seed.y;
+
+        if (left < edgeBand) seed.vx += 34 * (1 - left / edgeBand) * dt;
+        if (right < edgeBand) seed.vx -= 38 * (1 - right / edgeBand) * dt;
+        if (top < edgeBand) seed.vy += 31 * (1 - top / edgeBand) * dt;
+        if (bottom < edgeBand) seed.vy -= 38 * (1 - bottom / edgeBand) * dt;
+
+        seed.x += seed.vx * dt;
+        seed.y += seed.vy * dt;
+
+        const targetAngle = clamp(seed.vx * 0.0102, -0.30, 0.72);
+        const torque = (targetAngle - seed.angle) * 1.12 - seed.angularVelocity * 1.60;
+        seed.angularVelocity += torque * dt;
+        seed.angle += seed.angularVelocity * dt;
+
+        const localWind = clamp((air.x + gust) / 34, -1.25, 1.25);
+        for (const filament of seed.filaments) {
+          const microEddy =
+            Math.sin(elapsed * (1.30 + filament.k * 0.43) + filament.p + seed.phase) *
+            0.010;
+          const target = localWind * 0.070 * filament.k + microEddy;
+          const stiffness = 10.5 + filament.k * 5.8;
+          const damping = 2 * Math.sqrt(stiffness) * 0.82;
+          filament.deflectionVelocity +=
+            ((target - filament.deflection) * stiffness -
+              filament.deflectionVelocity * damping) *
+            dt;
+          filament.deflection += filament.deflectionVelocity * dt;
+        }
+
+        constrainSeed(seed);
+      }
+
+      function separateSeeds(dt) {
+        for (let i = 0; i < seeds.length; i++) {
+          for (let j = i + 1; j < seeds.length; j++) {
+            const a = seeds[i];
+            const b = seeds[j];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const distance = Math.max(1, Math.hypot(dx, dy));
+            const comfort = 104 * UNIT * fitScale;
+            if (distance < comfort) {
+              const push = (1 - distance / comfort) * 5.5 * dt;
+              const nx = dx / distance;
+              const ny = dy / distance;
+              a.vx -= nx * push;
+              a.vy -= ny * push;
+              b.vx += nx * push;
+              b.vy += ny * push;
+            }
+          }
+        }
+      }
+
+      function update(dt) {
+        elapsed += dt;
+        globalGust *= Math.exp(-1.65 * dt);
+        
+        // Trigger a strong breeze occasionally (roughly 5-10 times an hour, or manually tested scale)
+        if (Math.random() < dt * 0.003) {
+          globalGust += (Math.random() > 0.5 ? 1 : -1) * (150 + Math.random() * 200);
+        }
+
+        for (const seed of seeds) updateSeed(seed, dt);
+        separateSeeds(dt);
+      }
+
+      function deformPoint(point, fraction, filament) {
+        const angle = filament.deflection * Math.pow(fraction, 1.72);
+        const cosine = Math.cos(angle);
+        const sine = Math.sin(angle);
+        const x = point[0] * cosine - point[1] * sine;
+        const y = point[0] * sine + point[1] * cosine;
+        const ripple =
+          Math.sin(elapsed * 2.0 + filament.p + fraction * 1.8) *
+          0.34 *
+          fraction *
+          filament.k;
+        return [x, y + ripple];
+      }
+
+      function drawFilament(filament, index) {
+        const c1 = deformPoint(filament.c1, 0.30, filament);
+        const c2 = deformPoint(filament.c2, 0.66, filament);
+        const tip = deformPoint(filament.e, 1, filament);
+        const frontFactor = 0.76 + (filament.depth + 1) * 0.12;
+        const alpha = filament.a * frontFactor;
+
+        ctx.strokeStyle = 'rgba(255,255,246,' + alpha.toFixed(3) + ')';
+        ctx.lineWidth = filament.w;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], tip[0], tip[1]);
+        ctx.stroke();
+
+        if (Math.sin(filament.p * 2.7 + index) > 0.18) {
+          const baseX = lerp(c2[0], tip[0], 0.50);
+          const baseY = lerp(c2[1], tip[1], 0.50);
+          const length = Math.max(1, Math.hypot(tip[0], tip[1]));
+          const normalX = -tip[1] / length;
+          const normalY = tip[0] / length;
+          ctx.strokeStyle = 'rgba(255,255,248,' + (alpha * 0.62).toFixed(3) + ')';
+          ctx.lineWidth = 0.27;
+          ctx.beginPath();
+          ctx.moveTo(baseX, baseY);
+          ctx.lineTo(baseX + normalX * 1.55, baseY + normalY * 1.55);
+          ctx.moveTo(baseX, baseY);
+          ctx.lineTo(baseX - normalX * 1.2, baseY - normalY * 1.2);
+          ctx.stroke();
+        }
+      }
+
+      function drawAchene() {
+        const bodyGradient = ctx.createLinearGradient(-2.2, 71, 2.4, 94);
+        bodyGradient.addColorStop(0, '#6b4428');
+        bodyGradient.addColorStop(0.28, '#a66f3e');
+        bodyGradient.addColorStop(0.55, '#bc8750');
+        bodyGradient.addColorStop(0.80, '#84552f');
+        bodyGradient.addColorStop(1, '#4e311f');
+        ctx.fillStyle = bodyGradient;
+        ctx.beginPath();
+        ctx.moveTo(0.05, 71.0);
+        ctx.bezierCurveTo(1.85, 72.7, 2.35, 77.6, 2.05, 83.3);
+        ctx.bezierCurveTo(1.8, 88.2, 0.95, 93.4, 0.15, 96.1);
+        ctx.bezierCurveTo(-0.45, 97.5, -1.05, 97.4, -1.55, 95.9);
+        ctx.bezierCurveTo(-2.55, 91.8, -2.65, 84.0, -2.25, 78.2);
+        ctx.bezierCurveTo(-1.95, 74.1, -1.0, 71.7, 0.05, 71.0);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(72,43,25,0.64)';
+        ctx.lineWidth = 0.30;
+        for (let rib = -1; rib <= 1; rib++) {
+          const x = rib * 0.82;
+          ctx.beginPath();
+          ctx.moveTo(x * 0.30, 73.0);
+          ctx.bezierCurveTo(x * 0.82, 79.2, x, 88.1, x * 0.34, 94.8);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#50311e';
+        ctx.beginPath();
+        ctx.moveTo(-0.55, 95.4);
+        ctx.lineTo(0, 98.2);
+        ctx.lineTo(0.52, 95.4);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawSeed(seed) {
+        ctx.save();
+        ctx.translate(seed.x, seed.y);
+        ctx.rotate(seed.angle);
+        const scale = seedScale(seed);
+        ctx.scale(scale, scale);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        for (let i = 0; i < seed.filaments.length; i++) {
+          if (seed.filaments[i].depth <= 0) drawFilament(seed.filaments[i], i);
+        }
+
+        const beakGradient = ctx.createLinearGradient(0, 0, 0, 72);
+        beakGradient.addColorStop(0, 'rgba(229,214,170,0.98)');
+        beakGradient.addColorStop(0.38, 'rgba(188,155,103,0.96)');
+        beakGradient.addColorStop(1, 'rgba(123,82,48,0.98)');
+        ctx.strokeStyle = beakGradient;
+        ctx.lineWidth = 0.48;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-0.34, 19, 0.42, 46, 0, 71.4);
+        ctx.stroke();
+
+        const hubGradient = ctx.createRadialGradient(-0.35, -0.6, 0.15, 0, 0, 2);
+        hubGradient.addColorStop(0, '#fffceb');
+        hubGradient.addColorStop(0.62, '#e9dfb7');
+        hubGradient.addColorStop(1, '#a88455');
+        ctx.fillStyle = hubGradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 1.7, 1.15, 0, 0, TAU);
+        ctx.fill();
+
+        for (let i = 0; i < seed.filaments.length; i++) {
+          if (seed.filaments[i].depth > 0) drawFilament(seed.filaments[i], i);
+        }
+
+        drawAchene();
+        ctx.restore();
+      }
+
+      function draw() {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+        const ordered = [...seeds].sort((a, b) => a.size - b.size);
+        for (const seed of ordered) drawSeed(seed);
+      }
+
+      function frame(now) {
+        const dt = Math.min(0.033, Math.max(0, (now - lastTime) / 1000));
+        lastTime = now;
+        if (!paused) update(dt);
+        draw();
+        requestAnimationFrame(frame);
+      }
+
+      addEventListener('resize', resize, { passive: true });
+      addEventListener('keydown', event => {
+        const key = event.key.toLowerCase();
+        if (event.code === 'Space') {
+          paused = !paused;
+          event.preventDefault();
+        } else if (key === 'g') {
+          globalGust = Math.max(globalGust, 24);
+        } else if (key === 'r') {
+          reset();
+        } else if (key === 'f') {
+          document.documentElement.requestFullscreen?.();
+        }
+      });
+
+      addEventListener('pointerdown', event => {
+        for (const seed of seeds) {
+          const dx = seed.x - event.clientX;
+          const dy = seed.y - event.clientY;
+          const distance = Math.max(80, Math.hypot(dx, dy));
+          seed.vx += (dx / distance) * 17;
+          seed.vy += (dy / distance) * 11;
+        }
+        globalGust = Math.max(globalGust, 15);
+      }, { passive: true });
+
+      resize();
+      reset();
+      requestAnimationFrame(frame);
+    
+  shared.dandelions = seeds; shared.addDandelionGust = (g) => { globalGust += g; }; return { resize: (typeof resize !== "undefined" ? resize : ()=>{}), update: (typeof update !== "undefined" ? update : (dt)=>{}), draw: (typeof draw !== "undefined" ? draw : (ctx)=>{}) };
+}
+
+function init_dragonflies(shared) {
+
+
+      
+      
+      const query = new URLSearchParams(location.search);
+      const DRAGONFLY_COUNT = clamp(Math.round(Number(query.get('count')) || 2), 1, 2);
+      const globalScale = parseFloat(query.get('scale')) || 1.0;
+      const TAU = Math.PI * 2;
+
+      let width = 1;
+      let height = 1;
+      let pixelRatio = 1;
+      let elapsed = 0;
+      let lastTime = performance.now();
+      let paused = false;
+      let gust = 0;
+
+      const pointer = {
+        x: -10000,
+        y: -10000,
+        velocityX: 0,
+        velocityY: 0,
+        active: false,
+        down: false,
+        lastMove: performance.now()
+      };
+
+      function clamp(value, minimum, maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+      }
+
+      function lerp(from, to, amount) {
+        return from + (to - from) * amount;
+      }
+
+      function seeded(index, salt = 0) {
+        const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453123;
+        return value - Math.floor(value);
+      }
+
+      function angleDifference(from, to) {
+        return Math.atan2(Math.sin(to - from), Math.cos(to - from));
+      }
+
+      function createDragonfly(index) {
+        const species = index % 2;
+        const x = 0.20 + seeded(index, 1) * 0.60;
+        const y = 0.22 + seeded(index, 2) * 0.56;
+        const facing = seeded(index, 3) * TAU;
+        shared.dragonflies = dragonflies; return {
+          x,
+          y,
+          z: 0.44 + seeded(index, 4) * 0.48,
+          vx: Math.cos(facing) * 0.018,
+          vy: Math.sin(facing) * 0.018,
+          vz: 0,
+          targetX: x,
+          targetY: y,
+          targetZ: 0.56,
+          facing,
+          visualFacing: facing,
+          bank: 0,
+          pitch: 0,
+          wingPhase: seeded(index, 5) * TAU,
+          wingRate: 28 + seeded(index, 6) * 9,
+          behavior: 'hover',
+          behaviorTimer: 0.9 + seeded(index, 7) * 1.6,
+          hoverX: x,
+          hoverY: y,
+          hoverPhase: seeded(index, 8) * TAU,
+          startled: 0,
+          braking: 0,
+          species,
+          seed: index + 1
+        };
+      }
+
+      const dragonflies = Array.from(
+        { length: DRAGONFLY_COUNT },
+        (_, index) => createDragonfly(index)
+      );
+
+      function chooseBehavior(dragonfly, forcedDart = false) {
+        const choiceSeed = Math.floor(elapsed * 3.7) + dragonfly.seed * 31;
+        const roll = forcedDart ? 0 : seeded(choiceSeed, 10);
+        
+        if (forcedDart || roll > 0.60) {
+          dragonfly.behavior = 'dart';
+          const travelAngle = dragonfly.facing + (seeded(choiceSeed, 11) - 0.5) * 2.7;
+          const distance = 0.16 + seeded(choiceSeed, 12) * 0.31;
+          dragonfly.targetX = clamp(dragonfly.x + Math.cos(travelAngle) * distance, 0.09, 0.91);
+          dragonfly.targetY = clamp(dragonfly.y + Math.sin(travelAngle) * distance, 0.11, 0.89);
+          dragonfly.targetZ = 0.34 + seeded(choiceSeed, 13) * 0.67;
+          dragonfly.behaviorTimer = 0.34 + seeded(choiceSeed, 14) * 0.46;
+          dragonfly.braking = 0;
+        } else if (roll < 0.20) {
+          dragonfly.behavior = 'rest_approach';
+          if (typeof shared !== 'undefined' && shared.hornwortPlants && shared.hornwortPlants.length > 0) {
+              const plant = shared.hornwortPlants[Math.floor(seeded(choiceSeed, 12) * shared.hornwortPlants.length)];
+              const nodeIdx = Math.floor(2 + seeded(choiceSeed, 13) * (plant.points.length - 2));
+              const node = plant.points[nodeIdx];
+              if (node) {
+                  dragonfly.targetX = node.x / width;
+                  dragonfly.targetY = (node.y - 15) / height;
+                  dragonfly.targetZ = 1.0;
+              } else {
+                  dragonfly.targetX = 0.5; dragonfly.targetY = 0.5; dragonfly.targetZ = 1.0;
+              }
+          } else {
+              const travelAngle = dragonfly.facing + (seeded(choiceSeed, 11) - 0.5) * TAU;
+              const distance = 0.3 + seeded(choiceSeed, 12) * 0.5;
+              dragonfly.targetX = clamp(dragonfly.x + Math.cos(travelAngle) * distance, 0.05, 0.95);
+              dragonfly.targetY = clamp(dragonfly.y + Math.sin(travelAngle) * distance, 0.05, 0.95);
+              dragonfly.targetZ = 1.0;
+          }
+          dragonfly.behaviorTimer = 2.0;
+          dragonfly.braking = 0;
+        } else {
+          dragonfly.behavior = 'hover';
+          dragonfly.hoverX = clamp(dragonfly.x + (seeded(choiceSeed, 15) - 0.5) * 0.07, 0.10, 0.90);
+          dragonfly.hoverY = clamp(dragonfly.y + (seeded(choiceSeed, 16) - 0.5) * 0.06, 0.12, 0.88);
+          dragonfly.targetZ = clamp(dragonfly.z + (seeded(choiceSeed, 17) - 0.5) * 0.13, 0.34, 1.02);
+          dragonfly.behaviorTimer = 1.0 + seeded(choiceSeed, 18) * 2.8;
+          dragonfly.braking = 1;
+        }
+      }
+
+      function scareAt(x, y, radius, strength) {
+        for (const dragonfly of dragonflies) {
+          const dx = dragonfly.x * width - x;
+          const dy = dragonfly.y * height - y;
+          const distance = Math.max(20, Math.hypot(dx, dy));
+          if (distance >= radius) continue;
+          const influence = (1 - distance / radius) * strength;
+          dragonfly.vx += (dx / distance) * influence * 0.15;
+          dragonfly.vy += (dy / distance) * influence * 0.15;
+          dragonfly.vz += (seeded(dragonfly.seed, Math.floor(elapsed * 20)) - 0.5) * influence * 0.08;
+          dragonfly.startled = Math.max(dragonfly.startled, influence);
+          chooseBehavior(dragonfly, true);
+        }
+      }
+
+      function updateDragonfly(dragonfly, dt, index) {
+        dragonfly.behaviorTimer -= dt;
+        if (dragonfly.behaviorTimer <= 0) chooseBehavior(dragonfly);
+
+        let ax = 0;
+        let ay = 0;
+        let az = 0;
+
+        if (dragonfly.behavior === 'dart' || dragonfly.behavior === 'rest_approach') {
+          const dx = dragonfly.targetX - dragonfly.x;
+          const dy = dragonfly.targetY - dragonfly.y;
+          const distance = Math.hypot(dx, dy);
+          const desiredSpeed = clamp(distance * 1.65, 0.075, 0.30 + dragonfly.startled * 0.13);
+          const desiredVx = distance > 0.0001 ? dx / distance * desiredSpeed : 0;
+          const desiredVy = distance > 0.0001 ? dy / distance * desiredSpeed : 0;
+          ax = (desiredVx - dragonfly.vx) * 5.8;
+          ay = (desiredVy - dragonfly.vy) * 5.8;
+          az = (dragonfly.targetZ - dragonfly.z) * 0.85;
+
+            if (distance < 0.055) {
+              if (dragonfly.behavior === 'rest_approach') {
+                dragonfly.behavior = 'resting';
+                dragonfly.behaviorTimer = 60.0; // 1 full minute
+                dragonfly.braking = 1;
+                dragonfly.vx = 0;
+                dragonfly.vy = 0;
+                dragonfly.vz = 0;
+              } else {
+              dragonfly.behavior = 'brake';
+              dragonfly.behaviorTimer = 0.22 + seeded(dragonfly.seed, Math.floor(elapsed * 11)) * 0.26;
+              dragonfly.braking = 1;
+            }
+          }
+        } else if (dragonfly.behavior === 'brake') {
+          ax = -dragonfly.vx * 7.5;
+          ay = -dragonfly.vy * 7.5;
+          az = -dragonfly.vz * 3.0;
+        } else if (dragonfly.behavior === 'resting') {
+          // Perfectly stationary
+          ax = 0;
+          ay = 0;
+          az = 0;
+          dragonfly.vx = 0;
+          dragonfly.vy = 0;
+          dragonfly.vz = 0;
+        } else {
+          const hoverTime = elapsed * (1.7 + dragonfly.seed * 0.08) + dragonfly.hoverPhase;
+          const hoverTargetX = dragonfly.hoverX + Math.sin(hoverTime * 1.13) * 0.012;
+          const hoverTargetY = dragonfly.hoverY + Math.cos(hoverTime * 0.91) * 0.009;
+          ax = (hoverTargetX - dragonfly.x) * 0.95 - dragonfly.vx * 2.6;
+          ay = (hoverTargetY - dragonfly.y) * 0.95 - dragonfly.vy * 2.6;
+          az = (dragonfly.targetZ - dragonfly.z) * 0.42 - dragonfly.vz * 1.9;
+        }
+
+        for (let otherIndex = 0; otherIndex < dragonflies.length; otherIndex++) {
+          if (otherIndex === index) continue;
+          const other = dragonflies[otherIndex];
+          const dx = dragonfly.x - other.x;
+          const dy = dragonfly.y - other.y;
+          const distance = Math.max(0.001, Math.hypot(dx, dy));
+          if (distance < 0.13) {
+            const push = (0.13 - distance) * 0.42;
+            ax += dx / distance * push;
+            ay += dy / distance * push;
+          }
+        }
+
+        if (pointer.active) {
+          const screenX = dragonfly.x * width;
+          const screenY = dragonfly.y * height;
+          const dx = screenX - pointer.x;
+          const dy = screenY - pointer.y;
+          const distance = Math.max(18, Math.hypot(dx, dy));
+          const radius = pointer.down ? 300 : 190;
+          if (distance < radius) {
+            const proximity = 1 - distance / radius;
+            const handSpeed = Math.min(2, Math.hypot(pointer.velocityX, pointer.velocityY) / 900);
+            const pressure = proximity * (0.10 + handSpeed * 0.18 + (pointer.down ? 0.11 : 0));
+            ax += dx / distance * pressure;
+            ay += dy / distance * pressure;
+            ax += pointer.velocityX / Math.max(1, width) * proximity * 0.08;
+            ay += pointer.velocityY / Math.max(1, height) * proximity * 0.08;
+            dragonfly.startled = Math.max(dragonfly.startled, proximity * 0.8);
+          }
+        }
+
+        const marginX = 0.065;
+        const marginY = 0.08;
+        if (dragonfly.x < marginX) ax += (marginX - dragonfly.x) * 4.4;
+        if (dragonfly.x > 1 - marginX) ax -= (dragonfly.x - (1 - marginX)) * 4.4;
+        if (dragonfly.y < marginY) ay += (marginY - dragonfly.y) * 4.4;
+        if (dragonfly.y > 1 - marginY) ay -= (dragonfly.y - (1 - marginY)) * 4.4;
+        if (dragonfly.z < 0.28) az += (0.28 - dragonfly.z) * 1.6;
+        if (dragonfly.z > 1.05) az -= (dragonfly.z - 1.05) * 1.6;
+
+        if (dragonfly.behavior !== 'resting') {
+          ax += gust * 0.045;
+          ay += Math.sin(elapsed * 1.9 + dragonfly.seed) * gust * 0.008;
+          dragonfly.vx += ax * dt;
+          dragonfly.vy += ay * dt;
+          dragonfly.vz += az * dt;
+        }
+
+        const flightDrag = dragonfly.behavior === 'dart' ? 0.52 : 1.45;
+        dragonfly.vx *= Math.exp(-flightDrag * dt);
+        dragonfly.vy *= Math.exp(-flightDrag * dt);
+        dragonfly.vz *= Math.exp(-1.2 * dt);
+
+        const speed = Math.hypot(dragonfly.vx, dragonfly.vy);
+        const maximumSpeed = 0.34 + dragonfly.startled * 0.12;
+        if (speed > maximumSpeed) {
+          dragonfly.vx *= maximumSpeed / speed;
+          dragonfly.vy *= maximumSpeed / speed;
+        }
+
+        dragonfly.x = clamp(dragonfly.x + dragonfly.vx * dt, 0.025, 0.975);
+        dragonfly.y = clamp(dragonfly.y + dragonfly.vy * dt, 0.025, 0.975);
+        dragonfly.z = clamp(dragonfly.z + dragonfly.vz * dt, 0.24, 1.10);
+
+        if (speed > 0.003) {
+          dragonfly.facing = Math.atan2(dragonfly.vy, dragonfly.vx);
+        }
+        const turn = angleDifference(dragonfly.visualFacing, dragonfly.facing);
+        dragonfly.visualFacing += turn * Math.min(1, dt * (6.5 + speed * 13));
+        const targetBank = clamp(turn * 2.4, -0.78, 0.78);
+        dragonfly.bank = lerp(dragonfly.bank, targetBank, Math.min(1, dt * 7.5));
+        dragonfly.pitch = lerp(
+          dragonfly.pitch,
+          clamp(speed * 1.6 - dragonfly.braking * 0.22, -0.30, 0.42),
+          Math.min(1, dt * 5.0)
+        );
+
+        if (dragonfly.behavior === 'resting') {
+          const turn = angleDifference(dragonfly.wingPhase, 0);
+          dragonfly.wingPhase = (dragonfly.wingPhase + turn * dt * 12.0) % TAU;
+        } else {
+          let beatRate = dragonfly.wingRate * (1 + speed * 1.8 + dragonfly.startled * 0.38);
+          dragonfly.wingPhase = (dragonfly.wingPhase + beatRate * TAU * dt) % TAU;
+        }
+        
+        dragonfly.startled *= Math.exp(-1.5 * dt);
+        dragonfly.braking *= Math.exp(-3.8 * dt);
+      }
+
+      function wingPath(ctx, length, widthValue, hindWing) {
+        const root = hindWing ? -0.01 : 0.02;
+        ctx.beginPath();
+        ctx.moveTo(root * length, 0);
+        if (hindWing) {
+          ctx.bezierCurveTo(length * 0.25, -widthValue * 0.10, length * 0.75, -widthValue * 1.05, length, 0);
+          ctx.bezierCurveTo(length * 0.75, widthValue * 1.05, length * 0.25, widthValue * 0.35, root * length, 0);
+        } else {
+          ctx.bezierCurveTo(length * 0.30, -widthValue * 0.15, length * 0.70, -widthValue * 0.95, length, 0);
+          ctx.bezierCurveTo(length * 0.70, widthValue * 0.95, length * 0.30, widthValue * 0.35, root * length, 0);
+        }
+        ctx.closePath();
+      }
+
+      function drawWingVeins(ctx, length, widthValue, alpha, hindWing) {
+        ctx.strokeStyle = `rgba(128,148,145,${alpha})`;
+        ctx.lineWidth = 0.46;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(length * 0.92, 0);
+        ctx.stroke();
+
+        for (let vein = 1; vein <= 5; vein++) {
+          const amount = vein / 6;
+          const x = length * amount;
+          const spread = Math.sin(amount * Math.PI) * widthValue * (hindWing ? 0.39 : 0.27);
+          ctx.beginPath();
+          ctx.moveTo(x * 0.52, 0);
+          ctx.lineTo(x, -spread);
+          ctx.moveTo(x * 0.52, 0);
+          ctx.lineTo(x, spread);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = `rgba(112,128,123,${alpha * 0.72})`;
+        ctx.beginPath();
+        ctx.moveTo(length * 0.32, -widthValue * 0.18);
+        ctx.quadraticCurveTo(length * 0.62, -widthValue * 0.28, length * 0.91, -widthValue * 0.06);
+        ctx.moveTo(length * 0.32, widthValue * 0.18);
+        ctx.quadraticCurveTo(length * 0.62, widthValue * 0.28, length * 0.91, widthValue * 0.06);
+        ctx.stroke();
+      }
+
+      function drawOneWing(ctx, side, fore, length, bodyLength, beat, alpha, dragonfly, ghost = false) {
+        const hindWing = !fore;
+        const attachmentX = bodyLength * (fore ? 0.15 : 0.05);
+        const baseAngle = fore ? 1.05 : 1.45;
+        const sweep = beat * (fore ? 0.15 : 0.12);
+        const widthValue = length * (fore ? 0.35 : 0.42); // Even broader paddles
+        const projection = 0.62 + Math.abs(Math.cos(beat * 1.18)) * 0.38;
+
+        ctx.save();
+        ctx.translate(attachmentX, 0);
+        ctx.rotate(side * (baseAngle + sweep));
+        ctx.scale(projection, 0.78 + projection * 0.22);
+        wingPath(ctx, length, widthValue, hindWing);
+        const gradient = ctx.createLinearGradient(0, 0, length, 0);
+        if (ghost) {
+          gradient.addColorStop(0, `rgba(40,10,120,${alpha * 0.3})`);
+          gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        } else {
+          // Subtler, more realistic metallic sheer instead of solid paint
+          if (dragonfly.species === 0) {
+            gradient.addColorStop(0, `rgba(10, 20, 60, ${alpha * 0.9})`);
+            gradient.addColorStop(0.3, `rgba(25, 70, 130, ${alpha * 0.7})`);
+            gradient.addColorStop(0.6, `rgba(130, 180, 140, ${alpha * 0.6})`);
+            gradient.addColorStop(0.8, `rgba(200, 100, 130, ${alpha * 0.5})`);
+            gradient.addColorStop(1, `rgba(50, 25, 80, ${alpha * 0.4})`);
+          } else {
+            gradient.addColorStop(0, `rgba(20, 15, 50, ${alpha * 0.9})`);
+            gradient.addColorStop(0.3, `rgba(70, 35, 110, ${alpha * 0.7})`);
+            gradient.addColorStop(0.6, `rgba(150, 90, 160, ${alpha * 0.6})`);
+            gradient.addColorStop(0.8, `rgba(210, 160, 110, ${alpha * 0.5})`);
+            gradient.addColorStop(1, `rgba(50, 20, 70, ${alpha * 0.4})`);
+          }
+        }
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        if (!ghost) {
+          ctx.strokeStyle = `rgba(0,5,15,${alpha})`;
+          ctx.lineWidth = 1.0;
+          ctx.stroke();
+          drawWingVeins(ctx, length, widthValue, alpha * 0.9, hindWing);
+        }
+        ctx.restore();
+      }
+
+      function drawWings(ctx, dragonfly, bodyLength) {
+        const wingLength = bodyLength * 1.5; // Huge wings
+        const phase = dragonfly.wingPhase;
+        const leftBeat = Math.sin(phase);
+        const rightBeat = Math.sin(phase + 0.16);
+        const flightSpeed = Math.hypot(dragonfly.vx, dragonfly.vy);
+        const alpha = clamp(0.35 + dragonfly.z * 0.15 + flightSpeed * 0.1, 0.35, 0.65); // Realistic transparency
+
+        // Faint trailing wings for motion blur
+        if (flightSpeed > 0.01) {
+          for (const offset of [-0.38, 0.32]) {
+            drawOneWing(ctx, -1, true, wingLength, bodyLength, leftBeat + offset, alpha * 0.3, dragonfly, true);
+            drawOneWing(ctx, 1, true, wingLength, bodyLength, rightBeat - offset, alpha * 0.3, dragonfly, true);
+            drawOneWing(ctx, -1, false, wingLength * 0.92, bodyLength, -leftBeat + offset, alpha * 0.25, dragonfly, true);
+            drawOneWing(ctx, 1, false, wingLength * 0.92, bodyLength, -rightBeat - offset, alpha * 0.25, dragonfly, true);
+          }
+        }
+
+        drawOneWing(ctx, -1, true, wingLength, bodyLength, leftBeat, alpha, dragonfly);
+        drawOneWing(ctx, 1, true, wingLength, bodyLength, rightBeat, alpha, dragonfly);
+        drawOneWing(ctx, -1, false, wingLength * 0.92, bodyLength, -leftBeat, alpha * 0.95, dragonfly);
+        drawOneWing(ctx, 1, false, wingLength * 0.92, bodyLength, -rightBeat, alpha * 0.95, dragonfly);
+      }
+
+      function drawBody(ctx, dragonfly, bodyLength) {
+        const speciesBlue = dragonfly.species === 0;
+        const abdomenLength = bodyLength * 1.1; // Extremely long tail
+        const segmentCount = 10;
+        const startX = -bodyLength * 0.10;
+
+        // Abdomen segments taper toward the tail and use opposing highlights to remain cylindrical.
+        for (let segment = segmentCount - 1; segment >= 0; segment--) {
+          const amount = segment / (segmentCount - 1);
+          const segmentX = startX - amount * abdomenLength;
+          const radiusX = bodyLength * 0.055;
+          const radiusY = bodyLength * (0.02 - amount * 0.012); // Needle thin
+          const bodyGradient = ctx.createLinearGradient(segmentX, -radiusY, segmentX, radiusY);
+          if (speciesBlue) {
+            bodyGradient.addColorStop(0, segment % 2 ? '#040b12' : '#081a29');
+            bodyGradient.addColorStop(0.35, segment % 2 ? '#104875' : '#288ab5');
+            bodyGradient.addColorStop(0.60, segment % 2 ? '#061d2b' : '#145778');
+            bodyGradient.addColorStop(1, '#020508');
+          } else {
+            bodyGradient.addColorStop(0, segment % 2 ? '#0a0a1a' : '#141432');
+            bodyGradient.addColorStop(0.35, segment % 2 ? '#5a2d8a' : '#994cd6');
+            bodyGradient.addColorStop(0.60, segment % 2 ? '#3a1a5c' : '#6a2a9e');
+            bodyGradient.addColorStop(1, '#050510');
+          }
+          ctx.fillStyle = bodyGradient;
+          ctx.beginPath();
+          ctx.ellipse(segmentX, 0, radiusX * 1.05, radiusY, 0, 0, TAU);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(2,5,4,0.72)';
+          ctx.lineWidth = Math.max(0.35, bodyLength * 0.009);
+          ctx.stroke();
+        }
+
+        const thoraxGradient = ctx.createRadialGradient(
+          bodyLength * 0.03,
+          -bodyLength * 0.08,
+          bodyLength * 0.01,
+          bodyLength * 0.01,
+          0,
+          bodyLength * 0.28
+        );
+        if (speciesBlue) {
+          thoraxGradient.addColorStop(0, '#5bb8c1');
+          thoraxGradient.addColorStop(0.31, '#215e69');
+          thoraxGradient.addColorStop(0.68, '#102b32');
+          thoraxGradient.addColorStop(1, '#03090b');
+        } else {
+          thoraxGradient.addColorStop(0, '#9db14a');
+          thoraxGradient.addColorStop(0.31, '#446b2b');
+          thoraxGradient.addColorStop(0.68, '#1b351b');
+          thoraxGradient.addColorStop(1, '#050b05');
+        }
+        ctx.fillStyle = thoraxGradient;
+        ctx.beginPath();
+        ctx.ellipse(bodyLength * 0.06, 0, bodyLength * 0.16, bodyLength * 0.08, 0, 0, TAU);
+        ctx.fill();
+
+        // Head and two oversized compound eyes.
+        ctx.fillStyle = speciesBlue ? '#172c2f' : '#25351a';
+        ctx.beginPath();
+        ctx.ellipse(bodyLength * 0.22, 0, bodyLength * 0.12, bodyLength * 0.10, 0, 0, TAU);
+        ctx.fill();
+
+        for (const side of [-1, 1]) {
+          const eyeGradient = ctx.createRadialGradient(
+            bodyLength * 0.24,
+            side * bodyLength * 0.06,
+            0,
+            bodyLength * 0.24,
+            side * bodyLength * 0.06,
+            bodyLength * 0.08
+          );
+          eyeGradient.addColorStop(0, speciesBlue ? '#65796e' : '#8b8142');
+          eyeGradient.addColorStop(0.30, speciesBlue ? '#263e3a' : '#3f4523');
+          eyeGradient.addColorStop(0.72, '#111913');
+          eyeGradient.addColorStop(1, '#020302');
+          ctx.fillStyle = eyeGradient;
+          ctx.beginPath();
+          ctx.ellipse(bodyLength * 0.24, side * bodyLength * 0.06, bodyLength * 0.08, bodyLength * 0.06, 0, 0, TAU);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(205,227,194,0.38)';
+          ctx.beginPath();
+          ctx.ellipse(bodyLength * 0.26, side * bodyLength * 0.04, bodyLength * 0.015, bodyLength * 0.01, 0, 0, TAU);
+          ctx.fill();
+        }
+      }
+
+      function drawDragonfly(dragonfly) {
+        const x = dragonfly.x * width;
+        const y = dragonfly.y * height;
+        // Project 3D depth to 2D scale
+        const depthScale = 1.0 / dragonfly.z;
+        const bodyLength = clamp(Math.min(width, height) * 0.057 * depthScale, 31, 72) * globalScale;
+
+        context.save();
+        context.translate(x, y);
+        context.rotate(dragonfly.visualFacing);
+        context.scale(1, 1 - Math.abs(dragonfly.bank) * 0.12);
+
+        drawWings(context, dragonfly, bodyLength);
+        drawBody(context, dragonfly, bodyLength);
+
+        context.restore();
+      }
+
+      function resize() {
+        width = Math.max(1, innerWidth);
+        height = Math.max(1, innerHeight);
+        pixelRatio = Math.min(devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      function reset() {
+        elapsed = 0;
+        gust = 0;
+        for (let index = 0; index < dragonflies.length; index++) {
+          Object.assign(dragonflies[index], createDragonfly(index));
+        }
+      }
+
+      function frame(now) {
+        const dt = Math.min(0.04, Math.max(0, (now - lastTime) / 1000));
+        lastTime = now;
+        if (!paused) {
+          elapsed += dt;
+          gust *= Math.exp(-0.8 * dt);
+          pointer.velocityX *= Math.exp(-7.0 * dt);
+          pointer.velocityY *= Math.exp(-7.0 * dt);
+          dragonflies.forEach((dragonfly, index) => updateDragonfly(dragonfly, dt, index));
+        }
+
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.globalCompositeOperation = 'source-over';
+        context.globalAlpha = 1;
+        context.clearRect(0, 0, width, height);
+
+        const renderOrder = [...dragonflies].sort((a, b) => a.z - b.z);
+        for (const dragonfly of renderOrder) drawDragonfly(dragonfly);
+        requestAnimationFrame(frame);
+      }
+
+      function movePointer(event) {
+        const now = performance.now();
+        const dt = clamp((now - pointer.lastMove) / 1000, 0.008, 0.08);
+        const x = clamp(event.clientX, 0, width);
+        const y = clamp(event.clientY, 0, height);
+        if (pointer.active) {
+          pointer.velocityX = (x - pointer.x) / dt;
+          pointer.velocityY = (y - pointer.y) / dt;
+          const speed = Math.hypot(pointer.velocityX, pointer.velocityY);
+          if (speed > 150) {
+            scareAt(x, y, clamp(150 + speed * 0.045, 160, 320), clamp(speed / 1150, 0.15, 1));
+          }
+        }
+        pointer.x = x;
+        pointer.y = y;
+        pointer.active = true;
+        pointer.lastMove = now;
+      }
+
+      addEventListener('resize', resize, { passive: true });
+      addEventListener('pointermove', movePointer, { passive: true });
+      addEventListener('pointerdown', event => {
+        movePointer(event);
+        pointer.down = true;
+        canvas.setPointerCapture?.(event.pointerId);
+        scareAt(pointer.x, pointer.y, 350, 1.0);
+      }, { passive: true });
+      addEventListener('pointerup', event => {
+        movePointer(event);
+        pointer.down = false;
+        canvas.releasePointerCapture?.(event.pointerId);
+      }, { passive: true });
+      addEventListener('pointercancel', () => {
+        pointer.down = false;
+        pointer.active = false;
+      }, { passive: true });
+      addEventListener('pointerleave', event => {
+        if (event.pointerType === 'mouse' && !pointer.down) pointer.active = false;
+      }, { passive: true });
+      addEventListener('keydown', event => {
+        const key = event.key.toLowerCase();
+        if (event.code === 'Space') {
+          paused = !paused;
+          event.preventDefault();
+        } else if (key === 'g') {
+          gust = Math.max(gust, 1);
+        } else if (key === 'r') {
+          reset();
+        } else if (key === 'f') {
+          document.documentElement.requestFullscreen?.();
+        }
+      });
+
+      resize();
+      requestAnimationFrame(frame);
+    
+  shared.dragonflies = dragonflies; return { resize: (typeof resize !== "undefined" ? resize : ()=>{}), update: (typeof update !== "undefined" ? update : (dt)=>{}), draw: (typeof draw !== "undefined" ? draw : (ctx)=>{}) };
+}
+
+function init_fireflies(shared) {
+
+
+      
+      
+      const parameters = new URLSearchParams(location.search);
+      const FIREFLY_COUNT = Math.round(clamp(Number(parameters.get('count')) || 12, 5, 100));
+      const globalScale = parseFloat(parameters.get('scale')) || 1.0;
+      const TAU = Math.PI * 2;
+
+      let width = 1;
+      let height = 1;
+      let pixelRatio = 1;
+      let elapsed = 0;
+      let lastTime = performance.now();
+      let paused = false;
+      let gust = 0;
+      let disturbance = 0;
+
+      const pointer = {
+        x: -10000,
+        y: -10000,
+        previousX: -10000,
+        previousY: -10000,
+        velocityX: 0,
+        velocityY: 0,
+        active: false,
+        down: false,
+        lastMove: performance.now()
+      };
+
+      function clamp(value, minimum, maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+      }
+
+      function smoothstep(edge0, edge1, value) {
+        const amount = clamp((value - edge0) / Math.max(0.000001, edge1 - edge0), 0, 1);
+        return amount * amount * (3 - 2 * amount);
+      }
+
+      function seeded(index, salt = 0) {
+        const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453123;
+        return value - Math.floor(value);
+      }
+
+      function makeGlowSprite() {
+        const sprite = document.createElement('canvas');
+        sprite.width = 256;
+        sprite.height = 256;
+        const spriteContext = sprite.getContext('2d');
+        const gradient = spriteContext.createRadialGradient(128, 128, 1, 128, 128, 128);
+        gradient.addColorStop(0, 'rgba(255,255,197,1)');
+        gradient.addColorStop(0.035, 'rgba(239,255,123,0.98)');
+        gradient.addColorStop(0.12, 'rgba(174,255,55,0.55)');
+        gradient.addColorStop(0.31, 'rgba(112,235,22,0.19)');
+        gradient.addColorStop(0.62, 'rgba(76,190,8,0.045)');
+        gradient.addColorStop(1, 'rgba(25,90,0,0)');
+        spriteContext.fillStyle = gradient;
+        spriteContext.fillRect(0, 0, 256, 256);
+        return sprite;
+      }
+
+      const glowSprite = makeGlowSprite();
+
+      function createFirefly(index) {
+        const depth = 0.32 + seeded(index, 1) * 0.68;
+        const cycle = 2.35 + seeded(index, 2) * 2.10;
+        shared.fireflies = fireflies; return {
+          x: 0.10 + seeded(index, 3) * 0.80,
+          y: 0.15 + seeded(index, 4) * 0.70,
+          z: depth,
+          vx: (seeded(index, 5) - 0.5) * 0.035,
+          vy: (seeded(index, 6) - 0.5) * 0.025,
+          vz: (seeded(index, 7) - 0.5) * 0.012,
+          targetX: -0.05 + seeded(index, 8) * 1.10,
+          targetY: -0.05 + seeded(index, 9) * 1.10,
+          targetZ: 0.30 + seeded(index, 10) * 0.70,
+          targetTimer: 0.5 + seeded(index, 11) * 2.4,
+          wanderPhase: seeded(index, 12) * TAU,
+          wanderRate: 0.41 + seeded(index, 13) * 0.39,
+          wingPhase: seeded(index, 14) * TAU,
+          facing: seeded(index, 15) * TAU,
+          bank: 0,
+          flashCycle: 2.10 + seeded(index, 6) * 1.45,
+          flashOffset: seeded(index, 7) * 4.0,
+          flashShape: 0.85 + seeded(index, 8) * 0.30,
+          speedMult: 0.4 + seeded(index, 11) * 0.8,
+          restTimer: seeded(index, 12) * 5,
+          glowWarmth: seeded(index, 18),
+          startled: 0,
+          seed: index + 1
+        };
+      }
+
+      const fireflies = Array.from({ length: FIREFLY_COUNT }, (_, index) => createFirefly(index));
+
+      function chooseTarget(firefly) {
+        const timeSeed = Math.floor(elapsed * 0.7) + firefly.seed * 19;
+        // Fly widely across the whole screen, not clustered in the center
+        firefly.targetX = -0.1 + seeded(timeSeed, 21) * 1.20;
+        firefly.targetY = -0.1 + seeded(timeSeed, 22) * 1.20;
+        firefly.targetZ = 0.28 + seeded(timeSeed, 23) * 0.72;
+        firefly.targetTimer = 1.2 + seeded(timeSeed, 24) * 3.8;
+        
+        // 25% chance to rest
+        if (seeded(timeSeed, 25) > 0.75) {
+            firefly.restTimer = 2.0 + seeded(timeSeed, 26) * 4.0;
+        }
+      }
+
+      function flashIntensity(firefly) {
+        const phase = ((elapsed + firefly.flashOffset) % firefly.flashCycle) / firefly.flashCycle;
+        // A quick organic ignition, a short living plateau, then a slower fade.
+        const rise = smoothstep(0.035, 0.105, phase);
+        const fall = 1 - smoothstep(0.17, 0.36, phase);
+        const primary = rise * fall;
+        const afterglow =
+          smoothstep(0.20, 0.25, phase) *
+          (1 - smoothstep(0.25, 0.43, phase)) *
+          0.16;
+        const livingFlicker = 0.94 + Math.sin(elapsed * 17.0 + firefly.seed * 5.7) * 0.06;
+        return clamp((primary + afterglow) * livingFlicker * firefly.flashShape, 0, 1);
+      }
+
+      function disturbAt(x, y, radius, force) {
+        disturbance = Math.max(disturbance, force);
+        for (const firefly of fireflies) {
+          const dx = firefly.x * width - x;
+          const dy = firefly.y * height - y;
+          const distance = Math.max(18, Math.hypot(dx, dy));
+          if (distance >= radius) continue;
+          const amount = (1 - distance / radius) * force;
+          firefly.vx += (dx / distance) * amount * 0.085;
+          firefly.vy += (dy / distance) * amount * 0.085;
+          firefly.vz += (seeded(firefly.seed, Math.floor(elapsed * 10)) - 0.5) * amount * 0.055;
+          firefly.startled = Math.max(firefly.startled, amount);
+          firefly.targetTimer = Math.min(firefly.targetTimer, 0.12);
+        }
+      }
+
+      function updateFirefly(firefly, dt, index) {
+        firefly.targetTimer -= dt;
+        if (firefly.targetTimer <= 0) chooseTarget(firefly);
+
+        const dx = firefly.targetX - firefly.x;
+        const dy = firefly.targetY - firefly.y;
+        const dz = firefly.targetZ - firefly.z;
+        const wander = elapsed * firefly.wanderRate + firefly.wanderPhase;
+        const nervousness = 1 + firefly.startled * 1.8;
+
+        let ax = dx * 0.08 + Math.sin(wander * 1.37) * 0.012 * nervousness;
+        let ay = dy * 0.08 + Math.cos(wander * 1.11 + 0.7) * 0.010 * nervousness;
+        let az = dz * 0.05 + Math.sin(wander * 0.83 + 1.4) * 0.005;
+
+        if (firefly.restTimer > 0 && firefly.startled < 0.1) {
+            firefly.restTimer -= dt;
+            ax = 0; ay = 0; az = 0; // stop moving when resting
+        }
+
+        // Fireflies do not occupy the exact same pocket of air.
+        for (let otherIndex = 0; otherIndex < fireflies.length; otherIndex++) {
+          if (otherIndex === index) continue;
+          const other = fireflies[otherIndex];
+          const separationX = firefly.x - other.x;
+          const separationY = firefly.y - other.y;
+          const separationSquared = separationX * separationX + separationY * separationY;
+          if (separationSquared > 0.00001 && separationSquared < 0.010) {
+            const separation = Math.sqrt(separationSquared);
+            const push = (0.10 - separation) * 0.3;
+            ax += (separationX / separation) * push;
+            ay += (separationY / separation) * push;
+          }
+        }
+
+        if (pointer.active) {
+          const screenX = firefly.x * width;
+          const screenY = firefly.y * height;
+          const pointerDx = screenX - pointer.x;
+          const pointerDy = screenY - pointer.y;
+          const pointerDistance = Math.max(14, Math.hypot(pointerDx, pointerDy));
+          const radius = pointer.down ? 250 : 155;
+          if (pointerDistance < radius) {
+            const closeness = 1 - pointerDistance / radius;
+            const airSpeed = Math.min(1.7, Math.hypot(pointer.velocityX, pointer.velocityY) / 900);
+            const pressure = closeness * (0.065 + airSpeed * 0.11 + (pointer.down ? 0.07 : 0));
+            ax += (pointerDx / pointerDistance) * pressure;
+            ay += (pointerDy / pointerDistance) * pressure;
+            // The passing hand also drags a small wake behind it.
+            ax += pointer.velocityX / Math.max(1, width) * closeness * 0.055;
+            ay += pointer.velocityY / Math.max(1, height) * closeness * 0.055;
+            firefly.startled = Math.max(firefly.startled, closeness * 0.9);
+          }
+        }
+
+        const margin = -0.03;
+        if (firefly.x < margin) ax += (margin - firefly.x) * 2.15;
+        if (firefly.x > 1 - margin) ax -= (firefly.x - (1 - margin)) * 2.15;
+        if (firefly.y < margin) ay += (margin - firefly.y) * 2.15;
+        if (firefly.y > 1 - margin) ay -= (firefly.y - (1 - margin)) * 2.15;
+        if (firefly.z < 0.24) az += (0.24 - firefly.z) * 0.8;
+        if (firefly.z > 1.04) az -= (firefly.z - 1.04) * 0.8;
+
+        const flutter = 1 + Math.sin(elapsed * 3.1 + firefly.seed) * 0.08;
+        firefly.vx += (ax + gust * 0.022 * flutter) * dt;
+        firefly.vy += (ay + gust * Math.sin(wander) * 0.004) * dt;
+        firefly.vz += az * dt;
+
+        const drag = firefly.restTimer > 0 && firefly.startled < 0.1 ? Math.exp(-4.5 * dt) : Math.exp(-1.15 * dt);
+        firefly.vx *= drag;
+        firefly.vy *= drag;
+        firefly.vz *= drag;
+
+        const speed = Math.hypot(firefly.vx, firefly.vy);
+        const maximumSpeed = (0.07 * firefly.speedMult) + firefly.startled * 0.15;
+        if (speed > maximumSpeed) {
+          firefly.vx *= maximumSpeed / speed;
+          firefly.vy *= maximumSpeed / speed;
+        }
+
+        firefly.x += firefly.vx * dt;
+        firefly.y += firefly.vy * dt;
+        firefly.z += firefly.vz * dt;
+        firefly.x = clamp(firefly.x, -0.05, 1.05);
+        firefly.y = clamp(firefly.y, -0.05, 1.05);
+        firefly.z = clamp(firefly.z, 0.20, 1.08);
+
+        if (speed > 0.002) {
+          const desiredFacing = Math.atan2(firefly.vy, firefly.vx) + Math.PI;
+          let turn = desiredFacing - firefly.facing;
+          turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+          firefly.facing += turn * Math.min(1, dt * (3.4 + firefly.startled * 2.0));
+          firefly.bank += (clamp(turn * 1.8, -0.8, 0.8) - firefly.bank) * Math.min(1, dt * 4.5);
+        }
+
+        firefly.wingPhase = (firefly.wingPhase + dt * (45 + speed * 260 + firefly.startled * 22)) % TAU;
+        firefly.startled *= Math.exp(-1.15 * dt);
+      }
+
+      function drawWing(ctx, side, length, widthValue, beat, alpha) {
+        ctx.save();
+        ctx.scale(1, side);
+        ctx.rotate(-0.24 - beat * 0.24);
+        ctx.beginPath();
+        ctx.moveTo(-length * 0.05, 0);
+        ctx.bezierCurveTo(length * 0.18, -widthValue * 0.36, length * 0.83, -widthValue * 0.22, length, 0);
+        ctx.bezierCurveTo(length * 0.72, widthValue * 0.42, length * 0.20, widthValue * 0.40, -length * 0.05, 0);
+        const wingGradient = ctx.createLinearGradient(0, 0, length, 0);
+        wingGradient.addColorStop(0, `rgba(178,153,103,${alpha * 0.50})`);
+        wingGradient.addColorStop(0.45, `rgba(224,214,178,${alpha * 0.28})`);
+        wingGradient.addColorStop(1, 'rgba(195,210,188,0)');
+        ctx.fillStyle = wingGradient;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(218,210,175,${alpha * 0.22})`;
+        ctx.lineWidth = 0.42;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawFirefly(firefly) {
+        const x = firefly.x * width;
+        const y = firefly.y * height;
+        const depthScale = 0.62 + firefly.z * 0.78;
+        const bodyLength = clamp(Math.min(width, height) * 0.0135 * depthScale, 7.2, 17.5) * globalScale;
+        const flash = flashIntensity(firefly);
+        const speed = Math.hypot(firefly.vx, firefly.vy);
+        const perspectiveOpacity = 0.42 + firefly.z * 0.54;
+
+        if (flash > 0.006) {
+          const glowSize = bodyLength * (5.8 + flash * 4.8);
+          const tailX = x + Math.cos(firefly.facing) * bodyLength * 0.43;
+          const tailY = y + Math.sin(firefly.facing) * bodyLength * 0.43;
+          context.save();
+          context.globalCompositeOperation = 'lighter';
+          context.globalAlpha = flash * perspectiveOpacity * 0.82;
+          context.drawImage(glowSprite, tailX - glowSize, tailY - glowSize, glowSize * 2, glowSize * 2);
+          context.restore();
+        }
+
+        context.save();
+        context.translate(x, y);
+        context.rotate(firefly.facing);
+        context.scale(depthScale, depthScale * (1 - Math.abs(firefly.bank) * 0.14));
+
+        const wingBeat = Math.sin(firefly.wingPhase);
+        const wingAlpha = clamp(0.16 + speed * 4.8 + firefly.startled * 0.12, 0.15, 0.43) * perspectiveOpacity;
+        drawWing(context, -1, bodyLength * 0.86, bodyLength * 0.42, wingBeat, wingAlpha);
+        drawWing(context, 1, bodyLength * 0.86, bodyLength * 0.42, -wingBeat, wingAlpha);
+
+        // Six threadlike legs; subtle because the insect remains in flight.
+        context.strokeStyle = `rgba(76,55,31,${0.38 * perspectiveOpacity})`;
+        context.lineWidth = Math.max(0.45, bodyLength * 0.045);
+        context.lineCap = 'round';
+        for (let pair = -1; pair <= 1; pair++) {
+          const legX = pair * bodyLength * 0.12;
+          context.beginPath();
+          context.moveTo(legX, -bodyLength * 0.09);
+          context.lineTo(legX + bodyLength * (0.12 + pair * 0.02), -bodyLength * 0.30);
+          context.stroke();
+          context.beginPath();
+          context.moveTo(legX, bodyLength * 0.09);
+          context.lineTo(legX + bodyLength * (0.12 + pair * 0.02), bodyLength * 0.30);
+          context.stroke();
+        }
+
+        // Dark convex wing covers and thorax preserve the body volume.
+        const shellGradient = context.createLinearGradient(0, -bodyLength * 0.16, 0, bodyLength * 0.16);
+        shellGradient.addColorStop(0, '#120d08');
+        shellGradient.addColorStop(0.40, '#49301a');
+        shellGradient.addColorStop(0.68, '#1d130c');
+        shellGradient.addColorStop(1, '#070504');
+        context.fillStyle = shellGradient;
+        context.beginPath();
+        context.ellipse(bodyLength * 0.05, 0, bodyLength * 0.43, bodyLength * 0.16, 0, 0, TAU);
+        context.fill();
+
+        context.strokeStyle = 'rgba(126,82,39,0.42)';
+        context.lineWidth = Math.max(0.35, bodyLength * 0.028);
+        context.beginPath();
+        context.moveTo(-bodyLength * 0.02, -bodyLength * 0.145);
+        context.lineTo(bodyLength * 0.38, -bodyLength * 0.04);
+        context.stroke();
+
+        const thoraxGradient = context.createRadialGradient(
+          -bodyLength * 0.28,
+          -bodyLength * 0.07,
+          0,
+          -bodyLength * 0.22,
+          0,
+          bodyLength * 0.28
+        );
+        thoraxGradient.addColorStop(0, '#6f4721');
+        thoraxGradient.addColorStop(0.38, '#2f1c0e');
+        thoraxGradient.addColorStop(1, '#090604');
+        context.fillStyle = thoraxGradient;
+        context.beginPath();
+        context.ellipse(-bodyLength * 0.27, 0, bodyLength * 0.27, bodyLength * 0.20, 0, 0, TAU);
+        context.fill();
+
+        context.fillStyle = '#080604';
+        context.beginPath();
+        context.ellipse(-bodyLength * 0.53, 0, bodyLength * 0.14, bodyLength * 0.13, 0, 0, TAU);
+        context.fill();
+
+        // Thin antennae become visible only when this individual is near camera depth.
+        context.strokeStyle = `rgba(104,75,41,${0.34 * perspectiveOpacity})`;
+        context.lineWidth = Math.max(0.28, bodyLength * 0.018);
+        for (const side of [-1, 1]) {
+          context.beginPath();
+          context.moveTo(-bodyLength * 0.60, side * bodyLength * 0.035);
+          context.quadraticCurveTo(
+            -bodyLength * 0.78,
+            side * bodyLength * 0.12,
+            -bodyLength * 0.89,
+            side * bodyLength * 0.20
+          );
+          context.stroke();
+        }
+
+        // The terminal abdominal lantern is emissive but still has a solid casing.
+        const lanternGradient = context.createLinearGradient(
+          bodyLength * 0.23,
+          -bodyLength * 0.12,
+          bodyLength * 0.54,
+          bodyLength * 0.12
+        );
+        const lanternAlpha = 0.32 + flash * 0.68;
+        lanternGradient.addColorStop(0, `rgba(91,84,22,${lanternAlpha})`);
+        lanternGradient.addColorStop(0.48, `rgba(211,241,62,${lanternAlpha})`);
+        lanternGradient.addColorStop(0.78, `rgba(244,255,144,${lanternAlpha})`);
+        lanternGradient.addColorStop(1, `rgba(68,55,12,${lanternAlpha})`);
+        context.fillStyle = lanternGradient;
+        context.beginPath();
+        context.ellipse(bodyLength * 0.39, 0, bodyLength * 0.18, bodyLength * 0.125, 0, 0, TAU);
+        context.fill();
+
+        if (flash > 0.04) {
+          context.globalCompositeOperation = 'lighter';
+          context.fillStyle = `rgba(235,255,126,${flash * 0.72})`;
+          context.beginPath();
+          context.ellipse(bodyLength * 0.43, 0, bodyLength * 0.105, bodyLength * 0.075, 0, 0, TAU);
+          context.fill();
+        }
+
+        context.restore();
+      }
+
+      function resize() {
+        width = Math.max(1, innerWidth);
+        height = Math.max(1, innerHeight);
+        pixelRatio = Math.min(devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      function reset() {
+        elapsed = 0;
+        gust = 0;
+        disturbance = 0;
+        for (let index = 0; index < fireflies.length; index++) {
+          Object.assign(fireflies[index], createFirefly(index));
+        }
+      }
+
+      function frame(now) {
+        const dt = Math.min(0.04, Math.max(0, (now - lastTime) / 1000));
+        lastTime = now;
+        if (!paused) {
+          elapsed += dt;
+          gust *= Math.exp(-0.72 * dt);
+          disturbance *= Math.exp(-1.65 * dt);
+          pointer.velocityX *= Math.exp(-7.5 * dt);
+          pointer.velocityY *= Math.exp(-7.5 * dt);
+          fireflies.forEach((firefly, index) => updateFirefly(firefly, dt, index));
+        }
+
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.globalCompositeOperation = 'source-over';
+        context.globalAlpha = 1;
+        context.clearRect(0, 0, width, height);
+
+        // Farther individuals render first, maintaining believable occlusion.
+        const renderOrder = [...fireflies].sort((a, b) => a.z - b.z);
+        for (const firefly of renderOrder) drawFirefly(firefly);
+
+        requestAnimationFrame(frame);
+      }
+
+      function movePointer(event) {
+        const now = performance.now();
+        const dt = clamp((now - pointer.lastMove) / 1000, 0.008, 0.08);
+        const x = clamp(event.clientX, 0, width);
+        const y = clamp(event.clientY, 0, height);
+        if (pointer.active) {
+          pointer.velocityX = (x - pointer.x) / dt;
+          pointer.velocityY = (y - pointer.y) / dt;
+          const speed = Math.hypot(pointer.velocityX, pointer.velocityY);
+          if (speed > 120) {
+            disturbAt(x, y, clamp(115 + speed * 0.035, 120, 235), clamp(speed / 1350, 0.12, 0.82));
+          }
+        }
+        pointer.previousX = pointer.x;
+        pointer.previousY = pointer.y;
+        pointer.x = x;
+        pointer.y = y;
+        pointer.active = true;
+        pointer.lastMove = now;
+      }
+
+      addEventListener('resize', resize, { passive: true });
+      addEventListener('pointermove', movePointer, { passive: true });
+      addEventListener('pointerdown', event => {
+        movePointer(event);
+        pointer.down = true;
+        canvas.setPointerCapture?.(event.pointerId);
+        disturbAt(pointer.x, pointer.y, 280, 1.0);
+      }, { passive: true });
+      addEventListener('pointerup', event => {
+        movePointer(event);
+        pointer.down = false;
+        canvas.releasePointerCapture?.(event.pointerId);
+      }, { passive: true });
+      addEventListener('pointercancel', () => {
+        pointer.down = false;
+        pointer.active = false;
+      }, { passive: true });
+      addEventListener('pointerleave', event => {
+        if (event.pointerType === 'mouse' && !pointer.down) pointer.active = false;
+      }, { passive: true });
+      addEventListener('keydown', event => {
+        const key = event.key.toLowerCase();
+        if (event.code === 'Space') {
+          paused = !paused;
+          event.preventDefault();
+        } else if (key === 'g') {
+          gust = Math.max(gust, 1.0);
+        } else if (key === 'r') {
+          reset();
+        } else if (key === 'f') {
+          document.documentElement.requestFullscreen?.();
+        }
+      });
+
+      resize();
+      requestAnimationFrame(frame);
+    
+  shared.fireflies = fireflies; return { resize: (typeof resize !== "undefined" ? resize : ()=>{}), update: (typeof update !== "undefined" ? update : (dt)=>{}), draw: (typeof draw !== "undefined" ? draw : (ctx)=>{}) };
+}
+
+
+    
+    // Engine loop
+    const modules = [];
+    modules.push(init_dandelion(shared));
+    modules.push(init_dragonflies(shared));
+    modules.push(init_fireflies(shared));
+    
+    function resize() {
+      shared.width = window.innerWidth;
+      shared.height = window.innerHeight;
+      shared.dpr = window.devicePixelRatio || 1;
+      canvas.width = shared.width * shared.dpr;
+      canvas.height = shared.height * shared.dpr;
+      ctx.scale(shared.dpr, shared.dpr);
+      for (const m of modules) m.resize();
+    }
+    
+    let lastTime = performance.now();
+    function animate(time) {
+      const dt = Math.min(0.05, (time - lastTime) / 1000);
+      lastTime = time;
+      shared.elapsed += dt;
+      
+      ctx.clearRect(0, 0, shared.width, shared.height);
+      
+      for (const m of modules) m.update(dt);
+      
+      // PHYSICS INTERACTIONS
+      if (shared.dragonflies && shared.dragonflies.length > 0) {
+        for (const d of shared.dragonflies) {
+           let speed = Math.sqrt(d.vx*d.vx + d.vy*d.vy);
+           if (speed > 5) {
+               const dartIntensity = speed / 10;
+               // Push dandelions
+               if (shared.dandelions) {
+                   for (const seed of shared.dandelions) {
+                       const dx = seed.x - d.x;
+                       const dy = seed.y - d.y;
+                       const dist = Math.sqrt(dx*dx + dy*dy);
+                       if (dist < 300) {
+                           const force = (1 - dist/300) * dartIntensity * 20;
+                           seed.vx += (dx/dist) * force * dt;
+                           seed.vy += (dy/dist) * force * dt;
+                       }
+                   }
+               }
+               // Add global gust to dandelions
+               if (shared.addDandelionGust) {
+                   shared.addDandelionGust((d.vx / speed) * dartIntensity * 0.05 * dt);
+               }
+               // Fireflies scatter
+               if (shared.fireflies) {
+                   for (const f of shared.fireflies) {
+                       const dx = f.x - d.x;
+                       const dy = f.y - d.y;
+                       const dist = Math.sqrt(dx*dx + dy*dy);
+                       if (dist < 150) {
+                           f.vx += (dx/dist) * 200 * dt;
+                           f.vy += (dy/dist) * 200 * dt;
+                           f.glow = Math.max(0, f.glow - 5*dt); // Dim them
+                       }
+                   }
+               }
+           }
+        }
+      }
+      
+      for (const m of modules) m.draw(ctx);
+      
+      requestAnimationFrame(animate);
+    }
+    
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

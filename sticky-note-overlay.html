@@ -463,7 +463,36 @@ const pinEl = document.getElementById('pinEl');
 /* ─── State ─── */
 const sessionStart = Date.now();
 let currentStyle = 'yellow';
+let currentAttach = 'tape';
 let deadlineTime = null; // Date object or null
+let noteX = window.innerWidth - 250;
+let noteY = 40;
+
+function normalizeNotePosition(x, y) {
+  return {
+    x: Math.max(-50, Math.min(window.innerWidth - 160, x)),
+    y: Math.max(-10, Math.min(window.innerHeight - 50, y)),
+  };
+}
+
+function applyStyle(style) {
+  if (!style) return;
+  note.classList.remove('paper-' + currentStyle);
+  note.classList.add('paper-' + style);
+  currentStyle = style;
+  document.querySelectorAll('.style-dot').forEach(d => {
+    d.classList.toggle('active', d.dataset.style === style);
+  });
+}
+
+function applyAttach(attach) {
+  currentAttach = ['tape', 'pin', 'none'].includes(attach) ? attach : 'tape';
+  tapeEl.style.display = currentAttach === 'tape' ? 'block' : 'none';
+  pinEl.style.display = currentAttach === 'pin' ? 'block' : 'none';
+  document.querySelectorAll('.attach-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.attach === currentAttach);
+  });
+}
 
 // Load saved state from localStorage
 try {
@@ -471,14 +500,16 @@ try {
   if (saved) {
     const s = JSON.parse(saved);
     if (s.note) noteText.value = s.note;
-    if (s.deadline) deadlineTime = new Date(s.deadline);
-    if (s.style) {
-      currentStyle = s.style;
-      note.classList.remove('paper-yellow');
-      note.classList.add('paper-' + s.style);
-      document.querySelectorAll('.style-dot').forEach(d => {
-        d.classList.toggle('active', d.dataset.style === s.style);
-      });
+    if (s.deadline) {
+      const parsedDeadline = new Date(s.deadline);
+      deadlineTime = Number.isFinite(parsedDeadline.getTime()) ? parsedDeadline : null;
+    }
+    if (s.style) applyStyle(s.style);
+    if (s.attach) applyAttach(s.attach);
+    if (Number.isFinite(s.x) && Number.isFinite(s.y)) {
+      const pos = normalizeNotePosition(s.x, s.y);
+      noteX = pos.x;
+      noteY = pos.y;
     }
   }
 } catch(e) {}
@@ -490,14 +521,15 @@ function saveState() {
       note: noteText.value,
       deadline: deadlineTime ? deadlineTime.toISOString() : null,
       style: currentStyle,
+      attach: currentAttach,
+      x: noteX,
+      y: noteY,
     }));
   } catch(e) {}
 }
 noteText.addEventListener('input', saveState);
 
 /* ─── Position ─── */
-let noteX = window.innerWidth - 250;
-let noteY = 40;
 note.style.left = noteX + 'px';
 note.style.top = noteY + 'px';
 
@@ -532,6 +564,7 @@ window.addEventListener('mouseup', () => {
   if (isDragging) {
     isDragging = false;
     note.style.transition = 'box-shadow 0.3s ease, transform 0.15s ease';
+    saveState();
   }
 });
 
@@ -541,22 +574,15 @@ document.getElementById('styleBar').addEventListener('click', (e) => {
   if (!dot) return;
   const style = dot.dataset.style;
   if (style === currentStyle) return;
-  note.classList.remove('paper-' + currentStyle);
-  note.classList.add('paper-' + style);
-  currentStyle = style;
-  document.querySelectorAll('.style-dot').forEach(d => d.classList.remove('active'));
-  dot.classList.add('active');
+  applyStyle(style);
   saveState();
 });
 
 /* ─── Attachment Switching ─── */
 document.querySelectorAll('.attach-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    const attach = btn.dataset.attach;
-    tapeEl.style.display = attach === 'tape' ? 'block' : 'none';
-    pinEl.style.display = attach === 'pin' ? 'block' : 'none';
-    document.querySelectorAll('.attach-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    applyAttach(btn.dataset.attach);
+    saveState();
   });
 });
 
@@ -576,7 +602,9 @@ deadlineEditBtn.addEventListener('click', () => {
 deadlineSetBtn.addEventListener('click', () => {
   const val = deadlineInput.value;
   if (val) {
-    deadlineTime = new Date(val);
+    const parsedDeadline = new Date(val);
+    if (!Number.isFinite(parsedDeadline.getTime())) return;
+    deadlineTime = parsedDeadline;
     deadlineInputRow.classList.remove('visible');
     saveState();
   }
@@ -637,14 +665,18 @@ function updateTime() {
 }
 
 updateTime();
-setInterval(updateTime, 1000);
+const updateTimerId = window.setInterval(updateTime, 1000);
+window.addEventListener('pagehide', () => window.clearInterval(updateTimerId), { once: true });
+window.addEventListener('beforeunload', () => window.clearInterval(updateTimerId), { once: true });
 
 /* ─── Resize ─── */
 window.addEventListener('resize', () => {
-  noteX = Math.min(noteX, window.innerWidth - 160);
-  noteY = Math.min(noteY, window.innerHeight - 50);
+  const pos = normalizeNotePosition(noteX, noteY);
+  noteX = pos.x;
+  noteY = pos.y;
   note.style.left = noteX + 'px';
   note.style.top = noteY + 'px';
+  saveState();
 });
 </script>
 </body>

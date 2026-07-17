@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Lanterns & Sakura Overlay</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: transparent;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Raleway:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <script src="quotes.js"></script>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+
+        // State Machine
+        const STATE_IDLE = 0;
+        const STATE_LANTERNS = 1;
+        const STATE_SAKURA = 2;
+        const STATE_TRAIN = 3;
+        const STATE_PLANTS = 5;
+        const STATE_RAIN = 6;
+        const STATE_QUOTE = 4;
+        
+        let currentState = STATE_RAIN; 
+        const IDLE_DURATION = 999999999; 
+        let stateTimer = IDLE_DURATION; 
+
+        let lanterns = [];
+        let petals = [];
+        let spiritTrain = null;
+        
+        // Rain Sequence Variables
+        let raindrops = [];
+        let mistParticles = [];
+        let clouds = [];
+        let animeTrees = [];
+        let lightningAlpha = 0;
+        let rainDuration = 999999999;
+        let kubo = null;
+        let frog = null;
+        
+        let currentQuote = null;
+        let currentFont = "Montserrat";
+        const QUOTE_FONTS = ["Montserrat", "Oswald", "Raleway", "Playfair Display", "Cinzel"];
+        let quoteTimer = 0;
+        const QUOTE_DURATION = 10; // 10 seconds
+        let quoteParticles = [];
+        let quoteDissolving = false;
+        
+        class QuoteParticle {
+            constructor(x, y, vx, vy, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.size = Math.random() * 1.5 + 0.5; // Smaller particles
+                this.alpha = 1.0;
+                this.color = color;
+                this.lifetime = Math.random() * 8 + 6; // Random lifetime (6 to 14 seconds)
+                this.age = 0;
+            }
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                // High friction so they burst fast then hang in the air
+                const friction = Math.pow(0.96, dt * 60);
+                this.vx *= friction;
+                this.vy *= friction;
+                
+                this.age += dt;
+                if (this.age > this.lifetime) {
+                    this.alpha -= dt * 1.5; // Disappear slowly one by one when lifetime ends
+                }
+            }
+            draw(ctx) {
+                if (this.alpha <= 0) return;
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // ==========================================
+        // LANTERNS
+        // ==========================================
+        const LANTERN_COUNT = 20;
+        class Lantern {
+            constructor() {
+                // Parallax layers: 0 (back) to 1 (front)
+                this.z = Math.random();
+                
+                // Size depends on z (perspective)
+                const baseWidth = 20 + this.z * 30; 
+                this.width = baseWidth * (0.9 + Math.random() * 0.2);
+                this.height = this.width * (1.2 + Math.random() * 0.4);
+                
+                this.x = Math.random() * canvas.width;
+                
+                // Spawn below screen, staggered so they don't all come up at once
+                this.y = canvas.height + this.height + Math.random() * (canvas.height * 0.8);
+                
+                // VERY SLOW ascend speed for cinematic feel
+                this.vy = -(8 + this.z * 12) * (0.8 + Math.random() * 0.4);
+                
+                // Sway parameters
+                this.swayPhase = Math.random() * Math.PI * 2;
+                this.swaySpeed = 0.2 + Math.random() * 0.3; // Slower sway
+                this.swayAmount = 5 + this.z * 10; // Float much straighter
+                
+                // Subtle flicker
+                this.flickerPhase = Math.random() * Math.PI * 2;
+                this.flickerSpeed = 1.5 + Math.random() * 3;
+                
+                // Color variation (warm yellows, oranges, soft reds)
+                const hues = [15, 25, 35, 45]; // Orange-red to golden-yellow
+                this.hue = hues[Math.floor(Math.random() * hues.length)] + (Math.random() * 10 - 5);
+                this.sat = 80 + Math.random() * 20;
+                this.lum = 55 + Math.random() * 15;
+                
+                // Slightly tilted rotation
+                this.angle = (Math.random() - 0.5) * 0.15;
+                
+                this.dead = false;
+            }
+            
+            update(dt) {
+                this.y += this.vy * dt;
+                this.swayPhase += this.swaySpeed * dt;
+                this.flickerPhase += this.flickerSpeed * dt;
+                
+                // Mark dead once it is fully off the top
+                if (this.y < -this.height * 2) {
+                    this.dead = true;
+                }
+            }
+            
+            draw(ctx) {
+                const currentX = this.x + Math.sin(this.swayPhase) * this.swayAmount;
+                const currentY = this.y;
+                
+                ctx.save();
+                ctx.translate(currentX, currentY);
+                ctx.rotate(this.angle + Math.sin(this.swayPhase * 0.5) * 0.05);
+                
+                // Lower overall opacity so it doesn't block work (Max ~0.55)
+                const flicker = 0.85 + Math.sin(this.flickerPhase) * 0.15;
+                const globalAlpha = (0.2 + this.z * 0.35) * flicker;
+                
+                // Glow radius
+                const glowR = this.width * 1.8;
+                
+                // Draw glowing aura
+                ctx.globalCompositeOperation = 'screen';
+                const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
+                aura.addColorStop(0, `hsla(${this.hue}, ${this.sat}%, ${this.lum}%, ${globalAlpha * 0.5})`);
+                aura.addColorStop(0.5, `hsla(${this.hue}, ${this.sat}%, ${this.lum}%, ${globalAlpha * 0.15})`);
+                aura.addColorStop(1, `hsla(${this.hue}, ${this.sat}%, ${this.lum}%, 0)`);
+                
+                ctx.fillStyle = aura;
+                ctx.beginPath();
+                ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw the lantern body
+                const hw = this.width / 2;
+                const hh = this.height / 2;
+                
+                const bodyGrad = ctx.createLinearGradient(0, hh, 0, -hh);
+                bodyGrad.addColorStop(0, `hsla(${this.hue}, ${this.sat}%, ${this.lum + 20}%, ${globalAlpha})`);
+                bodyGrad.addColorStop(0.3, `hsla(${this.hue}, ${this.sat}%, ${this.lum}%, ${globalAlpha * 0.8})`);
+                bodyGrad.addColorStop(1, `hsla(${this.hue}, ${this.sat}%, ${this.lum - 15}%, ${globalAlpha * 0.6})`);
+                
+                ctx.fillStyle = bodyGrad;
+                
+                // Rounded rectangle for lantern body
+                const r = this.width * 0.2;
+                ctx.beginPath();
+                ctx.moveTo(-hw + r, -hh);
+                ctx.lineTo(hw - r, -hh);
+                ctx.quadraticCurveTo(hw, -hh, hw, -hh + r);
+                ctx.lineTo(hw, hh - r);
+                ctx.quadraticCurveTo(hw, hh, hw - r, hh);
+                ctx.lineTo(-hw + r, hh);
+                ctx.quadraticCurveTo(-hw, hh, -hw, hh - r);
+                ctx.lineTo(-hw, -hh + r);
+                ctx.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Darker frame outline (silhouette effect)
+                ctx.strokeStyle = `hsla(${this.hue}, 50%, 8%, ${globalAlpha * 0.75})`;
+                ctx.lineWidth = 1.0;
+                ctx.stroke();
+                
+                // Subtle vertical ribs
+                ctx.beginPath();
+                ctx.moveTo(0, -hh);
+                ctx.lineTo(0, hh);
+                ctx.moveTo(-hw*0.5, -hh);
+                ctx.quadraticCurveTo(-hw*0.6, 0, -hw*0.5, hh);
+                ctx.moveTo(hw*0.5, -hh);
+                ctx.quadraticCurveTo(hw*0.6, 0, hw*0.5, hh);
+                ctx.stroke();
+                
+                // Subtle horizontal ribs
+                const ribs = 4;
+                for (let i = 1; i < ribs; i++) {
+                    const ry = -hh + (this.height / ribs) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(-hw, ry);
+                    ctx.quadraticCurveTo(0, ry + this.width * 0.15, hw, ry);
+                    ctx.stroke();
+                }
+                
+                // Bottom opening/candle glow
+                ctx.fillStyle = `hsla(45, 100%, 80%, ${globalAlpha * 0.8})`;
+                ctx.beginPath();
+                ctx.ellipse(0, hh, hw * 0.6, hw * 0.15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+        
+        // Initialize lanterns for the first run
+        for (let i = 0; i < LANTERN_COUNT; i++) {
+            lanterns.push(new Lantern());
+        }
+
+        // ==========================================
+        // SAKURA PETALS
+        // ==========================================
+        const PETAL_COUNT = 60;
+        class Petal {
+            constructor() {
+                this.z = Math.random();
+                const baseSize = 8 + this.z * 12;
+                this.size = baseSize * (1.2 + Math.random() * 0.6);
+                
+                this.x = Math.random() * canvas.width;
+                
+                // Spawn staggered above screen
+                this.y = -(Math.random() * canvas.height * 1.5);
+                
+                // Slow falling speed
+                this.vy = (15 + this.z * 30) * (0.8 + Math.random() * 0.4);
+                
+                // Drift horizontally (wind)
+                this.vx = (10 + Math.random() * 20) * (Math.random() > 0.5 ? 1 : -1);
+                if (Math.random() < 0.5) this.vx += 15; // prevailing wind tendency
+                
+                // 3D rotation simulations
+                this.rotX = Math.random() * Math.PI * 2;
+                this.rotY = Math.random() * Math.PI * 2;
+                this.rotZ = Math.random() * Math.PI * 2;
+                
+                this.spinX = (Math.random() - 0.5) * 2;
+                this.spinY = (Math.random() - 0.5) * 2;
+                this.spinZ = (Math.random() - 0.5) * 1;
+                
+                this.swayPhase = Math.random() * Math.PI * 2;
+                this.swaySpeed = 0.5 + Math.random() * 1.0;
+                
+                // Pink hues
+                this.hue = 330 + Math.random() * 20; // 330-350 (pink to light crimson)
+                this.sat = 60 + Math.random() * 30;
+                this.lum = 75 + Math.random() * 15;
+                
+                this.dead = false;
+                this.landed = false;
+                this.disturbed = false;
+                this.disturbedAlpha = 1.0;
+            }
+            
+            update(dt) {
+                if (this.disturbed) {
+                    // Petal was kicked up by SpiritTrain
+                    this.x += this.vx * dt;
+                    this.y += this.vy * dt;
+                    this.rotX += this.spinX * dt * 2;
+                    this.rotY += this.spinY * dt * 2;
+                    this.rotZ += this.spinZ * dt * 2;
+                    
+                    // Fade out over roughly 2 seconds
+                    this.disturbedAlpha -= dt * 0.5;
+                    if (this.disturbedAlpha <= 0) {
+                        this.dead = true;
+                    }
+                } else if (!this.landed) {
+                    // Falling state
+                    this.swayPhase += this.swaySpeed * dt;
+                    
+                    this.x += (this.vx + Math.sin(this.swayPhase) * 20) * dt;
+                    this.y += this.vy * dt;
+                    
+                    this.rotX += this.spinX * dt;
+                    this.rotY += this.spinY * dt;
+                    this.rotZ += this.spinZ * dt;
+                    
+                    // Wrap around X axis if blown off screen
+                    if (this.x > canvas.width + 50) this.x = -50;
+                    if (this.x < -50) this.x = canvas.width + 50;
+                    
+                    // Land on the taskbar ground line
+                    if (this.y >= canvas.height - 40) {
+                        this.y = canvas.height - 40;
+                        this.landed = true;
+                        // Lie relatively flat on the ground
+                        this.rotX = Math.PI / 2;
+                        this.rotY = 0;
+                    }
+                } else if (spiritTrain && this.landed) {
+                    const trainFront = spiritTrain.x + spiritTrain.totalLength;
+                    
+                    // Kicked up by the front (cowcatcher)
+                    if (this.x > trainFront - 20 && this.x < trainFront + 20) {
+                        this.disturbed = true;
+                        this.landed = false;
+                        this.vy = -Math.random() * 50 - 15; // less bouncy up
+                        this.vx = spiritTrain.vx * 0.8 + Math.random() * 80; // more forward swirl
+                        this.spinZ = (Math.random() - 0.5) * 25;
+                    } 
+                    // Gusts from under the train coaches
+                    else if (this.x > spiritTrain.x && this.x < trainFront) {
+                        if (Math.random() < 0.05) {
+                            this.disturbed = true;
+                            this.landed = false;
+                            this.vy = -Math.random() * 40 - 10;
+                            this.vx = spiritTrain.vx * 0.1 + Math.random() * 20; // Stay behind train, swirl sideways
+                            this.spinZ = (Math.random() - 0.5) * 20;
+                        }
+                    }
+                }
+            }
+            
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotZ);
+                
+                // Simulate 3D by scaling based on rotX/Y
+                const scaleX = Math.abs(Math.cos(this.rotY));
+                const scaleY = Math.abs(Math.cos(this.rotX));
+                
+                // Make sure it doesn't get completely invisible
+                ctx.scale(Math.max(scaleX, 0.2), Math.max(scaleY, 0.2));
+                
+                // Very transparent and unobtrusive, modulated by disturbed fade out
+                const baseAlpha = 0.6 + this.z * 0.4;
+                const finalAlpha = baseAlpha * this.disturbedAlpha;
+                ctx.fillStyle = `hsla(${this.hue}, ${this.sat}%, ${this.lum}%, ${finalAlpha})`;
+                
+                // Draw a simple petal shape
+                ctx.beginPath();
+                ctx.moveTo(0, this.size);
+                ctx.bezierCurveTo(this.size, this.size, this.size, 0, 0, -this.size);
+                ctx.bezierCurveTo(-this.size, 0, -this.size, this.size, 0, this.size);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // SPIRIT TRAIN
+        // ==========================================
+        class TrainSmoke {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = -Math.random() * 20 - 10; // drift left
+                this.vy = -Math.random() * 30 - 20; // drift up
+                this.size = Math.random() * 8 + 3;
+                this.alpha = 0.8;
+                this.growth = Math.random() * 6 + 2;
+                this.decay = Math.random() * 0.3 + 0.15;
+                
+                // Colorful smoke
+                const colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#1dd1a1', '#ffffff'];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+            }
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.size += this.growth * dt;
+                this.alpha -= this.decay * dt;
+            }
+            draw(ctx) {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = this.alpha * 0.6;
+                ctx.globalCompositeOperation = 'screen'; // Beautiful glowing blending
+                ctx.fillStyle = this.color;
+                
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        class Cloud {
+            constructor() {
+                this.x = width + Math.random() * 400;
+                this.y = Math.random() * (height * 0.4);
+                this.width = Math.random() * 250 + 150;
+                this.height = Math.random() * 80 + 50;
+                this.speed = -(Math.random() * 40 + 30);
+                this.alpha = Math.random() * 0.4 + 0.2;
+            }
+            update(dt) {
+                this.x += this.speed * dt;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = '#65727d'; // Realistic rain cloud grey
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, this.width, this.height, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.ellipse(this.x - this.width*0.4, this.y - this.height*0.3, this.width*0.6, this.height*0.7, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.ellipse(this.x + this.width*0.4, this.y - this.height*0.4, this.width*0.7, this.height*0.8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        class AnimeTree {
+            constructor(x, scale, zIndex) {
+                this.x = x;
+                this.scale = scale;
+                this.zIndex = zIndex;
+                this.swayOffset = Math.random() * Math.PI * 2;
+                this.swaySpeed = Math.random() * 0.5 + 0.5;
+                this.trunkColor = '#3a2a1c';
+                this.leafColor = `hsla(140, ${Math.random()*20 + 40}%, ${Math.random()*15 + 20}%, 0.9)`;
+                this.highlightColor = `hsla(140, ${Math.random()*20 + 50}%, ${Math.random()*15 + 35}%, 0.9)`;
+            }
+            update(dt) {}
+            draw(ctx, timeSec) {
+                ctx.save();
+                ctx.globalAlpha = 0.4;
+                const sway = Math.sin(timeSec * this.swaySpeed + this.swayOffset) * 15 * this.scale;
+                
+                ctx.translate(this.x, height - 40);
+                ctx.scale(this.scale, this.scale);
+                
+                // Trunk
+                ctx.fillStyle = this.trunkColor;
+                ctx.beginPath();
+                ctx.moveTo(-15, 0);
+                ctx.quadraticCurveTo(-10, -100, sway - 5, -200);
+                ctx.lineTo(sway + 5, -200);
+                ctx.quadraticCurveTo(10, -100, 15, 0);
+                ctx.fill();
+                
+                // Branches
+                ctx.beginPath();
+                ctx.moveTo(sway, -150);
+                ctx.quadraticCurveTo(sway - 30, -180, sway - 40, -220);
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = this.trunkColor;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(sway, -120);
+                ctx.quadraticCurveTo(sway + 40, -150, sway + 50, -200);
+                ctx.lineWidth = 5;
+                ctx.stroke();
+
+                // Canopy
+                ctx.translate(sway, -230);
+                
+                ctx.fillStyle = this.leafColor;
+                ctx.beginPath();
+                ctx.arc(0, 0, 80, 0, Math.PI*2);
+                ctx.arc(-50, 20, 60, 0, Math.PI*2);
+                ctx.arc(50, 30, 65, 0, Math.PI*2);
+                ctx.arc(-30, -50, 70, 0, Math.PI*2);
+                ctx.arc(40, -40, 75, 0, Math.PI*2);
+                ctx.fill();
+
+                // Highlights
+                ctx.fillStyle = this.highlightColor;
+                ctx.beginPath();
+                ctx.arc(-10, -20, 40, 0, Math.PI*2);
+                ctx.arc(30, -50, 35, 0, Math.PI*2);
+                ctx.arc(-40, -10, 30, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class Mist {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 40;
+                this.vy = -Math.random() * 20 - 5;
+                this.size = Math.random() * 2.5 + 1; // Smaller mist
+                this.alpha = 0.5;
+                this.decay = Math.random() * 2 + 1; // Faster decay
+            }
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.size += dt * 5;
+                this.alpha -= this.decay * dt;
+            }
+            draw(ctx) {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = '#e0e0e0';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Raindrop {
+            constructor() {
+                this.x = Math.random() * width * 1.5 - width * 0.25; 
+                this.y = -20 - Math.random() * height; 
+                this.length = Math.random() * 30 + 20;
+                this.speed = Math.random() * 600 + 800;
+                this.vx = -120;
+            }
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.speed * dt;
+                
+                if (this.y > height - 40) {
+                    for(let i=0; i<2; i++) {
+                        mistParticles.push(new Mist(this.x, height - 40));
+                    }
+                    this.y = -100 - Math.random() * 200; 
+                    this.x = Math.random() * width * 1.5 - width * 0.25;
+                }
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.strokeStyle = '#aaccff';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - (this.vx/this.speed)*this.length, this.y - this.length);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        class Frog {
+            constructor() {
+                this.x = Math.random() * (width * 0.5) + 50; 
+                this.y = height - 40;
+                this.vx = 0;
+                this.vy = 0;
+                this.jumpTimer = Math.random() * 5 + 3;
+                this.isJumping = false;
+                this.facing = 1; // 1 for right, -1 for left
+            }
+            update(dt) {
+                this.jumpTimer -= dt;
+                if (this.jumpTimer <= 0 && !this.isJumping) {
+                    this.isJumping = true;
+                    this.vy = -300; 
+                    this.vx = (Math.random() > 0.5 ? 1 : -1) * 150; 
+                    this.facing = this.vx > 0 ? 1 : -1;
+                }
+                
+                if (this.isJumping) {
+                    this.vy += 800 * dt; 
+                    this.x += this.vx * dt;
+                    this.y += this.vy * dt;
+                    
+                    if (this.y >= height - 40) {
+                        this.y = height - 40;
+                        this.isJumping = false;
+                        this.vx = 0;
+                        this.vy = 0;
+                        this.jumpTimer = Math.random() * 8 + 4;
+                    }
+                    
+                    if (this.x < 50) {
+                        this.x = 50;
+                        this.vx = -this.vx; // bounce off walls
+                        this.facing = 1;
+                    }
+                    if (this.x > width - 450) {
+                        this.x = width - 450; 
+                        this.vx = -this.vx;
+                        this.facing = -1;
+                    }
+                }
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(1.5, 1.5); // make frog slightly larger
+                if (this.facing < 0) {
+                    ctx.scale(-1, 1);
+                }
+                
+                ctx.fillStyle = '#2d5a27';
+                ctx.beginPath();
+                if (this.isJumping) {
+                    ctx.ellipse(0, -10, 15, 10, Math.PI/4, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#2d5a27';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(-10, -5); ctx.lineTo(-25, 5); ctx.lineTo(-30, 0);
+                    ctx.moveTo(10, -5); ctx.lineTo(25, 5); ctx.lineTo(30, 0);
+                    ctx.stroke();
+                } else {
+                    ctx.ellipse(0, -10, 18, 12, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.ellipse(-12, -8, 8, 10, -Math.PI/4, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.beginPath();
+                    ctx.arc(8, -18, 2.5, 0, Math.PI*2);
+                    ctx.arc(14, -18, 2.5, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(8, -18, 1, 0, Math.PI*2);
+                    ctx.arc(14, -18, 1, 0, Math.PI*2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        class BahayKubo {
+            constructor() {
+                this.w = 340;
+                this.h = 280;
+            }
+            draw(ctx) {
+                const scale = 0.85;
+                const scaledW = this.w * scale;
+                const scaledH = this.h * scale;
+                const bx = width - scaledW - 100;
+                const by = height - scaledH - 40;
+                
+                ctx.save();
+                ctx.translate(bx, by);
+                ctx.scale(scale, scale);
+                
+                // Stilts (Bamboo)
+                ctx.fillStyle = '#3a2a1c';
+                ctx.fillRect(50, 200, 15, 80);
+                ctx.fillRect(275, 200, 15, 80);
+                ctx.fillRect(110, 200, 10, 80);
+                ctx.fillRect(215, 200, 10, 80);
+                
+                // Main Body
+                ctx.fillStyle = '#8b6f4e'; 
+                ctx.fillRect(30, 100, 280, 100);
+                
+                // Woven texture lines
+                ctx.strokeStyle = '#6b543c';
+                ctx.lineWidth = 1;
+                for(let i=105; i<200; i+=8) {
+                    ctx.beginPath(); ctx.moveTo(30, i); ctx.lineTo(310, i); ctx.stroke();
+                }
+                
+                // Bamboo framing
+                ctx.strokeStyle = '#4a3b2c';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(30, 150); ctx.lineTo(310, 150);
+                ctx.moveTo(110, 100); ctx.lineTo(110, 200);
+                ctx.moveTo(230, 100); ctx.lineTo(230, 200);
+                ctx.stroke();
+                
+                // Open Window
+                ctx.fillStyle = '#1a1208'; 
+                ctx.fillRect(125, 115, 90, 50);
+                
+                // Window is empty now, removed lamp and light spill
+
+                // Window prop (Awning)
+                ctx.fillStyle = '#8b6f4e';
+                ctx.beginPath();
+                ctx.moveTo(120, 110);
+                ctx.lineTo(220, 110);
+                ctx.lineTo(235, 70);
+                ctx.lineTo(105, 70);
+                ctx.fill();
+                ctx.strokeStyle = '#4a3b2c';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                // Stick holding window
+                ctx.beginPath(); ctx.moveTo(170, 115); ctx.lineTo(180, 70); ctx.stroke();
+                
+                // Roof (Nipa)
+                ctx.fillStyle = '#4a4025'; 
+                ctx.beginPath();
+                ctx.moveTo(-10, 100);
+                ctx.lineTo(170, -30); // Taller roof
+                ctx.lineTo(350, 100);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Roof texture/layers
+                ctx.strokeStyle = '#635635';
+                ctx.lineWidth = 4;
+                for(let r=0; r<11; r++) {
+                    ctx.beginPath();
+                    ctx.moveTo(10 + r*15, 80 - r*10);
+                    ctx.lineTo(330 - r*15, 80 - r*10);
+                    ctx.stroke();
+                }
+
+                // Flowers removed
+                
+                ctx.restore();
+            }
+        }
+
+        class SpiritTrain {
+            constructor() {
+                // Highly accurate scaling to the reference image
+                this.engineWidth = 220;
+                this.engineHeight = 85; // To top of stack
+                this.coachWidth = 190;
+                this.coachHeight = 75; // Including roof
+                this.coachSpacing = 15;
+                this.numCoaches = 6;
+                
+                // Total length
+                this.totalLength = this.engineWidth + (this.coachWidth + this.coachSpacing) * this.numCoaches;
+                
+                // Start way off screen to the left
+                this.x = -canvas.width * 0.2;
+                this.baseY = canvas.height - 40; 
+                this.y = this.baseY;
+                
+                // Slow, peaceful glide
+                this.vx = 45; 
+                
+                this.dead = false;
+                this.smokeParticles = [];
+                this.smokeTimer = 0;
+            }
+            
+            update(dt) {
+                this.x += this.vx * dt;
+                
+                // Generate smoke from stack
+                this.smokeTimer -= dt;
+                if (this.smokeTimer <= 0) {
+                    const stackX = this.x + this.totalLength - 45; // Smoke stack position
+                    const stackY = this.y - 85;
+                    // Spawn multiple colorful puffs at once
+                    for(let i=0; i<3; i++) {
+                        this.smokeParticles.push(new TrainSmoke(stackX, stackY));
+                    }
+                    this.smokeTimer = 0.05; 
+                }
+                
+                // Update smoke
+                for (let i = this.smokeParticles.length - 1; i >= 0; i--) {
+                    let s = this.smokeParticles[i];
+                    s.update(dt);
+                    if (s.alpha <= 0) {
+                        this.smokeParticles.splice(i, 1);
+                    }
+                }
+                
+                // Kill when fully offscreen right
+                if (this.x > canvas.width + 100) {
+                    this.dead = true;
+                }
+            }
+            
+            draw(ctx) {
+                ctx.save();
+                
+                // Draw smoke (behind train)
+                for (let s of this.smokeParticles) {
+                    s.draw(ctx);
+                }
+                
+                // Semi-transparent spectral look
+                ctx.globalAlpha = 0.45;
+                const trainColor = '#1a1c1d';
+                const roofColor = '#111314';
+                const detailColor = '#0a0a0b';
+                const windowColor = 'rgba(255, 225, 120, 0.9)';
+                const shadowColor = 'rgba(255, 220, 80, 1)';
+                
+                let currentX = this.x;
+                const baseY = this.y;
+                
+                // Draw 10 coaches
+                for (let i = 0; i < this.numCoaches; i++) {
+                    // Clerestory Top Roof
+                    ctx.fillStyle = roofColor;
+                    ctx.fillRect(currentX + 25, baseY - 72, this.coachWidth - 50, 7);
+                    
+                    // Main Roof (overhangs platforms)
+                    ctx.beginPath();
+                    ctx.roundRect(currentX + 5, baseY - 65, this.coachWidth - 10, 8, 2);
+                    ctx.fill();
+                    
+                    // Coach Body
+                    ctx.fillStyle = trainColor;
+                    ctx.fillRect(currentX + 15, baseY - 57, this.coachWidth - 30, 42);
+                    
+                    // Platforms (floor)
+                    ctx.fillStyle = detailColor;
+                    ctx.fillRect(currentX, baseY - 15, this.coachWidth, 4);
+                    
+                    // Railings (left and right)
+                    ctx.fillRect(currentX + 5, baseY - 35, 2, 20); // Left post
+                    ctx.fillRect(currentX + 15, baseY - 35, 2, 20);
+                    ctx.fillRect(currentX + 5, baseY - 35, 10, 2); // Top rail
+                    
+                    ctx.fillRect(currentX + this.coachWidth - 7, baseY - 35, 2, 20); // Right post
+                    ctx.fillRect(currentX + this.coachWidth - 17, baseY - 35, 2, 20);
+                    ctx.fillRect(currentX + this.coachWidth - 17, baseY - 35, 10, 2); // Top rail
+                    
+                    // Windows (warm golden glow)
+                    ctx.save();
+                    ctx.fillStyle = windowColor;
+                    ctx.shadowColor = shadowColor;
+                    ctx.shadowBlur = 15;
+                    
+                    const winW = 20;
+                    const winH = 22;
+                    const winY = baseY - 50;
+                    // 4 windows per coach
+                    for (let w = 0; w < 4; w++) {
+                        const winX = currentX + 32 + w * 32;
+                        ctx.beginPath();
+                        ctx.roundRect(winX, winY, winW, winH, 2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                    
+                    // Wheels (Two bogies)
+                    ctx.fillStyle = detailColor;
+                    // Left bogie
+                    ctx.fillRect(currentX + 30, baseY - 11, 30, 4);
+                    ctx.beginPath();
+                    ctx.arc(currentX + 35, baseY - 5, 6, 0, Math.PI * 2);
+                    ctx.arc(currentX + 55, baseY - 5, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Right bogie
+                    ctx.fillRect(currentX + this.coachWidth - 60, baseY - 11, 30, 4);
+                    ctx.beginPath();
+                    ctx.arc(currentX + this.coachWidth - 55, baseY - 5, 6, 0, Math.PI * 2);
+                    ctx.arc(currentX + this.coachWidth - 35, baseY - 5, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Connector
+                    ctx.fillRect(currentX + this.coachWidth, baseY - 10, this.coachSpacing, 3);
+                    
+                    currentX += this.coachWidth + this.coachSpacing;
+                }
+                
+                // Draw Engine
+                // Cab (Back of engine)
+                ctx.fillStyle = trainColor;
+                ctx.fillRect(currentX, baseY - 70, 75, 58); // Cab body
+                
+                // Cab Roof (Overhangs back)
+                ctx.fillStyle = roofColor;
+                ctx.beginPath();
+                ctx.roundRect(currentX - 10, baseY - 78, 95, 8, 2);
+                ctx.fill();
+                
+                // Cab Window
+                ctx.save();
+                ctx.fillStyle = windowColor;
+                ctx.shadowColor = shadowColor;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.roundRect(currentX + 15, baseY - 60, 25, 28, 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Boiler (Front middle)
+                ctx.fillStyle = trainColor;
+                ctx.fillRect(currentX + 75, baseY - 52, 110, 40); // Boiler body
+                ctx.fillRect(currentX + 185, baseY - 45, 10, 33); // Front box
+                
+                // Boiler details/domes
+                ctx.fillStyle = detailColor;
+                // Sand dome
+                ctx.beginPath();
+                ctx.roundRect(currentX + 90, baseY - 65, 16, 13, 5);
+                ctx.fill();
+                // Steam dome
+                ctx.beginPath();
+                ctx.roundRect(currentX + 125, baseY - 70, 22, 18, 6);
+                ctx.fill();
+                // Smokestack (flared at top)
+                ctx.beginPath();
+                ctx.moveTo(currentX + 165, baseY - 52);
+                ctx.lineTo(currentX + 175, baseY - 52);
+                ctx.lineTo(currentX + 178, baseY - 85);
+                ctx.lineTo(currentX + 162, baseY - 85);
+                ctx.fill();
+                
+                // Piston box
+                ctx.fillRect(currentX + 160, baseY - 18, 35, 14);
+                
+                // Cowcatcher
+                ctx.beginPath();
+                ctx.moveTo(currentX + 195, baseY - 12);
+                ctx.lineTo(currentX + 220, baseY - 2);
+                ctx.lineTo(currentX + 195, baseY - 2);
+                ctx.fill();
+                ctx.strokeStyle = detailColor;
+                ctx.lineWidth = 1;
+                for(let i=0; i<4; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(currentX + 195, baseY - 12 + i*2);
+                    ctx.lineTo(currentX + 215 - i*4, baseY - 2);
+                    ctx.stroke();
+                }
+                
+                // Engine Wheels
+                ctx.fillStyle = detailColor;
+                
+                // Calculate wheel rotation based on x position
+                // Drive wheel radius = 16. Circumference = ~100.
+                const angle = (currentX % 100) / 100 * Math.PI * 2;
+                const rodOffsetX = Math.cos(angle) * 8;
+                const rodOffsetY = Math.sin(angle) * 8;
+                
+                // Big drive wheels
+                ctx.beginPath();
+                ctx.arc(currentX + 40, baseY - 10, 16, 0, Math.PI * 2);
+                ctx.arc(currentX + 85, baseY - 10, 16, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Spokes to visualize rotation
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                for(let i=0; i<4; i++) {
+                    const spkAngle = angle + (i * Math.PI / 2);
+                    ctx.beginPath();
+                    ctx.moveTo(currentX + 40, baseY - 10);
+                    ctx.lineTo(currentX + 40 + Math.cos(spkAngle)*16, baseY - 10 + Math.sin(spkAngle)*16);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(currentX + 85, baseY - 10);
+                    ctx.lineTo(currentX + 85 + Math.cos(spkAngle)*16, baseY - 10 + Math.sin(spkAngle)*16);
+                    ctx.stroke();
+                }
+                
+                // Connecting rod across drive wheels (moving)
+                ctx.fillStyle = '#a0a0a0';
+                ctx.fillRect(currentX + 40 + rodOffsetX, baseY - 12 + rodOffsetY, 45, 4);
+                
+                // Piston rod (connects to front piston box)
+                ctx.beginPath();
+                ctx.moveTo(currentX + 85 + rodOffsetX, baseY - 10 + rodOffsetY);
+                ctx.lineTo(currentX + 160, baseY - 10); // connects to fixed piston
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#a0a0a0';
+                ctx.stroke();
+                
+                // Pins connecting rods to wheels
+                ctx.fillStyle = '#dddddd';
+                ctx.beginPath();
+                ctx.arc(currentX + 40 + rodOffsetX, baseY - 10 + rodOffsetY, 3, 0, Math.PI*2);
+                ctx.arc(currentX + 85 + rodOffsetX, baseY - 10 + rodOffsetY, 3, 0, Math.PI*2);
+                ctx.fill();
+                
+                // Small front wheels
+                ctx.fillStyle = detailColor;
+                ctx.beginPath();
+                ctx.arc(currentX + 160, baseY - 5, 7, 0, Math.PI * 2);
+                ctx.arc(currentX + 185, baseY - 5, 7, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // MAIN LOOP
+        // ==========================================
+        let lastTime = performance.now();
+        
+        function animate(time) {
+            const dt = Math.min((time - lastTime) / 1000, 0.1);
+            lastTime = time;
+            
+            ctx.globalAlpha = 1.0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // State Machine Logic
+            if (currentState === STATE_IDLE) {
+                stateTimer -= dt;
+                if (stateTimer <= 0) {
+                    currentState = STATE_LANTERNS;
+                    lanterns = [];
+                    for (let i = 0; i < LANTERN_COUNT; i++) {
+                        lanterns.push(new Lantern());
+                    }
+                }
+            } 
+            else if (currentState === STATE_LANTERNS) {
+                lanterns = lanterns.filter(l => !l.dead);
+                lanterns.sort((a, b) => a.z - b.z);
+                for (const l of lanterns) {
+                    l.update(dt);
+                    l.draw(ctx);
+                }
+                
+                if (lanterns.length === 0) {
+                    currentState = STATE_SAKURA;
+                    petals = [];
+                    for (let i = 0; i < PETAL_COUNT; i++) {
+                        petals.push(new Petal());
+                    }
+                }
+            }
+            else if (currentState === STATE_SAKURA) {
+                // Petals persist until either dead or disturbed-faded
+                petals = petals.filter(p => !p.dead);
+                // Petals usually don't need strict z-sorting for drawing, but it helps depth
+                petals.sort((a, b) => a.z - b.z);
+                for (const p of petals) {
+                    p.update(dt);
+                    p.draw(ctx);
+                }
+                
+                // If all petals have either landed or died, transition to Train
+                if (petals.every(p => p.landed || p.dead)) {
+                    currentState = STATE_TRAIN;
+                    spiritTrain = new SpiritTrain();
+                }
+            }
+            else if (currentState === STATE_TRAIN) {
+                // Keep drawing petals on ground
+                petals = petals.filter(p => !p.dead);
+                for (let p of petals) {
+                    p.update(dt);
+                    p.draw(ctx);
+                }
+                
+                if (!spiritTrain.dead) {
+                    spiritTrain.update(dt);
+                    spiritTrain.draw(ctx);
+                } else {
+                    currentState = STATE_PLANTS;
+                    spiritTrain = null;
+                    petals = []; // Clear petals
+                    
+                    // Add some beautiful anime trees to the left side
+                    animeTrees = [
+                        new AnimeTree(100, 0.6, 1), 
+                        new AnimeTree(300, 0.45, 2), 
+                        new AnimeTree(50, 0.36, 3)
+                    ];
+                    
+                    kubo = null;
+                    frog = new Frog();
+                    
+                    // Spawn Clouds early
+                    clouds = [];
+                    for(let i=0; i<6; i++) {
+                        clouds.push(new Cloud());
+                    }
+                    
+                    stateTimer = 2;
+                }
+            }
+            else if (currentState === STATE_PLANTS) {
+                // Update and draw clouds
+                for (let c of clouds) {
+                    c.update(dt);
+                    c.draw(ctx);
+                }
+                
+                // Kubo removed
+                
+                // Update and draw anime trees
+                for (let t of animeTrees) {
+                    t.update(dt);
+                    t.draw(ctx, time / 1000);
+                }
+                
+                if (frog) {
+                    frog.update(dt);
+                    frog.draw(ctx);
+                }
+                
+                stateTimer -= dt;
+                if (stateTimer <= 0) {
+                    currentState = STATE_RAIN;
+                    rainDuration = 999999999; // Never end rain in screensaver
+                    raindrops = [];
+                    mistParticles = [];
+                    lightningAlpha = 0;
+                }
+            }
+            else if (currentState === STATE_RAIN) {
+                // Draw lightning
+                if (Math.random() < 0.005) {
+                    lightningAlpha = 0.8; // flash!
+                }
+                if (lightningAlpha > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = lightningAlpha;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.restore();
+                    lightningAlpha -= dt * 2; // fade out fast
+                }
+                
+                // Clouds
+                for (let c of clouds) {
+                    c.update(dt);
+                    c.draw(ctx);
+                }
+                
+                // Kubo removed
+                
+                // Spawn new raindrops (drizzle)
+                if (Math.random() < 0.1) { // lower density
+                    raindrops.push(new Raindrop());
+                    raindrops.push(new Raindrop());
+                }
+                
+                // Trees
+                for (let t of animeTrees) {
+                    t.draw(ctx, time / 1000);
+                }
+                
+                // Mist
+                mistParticles = mistParticles.filter(m => m.alpha > 0);
+                for (let m of mistParticles) {
+                    m.update(dt);
+                    m.draw(ctx);
+                }
+                
+                // Raindrops
+                for (let r of raindrops) {
+                    r.update(dt);
+                    r.draw(ctx);
+                }
+                
+                if (frog) {
+                    frog.update(dt);
+                    frog.draw(ctx);
+                }
+                
+                rainDuration -= dt;
+                if (rainDuration <= 0) {
+                    currentState = STATE_QUOTE;
+                    
+                    currentQuote = { 
+                        text: "Breathe in the hope, let go of the worries. Be good to yourself, and don't forget to drink a glass of water.", 
+                        author: "Gentle Reminder" 
+                    };
+                    
+                    currentFont = QUOTE_FONTS[Math.floor(Math.random() * QUOTE_FONTS.length)];
+                    quoteTimer = QUOTE_DURATION;
+                    quoteParticles = [];
+                    quoteDissolving = false;
+                }
+            }
+            else if (currentState === STATE_QUOTE) {
+                quoteTimer -= dt;
+                
+                const DISAPPEAR_TIME = 2.0; // Dissolve in the last 2 seconds
+                
+                if (quoteTimer <= DISAPPEAR_TIME && !quoteDissolving) {
+                    quoteDissolving = true;
+                    // Generate particles!
+                    // We need to approximate the bounding box to spawn particles inside it
+                    ctx.font = `55px "${currentFont}", sans-serif`;
+                    const words = currentQuote.text.split(' ');
+                    let line = '';
+                    const lines = [];
+                    const maxWidth = canvas.width * 0.5;
+                    for(let n = 0; n < words.length; n++) {
+                        const testLine = line + words[n] + ' ';
+                        if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                            lines.push(line);
+                            line = words[n] + ' ';
+                        } else line = testLine;
+                    }
+                    lines.push(line);
+                    const textHeight = (lines.length - 1) * 70;
+                    const padding = 60;
+                    const boxWidth = maxWidth + padding * 2;
+                    const boxHeight = textHeight + padding * 2 + 50;
+                    const boxX = (canvas.width / 2) - (boxWidth / 2);
+                    const boxY = (canvas.height / 2) - (boxHeight / 2);
+                    
+                    const boxCenterX = canvas.width / 2;
+                    const boxCenterY = canvas.height / 2;
+                    
+                    // Spawn 1500 atomic particles for a big bang effect
+                    for(let i=0; i<1500; i++) {
+                        let px, py;
+                        // Concentrate some particles near the center for a brighter core
+                        if (Math.random() > 0.5) {
+                            // Uniform spread over box
+                            px = boxX + Math.random() * boxWidth;
+                            py = boxY + Math.random() * boxHeight;
+                        } else {
+                            // Gaussian-ish spread near center
+                            px = boxCenterX + (Math.random() + Math.random() + Math.random() - 1.5) * boxWidth;
+                            py = boxCenterY + (Math.random() + Math.random() + Math.random() - 1.5) * boxHeight;
+                            
+                            // clamp to box
+                            px = Math.max(boxX, Math.min(boxX + boxWidth, px));
+                            py = Math.max(boxY, Math.min(boxY + boxHeight, py));
+                        }
+                        
+                        const dx = px - boxCenterX;
+                        const dy = py - boxCenterY;
+                        const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                        
+                        // Explosive velocity outward
+                        const speed = Math.random() * 800 + 300; 
+                        const vx = (dx / dist) * speed + (Math.random()-0.5)*200;
+                        const vy = (dy / dist) * (speed * 0.7) + (Math.random()-0.5)*200; // Slightly squashed Y explosion
+                        
+                        const rand = Math.random();
+                        let color = '#ffffff';
+                        if (rand > 0.6) color = 'rgba(255, 220, 50, 1)'; // bright gold
+                        else if (rand > 0.3) color = 'rgba(255, 255, 180, 1)'; // pale yellow
+                        else if (rand > 0.1) color = 'rgba(15, 15, 15, 1)'; // dark chunks
+                        
+                        quoteParticles.push(new QuoteParticle(px, py, vx, vy, color));
+                    }
+                }
+                
+                if (quoteTimer <= 0 && quoteParticles.length === 0) {
+                    currentState = STATE_IDLE;
+                    stateTimer = IDLE_DURATION;
+                } else if (!quoteDissolving) {
+                    // Normal display phase
+                    ctx.save();
+                    
+                    ctx.font = `55px "${currentFont}", sans-serif`;
+                    const words = currentQuote.text.split(' ');
+                    let line = '';
+                    const lines = [];
+                    const maxWidth = canvas.width * 0.5;
+                    
+                    for(let n = 0; n < words.length; n++) {
+                        const testLine = line + words[n] + ' ';
+                        const metrics = ctx.measureText(testLine);
+                        if (metrics.width > maxWidth && n > 0) {
+                            lines.push(line);
+                            line = words[n] + ' ';
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    lines.push(line);
+                    
+                    const lineHeight = 70;
+                    const textHeight = (lines.length - 1) * lineHeight;
+                    
+                    // Box dimensions
+                    const padding = 60;
+                    const boxWidth = maxWidth + padding * 2;
+                    const boxHeight = textHeight + padding * 2 + 50; // extra space for author
+                    const boxX = (canvas.width / 2) - (boxWidth / 2);
+                    const boxY = (canvas.height / 2) - (boxHeight / 2);
+                    
+                    // Draw dynamic poster-like background with beautiful graphic border
+                    ctx.globalAlpha = 1.0;
+                    const grad = ctx.createLinearGradient(boxX, boxY, boxX + boxWidth, boxY + boxHeight);
+                    const hue1 = (performance.now() / 80) % 360;
+                    const hue2 = (hue1 + 60) % 360;
+                    grad.addColorStop(0, `hsla(${hue1}, 80%, 20%, 0.85)`);
+                    grad.addColorStop(1, `hsla(${hue2}, 80%, 15%, 0.85)`);
+                    ctx.fillStyle = grad;
+                    ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; // elegant silver border
+                    ctx.lineWidth = 4;
+                    
+                    ctx.beginPath();
+                    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 15);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.roundRect(boxX + 10, boxY + 10, boxWidth - 20, boxHeight - 20, 10);
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    
+                    // Draw text inside box
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    ctx.shadowColor = "rgba(0,0,0,0.8)";
+                    ctx.shadowBlur = 8;
+                    
+                    let y = boxY + padding;
+                    for (const l of lines) {
+                        ctx.fillText(l, canvas.width / 2, y);
+                        y += lineHeight;
+                    }
+                    
+                    // Draw Author
+                    ctx.font = '24px "Segoe UI", sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.shadowBlur = 4;
+                    ctx.fillText(`— ${currentQuote.author}`, boxX + boxWidth - padding, boxY + boxHeight - padding + 20);
+                    
+                    ctx.restore();
+                } else {
+                    // Dissolving phase: update and draw particles
+                    let aliveParticles = 0;
+                    for (let p of quoteParticles) {
+                        p.update(dt);
+                        p.draw(ctx);
+                        if (p.alpha > 0) aliveParticles++;
+                    }
+                    // if all died and timer is basically 0, it will transition
+                    if (aliveParticles === 0) quoteParticles = [];
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Quick hotkey to force next state for debugging
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 's') {
+                if (currentState === STATE_IDLE) {
+                    stateTimer = 0;
+                } else if (currentState === STATE_LANTERNS) {
+                    lanterns = [];
+                } else if (currentState === STATE_SAKURA) {
+                    petals = [];
+                } else if (currentState === STATE_TRAIN) {
+                    if (spiritTrain) spiritTrain.dead = true;
+                } else if (currentState === STATE_PLANTS) {
+                    stateTimer = 0;
+                } else if (currentState === STATE_RAIN) {
+                    rainDuration = 0;
+                } else if (currentState === STATE_QUOTE) {
+                    quoteTimer = 0;
+                }
+            }
+        });
+        
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>

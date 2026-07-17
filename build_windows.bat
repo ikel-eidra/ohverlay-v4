@@ -17,29 +17,78 @@ echo.
 echo   Working directory: %cd%
 echo.
 
-REM Check if Python is available
-python --version >nul 2>&1
+set "PY_CMD=py -3.11"
+%PY_CMD% --version >nul 2>&1
 if errorlevel 1 (
-    echo  [ERROR] Python not found in PATH!
-    echo  Download Python 3.10+ from: https://www.python.org/downloads/
-    echo  Make sure to check "Add Python to PATH" during install.
+    set "PY_CMD=py -3"
+    %PY_CMD% --version >nul 2>&1
+)
+if errorlevel 1 (
+    set "PY_CMD=python"
+    %PY_CMD% --version >nul 2>&1
+)
+if errorlevel 1 (
+    echo  [ERROR] Python 3.11+ not found in PATH or via the Python launcher.
+    echo  Install Python 3.11 from: https://www.python.org/downloads/
     echo.
     pause
     exit /b 1
 )
 
-echo  [1/4] Installing build tools...
-pip install --user pyinstaller
+set "BUILD_PY=.venv-build\Scripts\python.exe"
+if not exist "%BUILD_PY%" (
+    echo  [1/6] Creating isolated build environment...
+    %PY_CMD% -m venv .venv-build
+    if errorlevel 1 (
+        echo.
+        echo  [ERROR] Failed to create .venv-build
+        pause
+        exit /b 1
+    )
+) else (
+    echo  [1/6] Reusing isolated build environment...
+)
 
 echo.
-echo  [2/4] Installing application dependencies...
-pip install --user -r requirements.txt
+echo  [2/6] Upgrading build tools...
+"%BUILD_PY%" -m pip install --upgrade pip setuptools wheel
+if errorlevel 1 (
+    echo.
+    echo  [ERROR] Failed to upgrade pip tooling.
+    pause
+    exit /b 1
+)
 
 echo.
-echo  [3/4] Building Ohverlay.exe with PyInstaller...
+echo  [3/6] Installing PyInstaller...
+"%BUILD_PY%" -m pip install pyinstaller
+if errorlevel 1 (
+    echo.
+    echo  [ERROR] Failed to install PyInstaller.
+    pause
+    exit /b 1
+)
+
+echo.
+echo  [4/6] Installing application dependencies...
+"%BUILD_PY%" -m pip install -r requirements.txt
+if errorlevel 1 (
+    echo.
+    echo  [ERROR] Failed to install application dependencies.
+    pause
+    exit /b 1
+)
+
+echo.
+echo  [5/6] Clearing previous build output...
+if exist "build" rmdir /s /q "build"
+if exist "dist\Ohverlay" rmdir /s /q "dist\Ohverlay"
+
+echo.
+echo  [6/6] Building Ohverlay.exe with PyInstaller...
 echo         (This may take 2-5 minutes)
 echo.
-pyinstaller ohverlay.spec --noconfirm --clean
+"%BUILD_PY%" -m PyInstaller ohverlay.spec --noconfirm --clean
 
 if errorlevel 1 (
     echo.
@@ -49,7 +98,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo  [4/4] Build complete!
+echo  [6/6] Build complete!
 echo.
 echo  =============================================
 echo   Your portable OHVERLAY is ready!
@@ -65,4 +114,5 @@ echo     3. Or run build_installer.bat to create a setup wizard
 echo.
 echo   No admin privileges or Python needed to run!
 echo.
+if /I "%OHVERLAY_NO_PAUSE%"=="1" exit /b 0
 pause

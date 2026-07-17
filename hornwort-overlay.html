@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Five-Stem Hornwort Taskbar Clump — Black Screen</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      cursor: none;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas
+    id="hornwort"
+    aria-label="A five-stem hornwort clump growing from one common base above the taskbar and reacting to touch"
+  ></canvas>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('hornwort');
+      const context = canvas.getContext('2d', {
+        alpha: true,
+        desynchronized: true
+      });
+      const parameters = new URLSearchParams(location.search);
+      const globalScale = parseFloat(parameters.get('scale')) || 1.0;
+      const TAU = Math.PI * 2;
+      const coarsePointer = matchMedia('(pointer: coarse)').matches;
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      let width = 1;
+      let height = 1;
+      let pixelRatio = 1;
+      let elapsed = 0;
+      let lastTime = performance.now();
+      let lastRenderedTime = 0;
+      let paused = false;
+      let gust = 0;
+      let pulse = 0;
+      let blackBackground = false;
+      let currentStrength = clamp(Number(parameters.get('current')) || 0.86, 0.15, 1.8);
+      let quality = coarsePointer ? 0.82 : 1;
+      let slowFrameAccumulator = 0;
+      let slowFrameCount = 0;
+      let frameInterval = coarsePointer ? 1000 / 40 : 1000 / 60;
+      let clusterWidth = 192;
+      let clusterHeight = 288;
+      let clusterLeft = 0;
+      let clusterTop = 0;
+      let rootCenterX = 0;
+      let rootBaselineY = 0;
+      const requestedTaskbar = parameters.has('taskbar')
+        ? clamp(Number(parameters.get('taskbar')) || 0, 0, 160)
+        : 48;
+      const requestedRightInset = parameters.has('right')
+        ? clamp(Number(parameters.get('right')) || 0, 0, 160)
+        : 8;
+
+      const pointer = {
+        x: -10000,
+        y: -10000,
+        previousX: -10000,
+        previousY: -10000,
+        velocityX: 0,
+        velocityY: 0,
+        active: false,
+        down: false,
+        lastMove: 0
+      };
+
+      function clamp(value, minimum, maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+      }
+
+      function lerp(a, b, amount) {
+        return a + (b - a) * amount;
+      }
+
+      function smoothstep(edge0, edge1, value) {
+        const amount = clamp((value - edge0) / Math.max(0.000001, edge1 - edge0), 0, 1);
+        return amount * amount * (3 - 2 * amount);
+      }
+
+      function seeded(index, salt = 0) {
+        const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453123;
+        return value - Math.floor(value);
+      }
+
+      function createPlant(index) {
+        const layouts = [
+          { height: 0.72, depth: 0.76, lean: -0.380, rootOffset: -0.020, rootDrop: 2.0 },
+          { height: 0.94, depth: 0.90, lean: -0.200, rootOffset: -0.010, rootDrop: 0.5 },
+          { height: 0.80, depth: 0.68, lean: -0.035, rootOffset:  0.000, rootDrop: 3.0 },
+          { height: 1.00, depth: 1.00, lean:  0.140, rootOffset:  0.012, rootDrop: 0.0 },
+          { height: 0.75, depth: 0.82, lean:  0.350, rootOffset:  0.023, rootDrop: 2.5 }
+        ];
+        const layout = layouts[index];
+        const segmentCount = 18;
+        const joints = [];
+
+        for (let jointIndex = 0; jointIndex < segmentCount; jointIndex++) {
+          const fraction = jointIndex / Math.max(1, segmentCount - 1);
+          const angle = layout.lean * (0.25 + fraction * 0.75) +
+            Math.sin(jointIndex * 0.43 + index * 1.7) * 0.006;
+          joints.push({
+            angle,
+            velocity: 0,
+            wake: 0,
+            lengthScale: fraction < 0.64
+              ? 1
+              : lerp(1, 0.44, (fraction - 0.64) / 0.36),
+            flutter: seeded(index * 31 + jointIndex, 2) * TAU
+          });
+        }
+
+        const whorlIndices = Array.from(
+          { length: segmentCount - 1 },
+          (_, whorlIndex) => whorlIndex + 2
+        );
+        const whorls = whorlIndices.map((jointIndex, whorlIndex) => {
+          const fraction = jointIndex / segmentCount;
+          const leafCount = Math.round(8 + fraction * 2 + seeded(index * 41 + whorlIndex, 4) * 2);
+          const leaves = [];
+
+          for (let leafIndex = 0; leafIndex < leafCount; leafIndex++) {
+            leaves.push({
+              azimuth: (leafIndex / leafCount) * TAU +
+                seeded(index * 809 + whorlIndex * 31 + leafIndex, 5) * 0.48,
+              lengthScale: 0.78 + seeded(index * 811 + whorlIndex * 37 + leafIndex, 6) * 0.42,
+              lift: 0.18 + seeded(index * 821 + whorlIndex * 41 + leafIndex, 7) * 0.34,
+              fork: 0.53 + seeded(index * 823 + whorlIndex * 43 + leafIndex, 8) * 0.15,
+              forkSpread: 0.15 + seeded(index * 827 + whorlIndex * 47 + leafIndex, 9) * 0.15,
+              doubleFork: seeded(index * 829 + whorlIndex * 53 + leafIndex, 10) > 0.68,
+              irregularity: seeded(index * 839 + whorlIndex * 59 + leafIndex, 11) - 0.5,
+              phase: seeded(index * 853 + whorlIndex * 61 + leafIndex, 12) * TAU
+            });
+          }
+
+          return {
+            jointIndex,
+            fraction,
+            leaves,
+            twist: seeded(index * 47 + whorlIndex, 13) * TAU,
+            flutter: 0
+          };
+        });
+
+        return {
+          index,
+          heightFactor: layout.height,
+          rootOffset: layout.rootOffset,
+          rootDrop: layout.rootDrop,
+          depth: layout.depth,
+          baseLean: layout.lean,
+          phase: seeded(index, 15) * TAU,
+          flowBias: 0.90 + seeded(index, 16) * 0.20,
+          joints,
+          whorls,
+          points: [],
+          segmentLength: 20,
+          leafLength: 24,
+          rootX: 0,
+          rootY: 0
+        };
+      }
+
+      const plants = Array.from({ length: 5 }, (_, index) => createPlant(index));
+      if (parameters.has('debug')) window.__hornwortDebug = { plants, pointer };
+
+      const motes = Array.from({ length: coarsePointer ? 12 : 20 }, (_, index) => ({
+        x: seeded(index, 51),
+        y: seeded(index, 52),
+        depth: 0.25 + seeded(index, 53) * 0.75,
+        phase: seeded(index, 54) * TAU,
+        radius: 0.35 + seeded(index, 55) * 0.85
+      }));
+
+      function configurePlantDimensions(plant) {
+        const plantHeight = clusterHeight * plant.heightFactor;
+        const lengthScaleTotal = plant.joints.reduce((total, joint) => total + joint.lengthScale, 0);
+        plant.segmentLength = plantHeight / lengthScaleTotal;
+        plant.leafLength = clamp(
+          plant.segmentLength * (1.72 + plant.depth * 0.25),
+          7,
+          clusterWidth * 0.19
+        );
+        plant.rootX = rootCenterX + plant.rootOffset * clusterWidth;
+        plant.rootY = rootBaselineY + plant.rootDrop;
+        computePlantPoints(plant);
+      }
+
+      function computePlantPoints(plant) {
+        plant.points.length = 0;
+        let x = plant.rootX;
+        let y = plant.rootY;
+        plant.points.push({ x, y });
+
+        for (const joint of plant.joints) {
+          const segmentLength = plant.segmentLength * joint.lengthScale;
+          x += Math.sin(joint.angle) * segmentLength;
+          y -= Math.cos(joint.angle) * segmentLength;
+          plant.points.push({ x, y });
+        }
+      }
+
+      function updateGrowth() {
+        const availableWidth = Math.max(64, width - requestedRightInset * 2);
+        clusterWidth = Math.min(2.05 * 96, availableWidth) * globalScale;
+        const heightRatio = width < 320 ? 0.83 : (coarsePointer ? 0.40 : 0.34);
+        
+        // Endless growth: assume it grows by 1 screen height every 8 hours
+        const eightHoursMs = 8 * 60 * 60 * 1000;
+        const totalUptime = performance.now(); 
+        const growProgress = totalUptime / eightHoursMs;
+        
+        const baseDesiredHeight = Math.min(clusterWidth * 1.57, height * heightRatio);
+        const availableHeight = Math.max(110, height - requestedTaskbar - 12);
+        
+        // It keeps adding `availableHeight - baseDesiredHeight` to its height every 8 hours
+        const growthAmount = (availableHeight - baseDesiredHeight) * growProgress;
+        const desiredClusterHeight = baseDesiredHeight + growthAmount;
+        
+        // We no longer bound clusterHeight to availableHeight, allowing it to grow indefinitely
+        clusterHeight = Math.max(clusterWidth * 1.18, desiredClusterHeight);
+        
+        clusterLeft = width - requestedRightInset - clusterWidth;
+        rootCenterX = clusterLeft + clusterWidth * 0.53;
+        rootBaselineY = height - requestedTaskbar + 2;
+        clusterTop = rootBaselineY - clusterHeight;
+
+        for (const plant of plants) configurePlantDimensions(plant);
+      }
+
+      function resize() {
+        width = Math.max(1, innerWidth);
+        height = Math.max(1, innerHeight);
+        const maximumDimension = coarsePointer ? 1200 : 1700;
+        const nativeRatio = Math.min(devicePixelRatio || 1, coarsePointer ? 1.25 : 1.65);
+        pixelRatio = Math.min(nativeRatio, maximumDimension / Math.max(width, height));
+        pixelRatio = Math.max(0.65, pixelRatio);
+
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        document.documentElement.style.background = blackBackground ? '#000' : 'transparent';
+        document.body.style.background = blackBackground ? '#000' : 'transparent';
+
+        updateGrowth();
+      }
+
+      function disturbPlants(x, y, velocityX, velocityY, pressure) {
+        const radius = clamp(Math.min(width, height) * (pointer.down ? 0.24 : 0.17), 90, 240);
+        const speed = Math.min(1.8, Math.hypot(velocityX, velocityY) / 950);
+
+        for (const plant of plants) {
+          for (let jointIndex = 0; jointIndex < plant.joints.length; jointIndex++) {
+            const point = plant.points[jointIndex + 1];
+            if (!point) continue;
+            const dx = point.x - x;
+            const dy = point.y - y;
+            const distance = Math.max(12, Math.hypot(dx, dy));
+            if (distance >= radius) continue;
+
+            const closeness = 1 - smoothstep(0, 1, distance / radius);
+            const heightFraction = (jointIndex + 1) / plant.joints.length;
+            const radialPush = dx / distance;
+            const draggedWater = velocityX / 900;
+            const angularKick = (radialPush * (0.55 + pressure * 0.8) + draggedWater * 1.35) *
+              closeness * heightFraction * (0.8 + speed * 0.75);
+            plant.joints[jointIndex].angle = clamp(
+              plant.joints[jointIndex].angle + angularKick * (pressure > 1 ? 0.022 : 0.003),
+              -0.62,
+              0.62
+            );
+            plant.joints[jointIndex].velocity += angularKick * 0.42;
+            plant.joints[jointIndex].wake += angularKick * 0.035 + velocityY / 3600 * closeness;
+
+            for (const whorl of plant.whorls) {
+              const jointDistance = Math.abs(whorl.jointIndex - (jointIndex + 1));
+              if (jointDistance < 3) {
+                whorl.flutter += closeness * (0.045 + speed * 0.09) * (3 - jointDistance) / 3;
+              }
+            }
+          }
+        }
+
+        pulse = Math.max(pulse, pressure * 0.75 + speed * 0.34);
+      }
+
+      function updatePlant(plant, dt) {
+        const jointCount = plant.joints.length;
+        const nextAngles = new Array(jointCount);
+        const motionScale = reducedMotion ? 0.26 : 1;
+
+        for (let jointIndex = 0; jointIndex < jointCount; jointIndex++) {
+          const joint = plant.joints[jointIndex];
+          const fraction = (jointIndex + 1) / jointCount;
+          const lowerNeighbor = jointIndex > 0 ? plant.joints[jointIndex - 1].angle : plant.baseLean * 0.20;
+          const upperNeighbor = jointIndex < jointCount - 1
+            ? plant.joints[jointIndex + 1].angle
+            : joint.angle;
+          const coherentCurrent =
+            Math.sin(elapsed * 0.43 + plant.phase + fraction * 1.18) * 0.70 +
+            Math.sin(elapsed * 0.91 + plant.phase * 0.41 - fraction * 2.3) * 0.22 +
+            Math.sin(elapsed * 0.17 + 1.7) * 0.16;
+          const rollingEddy = Math.sin(elapsed * 1.38 - fraction * 5.2 + plant.index) *
+            0.018 * fraction * fraction;
+          const currentTarget = plant.baseLean * (0.18 + fraction * 0.82) +
+            coherentCurrent * currentStrength * plant.flowBias *
+              (0.022 + fraction * fraction * 0.142) * motionScale +
+            rollingEddy * currentStrength * motionScale +
+            gust * (0.045 + fraction * fraction * 0.23) * motionScale;
+
+          const neighborShape = (lowerNeighbor + upperNeighbor) * 0.5;
+          const baseStiffness = lerp(8.2, 3.5, fraction);
+          const coupling = lerp(7.0, 4.3, fraction);
+          const returnTorque = (currentTarget - joint.angle) * baseStiffness;
+          const continuityTorque = (neighborShape - joint.angle) * coupling;
+          const wakeTorque = joint.wake * 7.5;
+
+          joint.velocity += (returnTorque + continuityTorque + wakeTorque) * dt;
+          joint.velocity *= Math.exp(-lerp(4.2, 2.7, fraction) * dt);
+          joint.wake *= Math.exp(-4.8 * dt);
+          nextAngles[jointIndex] = clamp(joint.angle + joint.velocity * dt, -0.62, 0.62);
+        }
+
+        for (let jointIndex = 0; jointIndex < jointCount; jointIndex++) {
+          plant.joints[jointIndex].angle = nextAngles[jointIndex];
+        }
+
+        for (const whorl of plant.whorls) {
+          whorl.flutter *= Math.exp(-3.1 * dt);
+        }
+        computePlantPoints(plant);
+      }
+
+      function drawMotes() {
+        context.save();
+        for (const mote of motes) {
+          const moteFieldWidth = clusterWidth + 16;
+          let x = clusterLeft - 8 +
+            (mote.x * clusterWidth + elapsed * (2.2 + mote.depth * 3.5)) % moteFieldWidth;
+          let y = clusterTop + mote.y * clusterHeight +
+            Math.sin(elapsed * 0.31 + mote.phase) * 4;
+          if (pointer.active) {
+            const dx = x - pointer.x;
+            const dy = y - pointer.y;
+            const distance = Math.max(20, Math.hypot(dx, dy));
+            if (distance < 150) {
+              const amount = 1 - distance / 150;
+              x += pointer.velocityX * amount * 0.012;
+              y += pointer.velocityY * amount * 0.012;
+            }
+          }
+          const alpha = 0.035 + mote.depth * 0.055;
+          context.fillStyle = `rgba(188,221,157,${alpha})`;
+          context.beginPath();
+          context.arc(x, y, mote.radius * mote.depth, 0, TAU);
+          context.fill();
+        }
+        context.restore();
+      }
+
+      function drawCommonCrown() {
+        context.save();
+
+        // The five stems emerge from one compact anchor rather than from five
+        // unrelated points. These buried continuations visually tie the clump
+        // together even while the upper stems move independently.
+        for (const plant of [...plants].sort((a, b) => a.depth - b.depth)) {
+          const target = plant.points[Math.min(3, plant.points.length - 1)];
+          context.beginPath();
+          context.moveTo(rootCenterX, rootBaselineY + 7);
+          context.quadraticCurveTo(
+            rootCenterX + (plant.rootX - rootCenterX) * 0.35,
+            rootBaselineY - plant.segmentLength * 0.85,
+            target.x,
+            target.y
+          );
+          context.strokeStyle = `rgba(4,25,3,${0.80 * plant.depth})`;
+          context.lineWidth = 4.2 * plant.depth;
+          context.stroke();
+
+          context.beginPath();
+          context.moveTo(rootCenterX, rootBaselineY + 6);
+          context.quadraticCurveTo(
+            rootCenterX + (plant.rootX - rootCenterX) * 0.35,
+            rootBaselineY - plant.segmentLength * 0.85,
+            target.x,
+            target.y
+          );
+          context.strokeStyle = `rgba(54,110,25,${0.76 * plant.depth})`;
+          context.lineWidth = 1.8 * plant.depth;
+          context.stroke();
+        }
+
+        for (let strand = 0; strand < 11; strand++) {
+          const offset = (seeded(strand, 81) - 0.5) * clusterWidth * 0.12;
+          const curl = (seeded(strand, 82) - 0.5) * clusterWidth * 0.08;
+          const length = 7 + seeded(strand, 83) * 14;
+          context.beginPath();
+          context.moveTo(rootCenterX + offset * 0.22, rootBaselineY + 1);
+          context.quadraticCurveTo(
+            rootCenterX + offset + curl,
+            rootBaselineY + length * 0.45,
+            rootCenterX + offset,
+            rootBaselineY + length
+          );
+          context.strokeStyle = `rgba(92,92,30,${0.22 + seeded(strand, 84) * 0.22})`;
+          context.lineWidth = 0.55 + seeded(strand, 85) * 0.55;
+          context.stroke();
+        }
+
+        const crownGradient = context.createRadialGradient(
+          rootCenterX - 2,
+          rootBaselineY,
+          1,
+          rootCenterX,
+          rootBaselineY + 2,
+          clusterWidth * 0.075
+        );
+        crownGradient.addColorStop(0, 'rgba(130,150,45,0.78)');
+        crownGradient.addColorStop(0.34, 'rgba(48,105,22,0.82)');
+        crownGradient.addColorStop(1, 'rgba(3,18,2,0)');
+        context.fillStyle = crownGradient;
+        context.beginPath();
+        context.ellipse(
+          rootCenterX,
+          rootBaselineY + 2,
+          clusterWidth * 0.075,
+          Math.max(5, clusterWidth * 0.036),
+          -0.08,
+          0,
+          TAU
+        );
+        context.fill();
+        context.restore();
+      }
+
+      function buildStemPath(plant) {
+        const points = plant.points;
+        context.beginPath();
+        context.moveTo(points[0].x, points[0].y);
+        for (let index = 1; index < points.length - 1; index++) {
+          const point = points[index];
+          const next = points[index + 1];
+          context.quadraticCurveTo(point.x, point.y, (point.x + next.x) * 0.5, (point.y + next.y) * 0.5);
+        }
+        const tip = points[points.length - 1];
+        context.lineTo(tip.x, tip.y);
+      }
+
+      function drawStem(plant) {
+        context.save();
+        buildStemPath(plant);
+        context.strokeStyle = `rgba(2,18,2,${0.80 * plant.depth})`;
+        context.lineWidth = 4.0 * plant.depth;
+        context.stroke();
+
+        buildStemPath(plant);
+        context.strokeStyle = `rgba(42,102,24,${0.88 * plant.depth})`;
+        context.lineWidth = 2.25 * plant.depth;
+        context.stroke();
+
+        buildStemPath(plant);
+        context.strokeStyle = `rgba(145,178,66,${0.52 * plant.depth})`;
+        context.lineWidth = 0.62 * plant.depth;
+        context.stroke();
+        context.restore();
+      }
+
+      function leafGeometry(plant, whorl, leaf) {
+        const pointIndex = whorl.jointIndex;
+        const point = plant.points[pointIndex];
+        const before = plant.points[Math.max(0, pointIndex - 1)];
+        const after = plant.points[Math.min(plant.points.length - 1, pointIndex + 1)];
+        let tangentX = after.x - before.x;
+        let tangentY = after.y - before.y;
+        const tangentLength = Math.max(0.001, Math.hypot(tangentX, tangentY));
+        tangentX /= tangentLength;
+        tangentY /= tangentLength;
+        const normalX = -tangentY;
+        const normalY = tangentX;
+
+        const twist = leaf.azimuth + whorl.twist + elapsed * 0.028 * (plant.index % 2 ? -1 : 1);
+        const projectedRadial = Math.cos(twist);
+        const depth = Math.sin(twist);
+        const foreshortening = 0.42 + Math.abs(projectedRadial) * 0.58;
+        const apexCrowding = 0.78 + whorl.fraction * 0.26;
+        const baseLength = plant.leafLength * leaf.lengthScale * apexCrowding * foreshortening;
+        const currentBend = Math.sin(elapsed * 0.78 + leaf.phase + whorl.fraction * 2.2) *
+          currentStrength * 0.025 + whorl.flutter * Math.sin(elapsed * 7.0 + leaf.phase);
+        const radialSign = Math.abs(projectedRadial) < 0.06
+          ? (leaf.irregularity < 0 ? -1 : 1) * 0.06
+          : projectedRadial;
+        let directionX = normalX * radialSign + tangentX * leaf.lift;
+        let directionY = normalY * radialSign + tangentY * leaf.lift;
+        const directionLength = Math.max(0.001, Math.hypot(directionX, directionY));
+        directionX /= directionLength;
+        directionY /= directionLength;
+
+        const bendNormalX = -directionY;
+        const bendNormalY = directionX;
+        const lateralCurve = (leaf.irregularity * 0.17 + currentBend) * baseLength;
+        const baseX = point.x + normalX * projectedRadial * plant.depth * 0.7;
+        const baseY = point.y + normalY * projectedRadial * plant.depth * 0.7;
+        const forkDistance = baseLength * leaf.fork;
+        const forkX = baseX + directionX * forkDistance + bendNormalX * lateralCurve * 0.34;
+        const forkY = baseY + directionY * forkDistance + bendNormalY * lateralCurve * 0.34;
+        const controlX = baseX + directionX * forkDistance * 0.50 + bendNormalX * lateralCurve;
+        const controlY = baseY + directionY * forkDistance * 0.50 + bendNormalY * lateralCurve;
+        const remaining = baseLength * (1 - leaf.fork);
+        const spread = leaf.forkSpread + whorl.flutter * 0.16;
+
+        function branch(sign, scale = 1) {
+          const cosine = Math.cos(spread * sign);
+          const sine = Math.sin(spread * sign);
+          const branchX = directionX * cosine - directionY * sine;
+          const branchY = directionX * sine + directionY * cosine;
+          const tipX = forkX + branchX * remaining * scale + bendNormalX * lateralCurve * 0.55;
+          const tipY = forkY + branchY * remaining * scale + bendNormalY * lateralCurve * 0.55;
+          const branchControlX = forkX + branchX * remaining * scale * 0.48 + bendNormalX * lateralCurve * 0.18;
+          const branchControlY = forkY + branchY * remaining * scale * 0.48 + bendNormalY * lateralCurve * 0.18;
+          return { tipX, tipY, controlX: branchControlX, controlY: branchControlY, branchX, branchY };
+        }
+
+        return {
+          baseX,
+          baseY,
+          controlX,
+          controlY,
+          forkX,
+          forkY,
+          branchA: branch(-1, 0.94 + leaf.irregularity * 0.12),
+          branchB: branch(1, 1.03 - leaf.irregularity * 0.10),
+          depth,
+          doubleFork: leaf.doubleFork
+        };
+      }
+
+      function traceLeaf(geometry, includeSecondFork) {
+        context.beginPath();
+        context.moveTo(geometry.baseX, geometry.baseY);
+        context.quadraticCurveTo(geometry.controlX, geometry.controlY, geometry.forkX, geometry.forkY);
+        context.quadraticCurveTo(
+          geometry.branchA.controlX,
+          geometry.branchA.controlY,
+          geometry.branchA.tipX,
+          geometry.branchA.tipY
+        );
+        context.moveTo(geometry.forkX, geometry.forkY);
+        context.quadraticCurveTo(
+          geometry.branchB.controlX,
+          geometry.branchB.controlY,
+          geometry.branchB.tipX,
+          geometry.branchB.tipY
+        );
+
+        if (includeSecondFork && geometry.doubleFork) {
+          for (const branch of [geometry.branchA, geometry.branchB]) {
+            const startX = lerp(geometry.forkX, branch.tipX, 0.66);
+            const startY = lerp(geometry.forkY, branch.tipY, 0.66);
+            const sideX = -branch.branchY;
+            const sideY = branch.branchX;
+            context.moveTo(startX, startY);
+            context.quadraticCurveTo(
+              lerp(startX, branch.tipX, 0.42) + sideX * 1.3,
+              lerp(startY, branch.tipY, 0.42) + sideY * 1.3,
+              branch.tipX + sideX * 2.3,
+              branch.tipY + sideY * 2.3
+            );
+          }
+        }
+      }
+
+      function drawLeaf(plant, whorl, leaf, frontPass) {
+        const geometry = leafGeometry(plant, whorl, leaf);
+        const isFront = geometry.depth >= 0;
+        if (frontPass !== isFront) return;
+
+        const depthLight = smoothstep(-1, 1, geometry.depth);
+        const apexLight = 0.78 + whorl.fraction * 0.22;
+        const alpha = (isFront ? 0.86 : 0.50) * plant.depth * apexLight;
+        const red = Math.round(lerp(36, 124, depthLight) * apexLight);
+        const green = Math.round(lerp(98, 194, depthLight) * apexLight);
+        const blue = Math.round(lerp(20, 58, depthLight));
+
+        traceLeaf(geometry, quality > 0.72);
+        context.strokeStyle = `rgba(1,18,1,${alpha * 0.72})`;
+        context.lineWidth = (isFront ? 1.86 : 1.42) * plant.depth;
+        context.stroke();
+
+        traceLeaf(geometry, quality > 0.72);
+        context.strokeStyle = `rgba(${red},${green},${blue},${alpha})`;
+        context.lineWidth = (isFront ? 1.02 : 0.76) * plant.depth;
+        context.stroke();
+
+        if (isFront && quality > 0.88) {
+          traceLeaf(geometry, false);
+          context.strokeStyle = `rgba(186,218,86,${alpha * 0.24})`;
+          context.lineWidth = 0.34 * plant.depth;
+          context.stroke();
+        }
+      }
+
+      function drawWhorls(plant, frontPass) {
+        for (const whorl of plant.whorls) {
+          const stride = quality < 0.72 && whorl.leaves.length > 6 ? 2 : 1;
+          for (let leafIndex = 0; leafIndex < whorl.leaves.length; leafIndex += stride) {
+            drawLeaf(plant, whorl, whorl.leaves[leafIndex], frontPass);
+          }
+        }
+      }
+
+      function drawTipBud(plant) {
+        const tip = plant.points[plant.points.length - 1];
+        const previous = plant.points[plant.points.length - 2];
+        const angle = Math.atan2(tip.y - previous.y, tip.x - previous.x);
+        context.save();
+        context.translate(tip.x, tip.y);
+        context.rotate(angle + Math.PI * 0.5);
+        for (let index = 0; index < 9; index++) {
+          const spread = (index - 4) * 0.15;
+          const length = plant.leafLength * (0.50 + seeded(plant.index * 31 + index, 71) * 0.22);
+          context.beginPath();
+          context.moveTo(0, 1);
+          context.quadraticCurveTo(Math.sin(spread) * length * 0.36, -length * 0.42, Math.sin(spread) * length, -Math.cos(spread) * length);
+          context.strokeStyle = `rgba(124,190,51,${0.50 + index * 0.025})`;
+          context.lineWidth = 0.72 * plant.depth;
+          context.stroke();
+        }
+        context.restore();
+      }
+
+      function drawPlant(plant) {
+        context.save();
+        context.globalAlpha = clamp(plant.depth, 0, 1);
+        drawWhorls(plant, false);
+        drawStem(plant);
+        drawWhorls(plant, true);
+        drawTipBud(plant);
+        context.restore();
+      }
+
+      function render() {
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.clearRect(0, 0, width, height);
+        if (blackBackground) {
+          context.fillStyle = '#000';
+          context.fillRect(0, 0, width, height);
+        }
+
+        drawMotes();
+        drawCommonCrown();
+        const sortedPlants = [...plants].sort((a, b) => a.depth - b.depth);
+        for (const plant of sortedPlants) drawPlant(plant);
+      }
+
+      function updatePointerDecay(dt) {
+        pointer.velocityX *= Math.exp(-7.2 * dt);
+        pointer.velocityY *= Math.exp(-7.2 * dt);
+        if (!pointer.down && performance.now() - pointer.lastMove > 1500) {
+          pointer.active = false;
+        }
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        const rawDelta = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+        lastTime = now;
+
+        if (now - lastRenderedTime < frameInterval) return;
+        lastRenderedTime = now;
+        if (paused) return;
+
+        updateGrowth();
+
+        elapsed += rawDelta;
+        gust *= Math.exp(-1.15 * rawDelta);
+        pulse *= Math.exp(-2.3 * rawDelta);
+        updatePointerDecay(rawDelta);
+        if (pointer.down) {
+          disturbPlants(
+            pointer.x,
+            pointer.y,
+            pointer.velocityX * 0.18,
+            pointer.velocityY * 0.18,
+            0.58
+          );
+        }
+        for (const plant of plants) updatePlant(plant, rawDelta);
+        render();
+
+        slowFrameAccumulator += rawDelta;
+        slowFrameCount += 1;
+        if (slowFrameAccumulator > 3.0) {
+          const averageFps = slowFrameCount / slowFrameAccumulator;
+          if (averageFps < 31 && quality > 0.68) {
+            quality = 0.68;
+            frameInterval = 1000 / 30;
+          }
+          slowFrameAccumulator = 0;
+          slowFrameCount = 0;
+        }
+      }
+
+      function updatePointer(event) {
+        const now = performance.now();
+        const delta = Math.max(0.008, (now - pointer.lastMove) / 1000);
+        const nextX = event.clientX;
+        const nextY = event.clientY;
+        pointer.previousX = pointer.x;
+        pointer.previousY = pointer.y;
+
+        if (pointer.active) {
+          const measuredX = (nextX - pointer.x) / delta;
+          const measuredY = (nextY - pointer.y) / delta;
+          pointer.velocityX = lerp(pointer.velocityX, measuredX, 0.42);
+          pointer.velocityY = lerp(pointer.velocityY, measuredY, 0.42);
+        }
+
+        pointer.x = nextX;
+        pointer.y = nextY;
+        pointer.active = true;
+        pointer.lastMove = now;
+        disturbPlants(nextX, nextY, pointer.velocityX, pointer.velocityY, pointer.down ? 1 : 0.35);
+      }
+
+      canvas.addEventListener('pointerenter', updatePointer);
+      canvas.addEventListener('pointermove', updatePointer);
+      canvas.addEventListener('pointerdown', event => {
+        pointer.down = true;
+        canvas.setPointerCapture?.(event.pointerId);
+        updatePointer(event);
+        disturbPlants(event.clientX, event.clientY, pointer.velocityX, pointer.velocityY, 1.85);
+      });
+      canvas.addEventListener('pointerup', event => {
+        pointer.down = false;
+        canvas.releasePointerCapture?.(event.pointerId);
+      });
+      canvas.addEventListener('pointercancel', () => {
+        pointer.down = false;
+        pointer.active = false;
+      });
+      canvas.addEventListener('pointerleave', () => {
+        if (!pointer.down) pointer.active = false;
+      });
+
+      addEventListener('keydown', event => {
+        if (event.code === 'Space') {
+          event.preventDefault();
+          paused = !paused;
+          if (!paused) lastTime = performance.now();
+        } else if (event.key.toLowerCase() === 'g') {
+          gust = Math.max(gust, 1.0);
+        } else if (event.key.toLowerCase() === 'r') {
+          for (const plant of plants) {
+            for (let index = 0; index < plant.joints.length; index++) {
+              const fraction = index / Math.max(1, plant.joints.length - 1);
+              plant.joints[index].angle = plant.baseLean * (0.25 + fraction * 0.75);
+              plant.joints[index].velocity = 0;
+              plant.joints[index].wake = 0;
+            }
+            computePlantPoints(plant);
+          }
+          gust = 0;
+        } else if (event.key.toLowerCase() === 'b') {
+          blackBackground = !blackBackground;
+          document.documentElement.style.background = blackBackground ? '#000' : 'transparent';
+          document.body.style.background = blackBackground ? '#000' : 'transparent';
+          render();
+        } else if (event.key.toLowerCase() === 'f') {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+          else document.exitFullscreen?.();
+        }
+      });
+
+      addEventListener('resize', resize, { passive: true });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          paused = true;
+        } else {
+          paused = false;
+          lastTime = performance.now();
+        }
+      });
+
+      resize();
+      render();
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>
