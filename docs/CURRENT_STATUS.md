@@ -1,39 +1,26 @@
-# Current Status (Audit Results)
+# Current Status
 
-*Last updated: Post-Consolidation Audit*
+**Product:** Ohverlay
+**Version:** v0.1.0-alpha.1
+**State:** Minimal Nature Baseline
 
-## Working Features (Verified)
-- **Desktop Runtime**: Core overlay platform launches via `python main.py`
-- **System Tray**: Settings and overlay toggle menu functional
-- **HTML Overlays**: Rendering via QWebEngineView (transparent, click-through, always-on-top)
-- **Included Overlays**: Ecosystem (dragonflies, dandelions, fireflies), Paper Lanterns, Volumetric Clouds, Sticky Notes, AI Chatbox, Exam Reviewer, Ghost Woman, Screensaver
-- **Multi-monitor Support**: Enabled via `MonitorManager`
-- **Hotkeys**: Global shortcuts for visibility (Ctrl+Alt+H), interactivity (Ctrl+Alt+I), and feeding (Ctrl+Alt+F)
-- **Notification Modules**: Health reminders, Love Notes, Schedule Alerts with Bubble UI
-- **Blue AI Assistant**: Anthropic/OpenAI backends integrated with persistent memory
-- **Blue Vision**: Screen analysis via Groq
-- **Integrations**: Telegram bot bridge and Webhook server functional
-- **Config**: Configuration persistence at `~/.ohverlay/config.json` with legacy `.zenfish` migration
-- **Build System**: PyInstaller pipeline (portable, installer, ZIP) operational
-- **Testing**: 11 core module test files passing
+## Implemented and Verified
+- Transparent overlay rendering via QWebEngineView
+- Click-through operation
+- Local-first JSON settings persistence (`~/.ohverlay/config.json`)
+- Fully offline behavior (no cloud dependencies)
+- System Tray integration for toggling overlays
+- Fireflies Object
+- Dragonflies Object
+- Dandelions Object
 
-## Incomplete / Not Yet Functional
-- **Factory Backend (FastAPI)**: Scaffolded but never deployed; returns placeholder responses
-- **Website**: `website/` directory is currently a placeholder
-- **Domain**: `ohverlay.com` referenced throughout code but no live site exists
-- **Overlay Marketplace**: `catalog.json` exists but download URLs are non-functional
-- **Technical Office**: Basic sticky note exists; full standard/supervisor workflow not implemented
-- **OVL Compiler**: Code exists but lacks tests; highly experimental
-- **PlumberPass**: Exam reviewer functional but lacks test coverage
-- **Video-to-Overlay**: Converter code exists but untested
-- **OHVER Token/Credits**: Not implemented (by design)
-- **Authentication**: No user accounts or login flow
-- **Auto-Updater**: Downloader works locally, but manifest endpoints are not live
-
-## Known Issues (Resolved in Cleanup)
-- **README Inaccuracies**: Removed fabricated metrics (10,000+ downloads, 85% stress reduction)
-- **Placeholder Branding**: Removed generic placeholders (`via.placeholder.com`) and replaced legacy support emails
-- **Obsolete URLs**: Removed defunct `michaelfutol` repository links
-- **Dead Code**: Purged unused scripts, scratch files, and `.txt` dumps
-- **Git Ignore**: Updated to exclude caches, logs, and build artifacts
-- **Docker Weak Defaults**: Hardcoded DB passwords in compose files flagged for production removal
+## Removed and Postponed
+The following features have been stripped from the repository to establish a clean, verifiable baseline, and may be rebuilt later:
+- Fish/Aquarium engines (Schooling, Sanctuary, Flocking)
+- PlumberPass & Exam reviewer
+- AI Brain (LLM Integrations)
+- Webhooks & Telegram Bridge
+- Inactivity/Screensaver triggers
+- OVL Compiler
+- Auto-updater and Marketplace features
+- Health, Schedule, Love Notes, and News modules

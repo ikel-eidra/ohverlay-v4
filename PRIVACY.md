@@ -1,23 +1,29 @@
-# Privacy Policy
+# Privacy & Data Handling
 
-Ohverlay is built on a foundation of local-first architecture and explicit user consent. We believe that workplace coordination tools should not double as surveillance software.
+Ohverlay is designed with a minimal privacy surface. It operates entirely offline and requires no cloud connectivity to function.
 
-## Data Storage
-- **Local Data:** By default, all configuration settings, logs, and activity records are stored locally on your machine in the `~/.ohverlay` directory.
-- **Optional Cloud Data:** In the future, optional cloud integration (e.g., for the Marketplace or synchronized sticky notes) will require an explicit account creation.
+## What is NOT collected or performed
+- **No cloud requirement:** Ohverlay runs locally on your machine.
+- **No telemetry:** We do not track your usage, crashes, or feature activation.
+- **No API keys:** Ohverlay requires no accounts or API keys.
+- **No screenshot capture:** Ohverlay does not capture your screen.
+- **No screen-content analysis:** Ohverlay does not read the contents of your screen.
+- **No advertising tracker:** No ads, no tracking pixels.
+- **No silent network request:** The application does not communicate with external servers.
+- **No employee-monitoring function:** Ohverlay is a personal tool, not a surveillance utility.
+- **No inactivity tracking:** We do not track your keyboard or mouse activity.
 
-## AI and Screen Analysis
-- **Optional AI Providers:** Ohverlay's Blue AI assistant relies on external APIs (like Anthropic or Groq). You must manually configure these with your own API keys. Prompts sent to these APIs are subject to the respective provider's privacy policies.
-- **Screenshot Permissions:** Ohverlay will **never** take silent screenshots. Screen analysis features require explicit, manual authorization for every action. 
+## What is stored locally
+- **Configuration:** Ohverlay stores your preferences (e.g., which overlays are active) in a local JSON file located at `~/.ohverlay/config.json`.
+- **Logs:** Ohverlay writes minimal diagnostic logs (such as startup/shutdown events and errors) to `~/.ohverlay/ohverlay.log`. These logs are purely for your own local debugging and are never transmitted.
 
-## Workplace Deployments
-- **Supervisor Functions:** The Technical Office modules support coordination (e.g., sending instructions, receiving acknowledgments). This is strictly for operational alignment.
-- **No Hidden Monitoring:** There are no mechanisms for supervisors to silently monitor employee screens, keystrokes, or active applications. Ohverlay maintains a clear distinction between staff coordination and surveillance.
+## System Interaction
+- **Monitor Dimensions:** Ohverlay reads the geometry (width, height, and coordinates) of your connected monitors to correctly position its transparent overlay windows across your entire desktop workspace.
+- **Autorun:** Ohverlay does not configure itself to start automatically on boot. If you wish for it to run on startup, you must configure this manually via your operating system.
 
-## Updates and Network Requests
-- **Update Checks:** Ohverlay may periodically ping a manifest URL to check for updates. This transmits only basic request headers. You have control over update behavior.
-- **User Deletion and Export:** Because data is stored locally, deleting the `~/.ohverlay` directory effectively purges your user data. Future cloud-connected features will include dedicated export and account deletion options.
+## Control and Exit
+- **Disabling Overlays:** You can disable individual overlays or all overlays simultaneously via the System Tray icon menu.
+- **Exit:** You can completely exit the application by selecting "Quit Ohverlay" from the System Tray menu. Closing the application terminates all background processes immediately.
 
-## What is Implemented vs. Planned
-- **Implemented:** Local-first configuration, manual AI key integration, local logging.
-- **Planned:** Marketplace accounts, local-network coordination sharing.
+## Conclusion
+Ohverlay operates with a minimal privacy surface. Your desktop remains yours.

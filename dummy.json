@@ -1,0 +1,14 @@
+{
+    "overlays": {
+        "fireflies": true,
+        "dragonflies": false,
+        "dandelions": false
+    },
+    "hotkeys": {
+        "toggle_visibility": "ctrl+alt+h",
+        "toggle_interactivity": "ctrl+alt+i"
+    },
+    "app": {
+        "version": "1.0.0"
+    }
+}

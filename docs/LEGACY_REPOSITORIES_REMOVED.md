@@ -1,15 +1,15 @@
-# Legacy Repositories — Removed
+# Legacy Repositories
 
-The following repositories have been permanently deleted to eliminate confusion, duplication, and conflicting development histories.
+During the canonicalization of Ohverlay, the following fragmented and legacy repositories were permanently deleted and are no longer supported. 
 
-| Repository | Reason for Removal |
-|---|---|
-| `michaelfutol/Project-Aether-Fin` | Obsolete V1 codebase with retired branding |
-| `michaelfutol/Ohverlay-Project-Aether-Fin-V2-` | Obsolete V2 codebase, superseded by V4 |
-| `michaelfutol/ohverlay-updates` | Separate update repo no longer needed |
+**Canonical Repository:** `michaelfutol/ohverlay`
 
-## Status
-Deletion pending manual action by repository owner.
+### Deleted Repositories:
+1. `michaelfutol/Project-Aether-Fin`
+2. `michaelfutol/Ohverlay-Project-Aether-Fin-V2-`
+3. `michaelfutol/ohverlay-updates`
 
-## Policy
-All future development happens exclusively in `michaelfutol/ohverlay`. No code from the deleted repositories should be referenced or migrated unless explicitly approved.
+### Why were they deleted?
+These repositories contained conflicting histories, outdated branding, obsolete API integrations, and experimental features that diverged from the core vision of Ohverlay. To eliminate confusion, duplication, and accidental development against the wrong codebase, these repositories were destroyed.
+
+**Note:** No code from these repositories should be migrated or restored without explicit justification and architectural review. Ohverlay's future development occurs exclusively within this canonical repository.

@@ -1,51 +1,25 @@
 # Architecture
 
-## Current State
-Ohverlay v4 is built on a hybrid architecture combining a native desktop application with web technologies.
+The minimal Ohverlay nature baseline uses a lightweight, fully offline architecture.
 
-- **Desktop Host**: Python + PySide6 (Qt). Handles OS integration, system tray, hotkeys, window management, and global config.
-- **Rendering Engine**: PySide6-WebEngine (Chromium). HTML overlays are rendered as transparent, borderless, always-on-top, click-through windows.
-- **Entry Point**: `main.py` instantiates the `OhverlayApp` controller.
-- **Core Modules**:
-  - `engine/`: Handles brain logic, multi-monitor geometry (`MonitorManager`), and LLM routing.
-  - `modules/`: Feature integrations (health, schedule, updater, Telegram, Blue Vision, `overlay_manager`).
-  - `ui/`: System tray and legacy skin systems.
-  - `config/`: Configuration parsing and persistence.
+## Core Components
+- **`main.py`**: The entry point. Initializes the PySide6 Qt application, configures the event loop, and starts the core services.
+- **`ui/tray.py`**: Provides the system tray icon and context menu. This is the sole method of user interaction, allowing the user to toggle overlays on or off, adjust sizes, and quit the app.
+- **`config/settings.py`**: Manages local JSON persistence. Reads from and writes to `~/.ohverlay/config.json`.
+- **`modules/overlay_manager.py`**: The core rendering manager. It creates frameless, transparent `QWebEngineView` windows that span the entire virtual desktop.
 
-## Target Repository Structure (Gradual Migration)
-Following the consolidation directive, the repository will gradually migrate to a monorepo structure without breaking the runnable state:
+## Objects
+Objects are implemented purely as local HTML files that utilize Canvas or WebGL for rendering:
+- `fireflies-overlay.html`
+- `dragonflies-overlay.html`
+- `dandelions-overlay.html`
 
-```text
-ohverlay/
-├── apps/
-│   ├── desktop/             # Current main.py and core desktop app
-│   ├── technical-office/    # Future supervisor dashboard apps
-│   └── website/             # Future public website
-├── packages/
-│   ├── overlay-runtime/
-│   ├── office-coordination/
-│   ├── blue-ai/
-│   ├── privacy-consent/
-│   ├── shared-ui/
-│   └── ovl/                 # Current OVL compiler
-├── overlays/
-│   ├── productivity/
-│   ├── nature/
-│   ├── ambient/
-│   ├── interactive/
-│   └── learning/
-├── services/
-│   ├── messaging/
-│   ├── reporting/
-│   ├── supervisor-dashboard/
-│   ├── marketplace/
-│   └── updater/
-├── website/                 # Temporary root location for website
-├── supabase/
-│   ├── migrations/
-│   ├── seed/
-│   └── tests/
-├── docs/
-├── releases/
-└── .github/workflows/
-```
+These files are loaded into the transparent `QWebEngineView` by the `OverlayManager`. They run independently without requiring any local backend APIs, network resources, or external dependencies.
+
+## Rendering Pipeline
+1. `OverlayManager` calculates the total geometry of all connected monitors.
+2. A single `QMainWindow` with `Qt.WA_TranslucentBackground`, `Qt.FramelessWindowHint`, and `Qt.WindowTransparentForInput` is created spanning this geometry.
+3. A `QWebEngineView` renders the requested object HTML file.
+4. The background of the `QWebEnginePage` is forced to transparent, leaving only the drawn canvas elements visible.
+
+This produces a click-through overlay that floats gently above the user's workspace without blocking interaction.
