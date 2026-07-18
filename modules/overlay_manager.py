@@ -97,6 +97,8 @@ class OverlayWindow(QMainWindow):
         self.setCentralWidget(central)
 
         self.setGeometry(screen_geometry)
+        self.setFixedSize(screen_geometry.width(), screen_geometry.height())
+        self.move(screen_geometry.topLeft())
 
     def load_local_html(self, file_name, scale=1.0):
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
