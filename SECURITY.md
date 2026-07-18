@@ -20,13 +20,13 @@ We will attempt to review and acknowledge receipt of the vulnerability report pr
 ## Security Architecture & Expectations
 
 ### Sensitive Data Handling
-Ohverlay stores configuration data locally in `~/.ohverlay/config.json`. Users are responsible for securing access to their local machines. Do not share this configuration file, as it may contain API keys for optional AI integrations.
+Ohverlay stores minimal configuration data locally in `~/.ohverlay/config.json`. Users are responsible for securing access to their local machines.
 
 ### Screen-Capture and Monitoring Risks
-Ohverlay explicitly rejects silent employee monitoring. Any screen-capture feature (such as Blue Vision) requires explicit, manual user authorization per session or action.
+Ohverlay does not include screen-capture or activity monitoring features in its minimal nature baseline.
 
 ### Credential Storage
-Currently, third-party API keys (e.g., Anthropic, Groq) are stored in plaintext in the local configuration file. Users should use dedicated, scoped API keys for Ohverlay.
+The minimal nature baseline operates completely offline and requires no third-party API credentials.
 
 ### Update and Package Verification
 Future automated update mechanisms will require manifest verification (e.g., SHA-256 checksums). Do not install overlay packages from untrusted sources, as they consist of HTML/JS that runs within the local application context.

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Canonicalization:** Renamed the repository to `michaelfutol/ohverlay` and established this as the single source of truth.
-- **Branding Cleanup:** Removed all obsolete branding (Project Aether, ZenFish) and placeholder metrics from documentation.
+- **Branding Cleanup:** Removed all obsolete branding (legacy project names) and placeholder metrics from documentation.
 - **README Redesign:** Replaced previous promotional documentation with an evidence-based, professional overview.
 - **Directory Structure:** Renamed the local development root to `ohverlay`.
 

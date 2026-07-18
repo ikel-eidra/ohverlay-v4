@@ -15,7 +15,6 @@ Before the `chore/minimal-nature-baseline` branch can be merged into `main`, the
 
 ### 2. Tray Menu Interaction
 - [x] Right-click the tray icon and verify that only "Nature Overlays", "Overlay Settings", "Toggle All Overlays", "Debug: Show Canvas Extent", and "Quit Ohverlay" are present.
-- [x] Verify that no AI, Telegram, Webhook, Sanctuary, or Aquarium options are present in the menu.
 - [x] Verify that checking and unchecking overlays properly adds and removes checkmarks in the menu.
 
 ### 3. Rendering Integrity (Transparency)
@@ -37,4 +36,4 @@ Before the `chore/minimal-nature-baseline` branch can be merged into `main`, the
 ## Sign-Off
 Once all steps above are confirmed successful, the cleanup can be considered complete, screenshots can be taken for the README, and the branch can be merged into `main`.
 
-**Status:** ALL VERIFIED AND PASSED LOCALLY BY MICHAEL FUTOL (2026-07-18).
+**Status:** PENDING LOCAL VERIFICATION BY MICHAEL FUTOL.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Ohverlay v4.0 - Cross-Platform Build Script
+Ohverlay 0.1.0-dev Build Script
 By FutolTech
 
 Usage:
@@ -9,7 +9,7 @@ Usage:
     python build.py --zip        # Build portable ZIP
 
 Requirements:
-    pip install pyinstaller
+    pip install -r requirements.txt
 """
 
 import subprocess
@@ -40,10 +40,14 @@ def check_python():
 
 
 def install_deps():
-    """Install build dependencies."""
-    print('[2/4] Installing dependencies...')
-    run(f'{sys.executable} -m pip install --user pyinstaller')
-    run(f'{sys.executable} -m pip install --user -r requirements.txt')
+    """Verify build dependencies."""
+    print('[2/4] Verifying dependencies...')
+    try:
+        import PyInstaller
+    except ImportError:
+        print('  [ERROR] PyInstaller not found. Please install build requirements:')
+        print('  pip install -r requirements.txt')
+        sys.exit(1)
 
 
 def build_app():
@@ -138,7 +142,7 @@ def main():
 
     print()
     print('  =============================================')
-    print('   OHVERLAY v4.0 - Build System')
+    print('   OHVERLAY 0.1.0-dev — Build System')
     print('   FutolTech')
     print('  =============================================')
     print()

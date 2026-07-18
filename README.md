@@ -3,7 +3,7 @@
 Ohverlay is a minimal, lightweight desktop overlay runtime designed to render calm, animated nature objects across your entire screen workspace. It operates silently and transparently over your desktop without capturing your screen, reading your data, or demanding system resources.
 
 ## What it does
-- Provides a transparent, frameless, always-on-top window spanning all monitors.
+- Designed to provide transparent, frameless, always-on-top rendering across the Windows desktop; final multi-monitor behavior is pending manual verification.
 - Renders local HTML/Canvas/WebGL animations over your desktop.
 - Designed for click-through operation.
 - Contains no intentional cloud dependency.
