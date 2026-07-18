@@ -32,7 +32,7 @@ This document captures the current product and engineering direction for the des
 
 ## 3) Business & Brand Context
 
-- **Company identity:** Futol Ethical Technology Ecosystems.
+- **Company identity:** FutolTech.
 - **Location for metadata context:** Sta. Magdalena, Sorsogon.
 - Maintain calm, ethical, non-intrusive UX.
 - Preserve trust: no silent execution of downloaded installers.

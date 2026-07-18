@@ -1,6 +1,6 @@
 # Grant Proposal Template: Ohverlay - AI Desktop Companion for Digital Wellness
 
-**Organization:** Futol Ethical Technology Ecosystems  
+**Organization:** FutolTech  
 **Project:** Ohverlay v4.0 - ZenFish  
 **Submitted By:** [Your Name]  
 **Date:** [Date]  
@@ -278,7 +278,7 @@ By funding Ohverlay, [Funder] will support:
 
 <div align="center">
 
-**Futol Ethical Technology Ecosystems**
+**FutolTech**
 
 📧 hello@futol.tech  
 🌐 https://futol.tech  

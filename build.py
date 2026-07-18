@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ohverlay v4.0 - Cross-Platform Build Script
-By Futol Ethical Technology Ecosystems
+By FutolTech
 
 Usage:
     python build.py              # Build portable app
@@ -139,7 +139,7 @@ def main():
     print()
     print('  =============================================')
     print('   OHVERLAY v4.0 - Build System')
-    print('   Futol Ethical Technology Ecosystems')
+    print('   FutolTech')
     print('  =============================================')
     print()
 

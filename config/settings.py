@@ -6,6 +6,7 @@ All user settings are stored locally and loaded on startup.
 import json
 import os
 import shutil
+import copy
 from utils.logger import logger
 
 APP_DIR_NAME = ".ohverlay"
@@ -17,11 +18,10 @@ DEFAULT_CONFIG = {
         "dandelions": False
     },
     "hotkeys": {
-        "toggle_visibility": "ctrl+alt+h",
-        "toggle_interactivity": "ctrl+alt+i"
+        "toggle_visibility": "ctrl+alt+h"
     },
     "app": {
-        "version": "1.0.0"
+        "version": "0.1.0-dev"
     }
 }
 
@@ -50,7 +50,7 @@ class Settings:
     def __init__(self, config_path=None):
         self.config_path = os.path.abspath(config_path or CONFIG_PATH)
         self.config_dir = os.path.dirname(self.config_path)
-        self.data = DEFAULT_CONFIG.copy()
+        self.data = copy.deepcopy(DEFAULT_CONFIG)
 
         # Ensure directory exists
         os.makedirs(self.config_dir, exist_ok=True)

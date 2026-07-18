@@ -1,6 +1,6 @@
 # Privacy & Data Handling
 
-Ohverlay is designed with a minimal privacy surface. It operates entirely offline and requires no cloud connectivity to function.
+Ohverlay is designed to be a clean baseline candidate, pending final desktop and network verification. It contains no intentional cloud dependency.
 
 ## What is NOT collected or performed
 - **No cloud requirement:** Ohverlay runs locally on your machine.
@@ -26,4 +26,4 @@ Ohverlay is designed with a minimal privacy surface. It operates entirely offlin
 - **Exit:** You can completely exit the application by selecting "Quit Ohverlay" from the System Tray menu. Closing the application terminates all background processes immediately.
 
 ## Conclusion
-Ohverlay operates with a minimal privacy surface. Your desktop remains yours.
+Ohverlay is designed to respect your desktop, pending final desktop and network verification.

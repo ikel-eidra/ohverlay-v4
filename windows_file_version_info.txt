@@ -15,11 +15,11 @@ VSVersionInfo(
       StringTable(
         '040904B0',
         [
-          StringStruct('CompanyName', 'Futol Ethical Technology Ecosystems'),
-          StringStruct('FileDescription', 'Ohverlay Desktop Overlay Platform'),
+          StringStruct('CompanyName', 'FutolTech'),
+          StringStruct('FileDescription', 'Ohverlay Minimal Nature Overlay Runtime'),
           StringStruct('FileVersion', '4.0.0.0'),
           StringStruct('InternalName', 'Ohverlay'),
-          StringStruct('LegalCopyright', '© Futol Ethical Technology Ecosystems, Sta. Magdalena, Sorsogon'),
+          StringStruct('LegalCopyright', '© FutolTech, Sta. Magdalena, Sorsogon'),
           StringStruct('OriginalFilename', 'Ohverlay.exe'),
           StringStruct('ProductName', 'Ohverlay v4.0'),
           StringStruct('ProductVersion', '4.0.0.0')

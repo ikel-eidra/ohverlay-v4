@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QRadialGradient, QBrush, QPen, QActionGroup
 from PySide6.QtCore import Qt, Signal, QObject
+import os
 from utils.logger import logger
 
 
@@ -97,8 +98,9 @@ class SystemTray(QSystemTrayIcon):
         visibility_action = menu.addAction("Toggle All Overlays (Ctrl+Alt+H)")
         visibility_action.triggered.connect(self.signals.toggle_visibility.emit)
 
-        debug_action = menu.addAction("Debug: Show Canvas Extent")
-        debug_action.triggered.connect(self.signals.debug_canvas_extents.emit)
+        if os.environ.get("OHVERLAY_DEBUG") == "1":
+            debug_action = menu.addAction("Debug: Show Canvas Extent")
+            debug_action.triggered.connect(self.signals.debug_canvas_extents.emit)
 
         menu.addSeparator()
 
@@ -160,5 +162,3 @@ class SystemTray(QSystemTrayIcon):
                 self.overlay_manager.close_overlay(overlay_id)
                 self.overlay_manager.open_overlay(overlay_id)
 
-    def update_status(self, text):
-        pass

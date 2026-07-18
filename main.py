@@ -15,7 +15,7 @@ from utils.logger import logger
 
 
 class OhverlayApp:
-    """Main application controller — Overlay Platform."""
+    """Main application controller — Minimal Nature Overlay Runtime."""
 
     def __init__(self):
         # Fix transparent window rendering bugs on Windows with Chromium QWebEngine
@@ -29,8 +29,7 @@ class OhverlayApp:
         ])
         self.app = QApplication(sys.argv)
         self.app.setApplicationName("Ohverlay")
-        self.app.setOrganizationName("Futol Ethical Technology Ecosystems")
-        self.app.setOrganizationDomain("futol-ethical-technology-ecosystems.local")
+        self.app.setOrganizationName("FutolTech")
         self.app.setQuitOnLastWindowClosed(False)
 
         # Allow Ctrl+C to exit from terminal
@@ -44,7 +43,7 @@ class OhverlayApp:
         self._init_tray()
         self._init_hotkeys()
 
-        logger.info("Ohverlay initialized — Desktop Overlay Platform ready!")
+        logger.info("Ohverlay initialized — Minimal Nature Overlay Runtime ready!")
 
     def _init_overlay_manager(self):
         """Initialize the HTML overlay system."""
