@@ -23,10 +23,10 @@ We will attempt to review and acknowledge receipt of the vulnerability report pr
 Ohverlay stores minimal configuration data locally in `~/.ohverlay/config.json`. Users are responsible for securing access to their local machines.
 
 ### Screen-Capture and Monitoring Risks
-Ohverlay does not include screen-capture or activity monitoring features in its minimal nature baseline.
+The minimal nature baseline intends to operate with a pristine privacy surface without telemetry, screen capture, or inactivity tracking; pending final verification.
 
 ### Credential Storage
-The minimal nature baseline operates completely offline and requires no third-party API credentials.
+The minimal nature baseline is designed to operate completely offline; pending final verification.
 
 ### Update and Package Verification
 Future automated update mechanisms will require manifest verification (e.g., SHA-256 checksums). Do not install overlay packages from untrusted sources, as they consist of HTML/JS that runs within the local application context.

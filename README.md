@@ -5,8 +5,8 @@ Ohverlay is a minimal, lightweight desktop overlay runtime designed to render ca
 ## What it does
 - Designed to provide transparent, frameless, always-on-top rendering across the Windows desktop; final multi-monitor behavior is pending manual verification.
 - Renders local HTML/Canvas/WebGL animations over your desktop.
-- Designed for click-through operation.
-- Contains no intentional cloud dependency.
+- Targeting transparent, click-through operation; pending final input verification.
+- Operates locally with a minimal and documented privacy surface; pending final verification that no network, telemetry, or tracking is present.
 
 ## Available Objects (Minimal Nature Baseline)
 The clean baseline candidate supports three ambient objects:
@@ -48,4 +48,4 @@ You can use PyInstaller to bundle Ohverlay into a standalone executable.
 3. The standalone executable will be generated in the `dist/` folder.
 
 ## Privacy & Security
-Ohverlay is pending final desktop and network verification to ensure a minimal data footprint. For complete details, see [PRIVACY.md](PRIVACY.md).
+Ohverlay is pending final desktop and network verification to ensure a minimal data footprint. For complete details, see [SECURITY.md](SECURITY.md).
