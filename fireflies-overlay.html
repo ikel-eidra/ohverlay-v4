@@ -95,16 +95,16 @@
         const depth = 0.32 + seeded(index, 1) * 0.68;
         const cycle = 2.35 + seeded(index, 2) * 2.10;
         return {
-          x: 0.10 + seeded(index, 3) * 0.80,
-          y: 0.15 + seeded(index, 4) * 0.70,
+          x: -0.05 + seeded(index, 3) * 1.10,
+          y: -0.05 + seeded(index, 4) * 1.10,
           z: depth,
-          vx: (seeded(index, 5) - 0.5) * 0.035,
-          vy: (seeded(index, 6) - 0.5) * 0.025,
+          vx: (seeded(index, 5) - 0.5) * 0.15,
+          vy: (seeded(index, 6) - 0.5) * 0.15,
           vz: (seeded(index, 7) - 0.5) * 0.012,
-          targetX: -0.05 + seeded(index, 8) * 1.10,
-          targetY: -0.05 + seeded(index, 9) * 1.10,
+          targetX: -0.10 + seeded(index, 8) * 1.20,
+          targetY: -0.10 + seeded(index, 9) * 1.20,
           targetZ: 0.30 + seeded(index, 10) * 0.70,
-          targetTimer: 0.5 + seeded(index, 11) * 2.4,
+          targetTimer: 4.0 + seeded(index, 11) * 6.0,
           wanderPhase: seeded(index, 12) * TAU,
           wanderRate: 0.41 + seeded(index, 13) * 0.39,
           wingPhase: seeded(index, 14) * TAU,
@@ -113,8 +113,8 @@
           flashCycle: 2.10 + seeded(index, 6) * 1.45,
           flashOffset: seeded(index, 7) * 4.0,
           flashShape: 0.85 + seeded(index, 8) * 0.30,
-          speedMult: 0.4 + seeded(index, 11) * 0.8,
-          restTimer: seeded(index, 12) * 5,
+          speedMult: 1.2 + seeded(index, 11) * 1.8,
+          restTimer: seeded(index, 12) * 2,
           glowWarmth: seeded(index, 18),
           startled: 0,
           seed: index + 1
@@ -129,11 +129,11 @@
         firefly.targetX = -0.1 + seeded(timeSeed, 21) * 1.20;
         firefly.targetY = -0.1 + seeded(timeSeed, 22) * 1.20;
         firefly.targetZ = 0.28 + seeded(timeSeed, 23) * 0.72;
-        firefly.targetTimer = 1.2 + seeded(timeSeed, 24) * 3.8;
+        firefly.targetTimer = 4.0 + seeded(timeSeed, 24) * 6.0;
         
-        // 25% chance to rest
-        if (seeded(timeSeed, 25) > 0.75) {
-            firefly.restTimer = 2.0 + seeded(timeSeed, 26) * 4.0;
+        // 15% chance to rest
+        if (seeded(timeSeed, 25) > 0.85) {
+            firefly.restTimer = 1.0 + seeded(timeSeed, 26) * 2.0;
         }
       }
 
@@ -177,9 +177,9 @@
         const wander = elapsed * firefly.wanderRate + firefly.wanderPhase;
         const nervousness = 1 + firefly.startled * 1.8;
 
-        let ax = dx * 0.08 + Math.sin(wander * 1.37) * 0.012 * nervousness;
-        let ay = dy * 0.08 + Math.cos(wander * 1.11 + 0.7) * 0.010 * nervousness;
-        let az = dz * 0.05 + Math.sin(wander * 0.83 + 1.4) * 0.005;
+        let ax = dx * 0.4 + Math.sin(wander * 1.37) * 0.03 * nervousness;
+        let ay = dy * 0.4 + Math.cos(wander * 1.11 + 0.7) * 0.025 * nervousness;
+        let az = dz * 0.15 + Math.sin(wander * 0.83 + 1.4) * 0.01;
 
         if (firefly.restTimer > 0 && firefly.startled < 0.1) {
             firefly.restTimer -= dt;
@@ -234,13 +234,13 @@
         firefly.vy += (ay + gust * Math.sin(wander) * 0.004) * dt;
         firefly.vz += az * dt;
 
-        const drag = firefly.restTimer > 0 && firefly.startled < 0.1 ? Math.exp(-4.5 * dt) : Math.exp(-1.15 * dt);
+        const drag = firefly.restTimer > 0 && firefly.startled < 0.1 ? Math.exp(-4.5 * dt) : Math.exp(-0.85 * dt);
         firefly.vx *= drag;
         firefly.vy *= drag;
         firefly.vz *= drag;
 
         const speed = Math.hypot(firefly.vx, firefly.vy);
-        const maximumSpeed = (0.07 * firefly.speedMult) + firefly.startled * 0.15;
+        const maximumSpeed = (0.25 * firefly.speedMult) + firefly.startled * 0.35;
         if (speed > maximumSpeed) {
           firefly.vx *= maximumSpeed / speed;
           firefly.vy *= maximumSpeed / speed;
