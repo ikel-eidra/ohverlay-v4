@@ -40,40 +40,43 @@ class WelcomeGuide(QWidget):
         card.setObjectName("cardFrame")
         card.setStyleSheet("""
             #cardFrame {
-                background-color: rgba(18, 24, 38, 245);
-                border: 1px solid rgba(80, 160, 255, 120);
+                background-color: rgba(17, 19, 24, 0.96);
+                border: 1px solid rgba(255, 255, 255, 0.12);
                 border-radius: 12px;
             }
             QLabel {
-                color: #e0f0ff;
-                font-family: 'Segoe UI', Arial, sans-serif;
+                color: #f0f2f5;
+                font-family: 'Arial', sans-serif;
             }
             QPushButton {
-                background-color: rgba(40, 90, 160, 180);
+                background-color: rgba(255, 255, 255, 0.08);
                 color: #ffffff;
-                border: 1px solid rgba(100, 180, 255, 150);
-                border-radius: 6px;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 5px;
                 padding: 6px 12px;
-                font-weight: 600;
-                font-size: 12px;
+                font-weight: bold;
+                font-size: 11px;
+                font-family: 'Arial', sans-serif;
             }
             QPushButton:hover {
-                background-color: rgba(60, 120, 210, 220);
-                border-color: rgba(140, 200, 255, 220);
+                background-color: rgba(255, 255, 255, 0.16);
+                border-color: rgba(255, 255, 255, 0.3);
             }
             QPushButton#gotItBtn {
-                background-color: rgba(46, 125, 50, 200);
-                border-color: rgba(100, 220, 120, 180);
+                background-color: #2563eb;
+                border: 1px solid #3b82f6;
+                color: #ffffff;
             }
             QPushButton#gotItBtn:hover {
-                background-color: rgba(60, 160, 70, 240);
+                background-color: #1d4ed8;
+                border-color: #60a5fa;
             }
         """)
 
         # Glow shadow
         shadow = QGraphicsDropShadowEffect(card)
         shadow.setBlurRadius(20)
-        shadow.setColor(QColor(40, 120, 255, 80))
+        shadow.setColor(QColor(0, 0, 0, 140))
         shadow.setOffset(0, 4)
         card.setGraphicsEffect(shadow)
 
@@ -84,7 +87,7 @@ class WelcomeGuide(QWidget):
         # Header
         header_layout = QHBoxLayout()
         title_label = QLabel("Welcome to Ohverlay", card)
-        title_font = QFont("Segoe UI", 13, QFont.Bold)
+        title_font = QFont("Arial", 13, QFont.Bold)
         title_label.setFont(title_font)
 
         close_btn = QPushButton("×", card)
@@ -93,14 +96,14 @@ class WelcomeGuide(QWidget):
             QPushButton {
                 background: transparent;
                 border: none;
-                color: #88aacc;
+                color: #9ea4b0;
                 font-size: 16px;
                 font-weight: bold;
                 padding: 0;
             }
             QPushButton:hover {
                 color: #ffffff;
-                background: rgba(255, 255, 255, 30);
+                background: rgba(255, 255, 255, 0.1);
                 border-radius: 11px;
             }
         """)
@@ -118,7 +121,7 @@ class WelcomeGuide(QWidget):
         )
         body_label.setTextFormat(Qt.RichText)
         body_label.setWordWrap(True)
-        body_label.setFont(QFont("Segoe UI", 10))
+        body_label.setFont(QFont("Arial", 10))
 
         # Buttons
         btn_layout = QHBoxLayout()

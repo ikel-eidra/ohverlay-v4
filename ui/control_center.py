@@ -54,30 +54,32 @@ class ControlCenter(QWidget):
         card.setObjectName("controlCard")
         card.setStyleSheet("""
             #controlCard {
-                background-color: rgba(18, 24, 38, 248);
-                border: 1px solid rgba(80, 160, 255, 130);
-                border-radius: 14px;
+                background-color: rgba(17, 19, 24, 0.96);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 12px;
             }
             QLabel {
-                color: #e0f0ff;
-                font-family: 'Segoe UI', Arial, sans-serif;
+                color: #f0f2f5;
+                font-family: 'Arial', sans-serif;
             }
             QPushButton {
-                background-color: rgba(35, 75, 135, 180);
-                color: #ffffff;
-                border: 1px solid rgba(90, 170, 240, 140);
-                border-radius: 6px;
+                background-color: rgba(255, 255, 255, 0.08);
+                color: #f0f2f5;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 5px;
                 padding: 4px 8px;
                 font-size: 11px;
-                font-weight: 600;
+                font-weight: bold;
+                font-family: 'Arial', sans-serif;
             }
             QPushButton:hover {
-                background-color: rgba(55, 115, 195, 220);
-                border-color: rgba(130, 200, 255, 220);
+                background-color: rgba(255, 255, 255, 0.16);
+                border-color: rgba(255, 255, 255, 0.3);
             }
             QPushButton:checked {
-                background-color: rgba(46, 125, 50, 220);
-                border-color: rgba(100, 220, 120, 220);
+                background-color: #2563eb;
+                border-color: #3b82f6;
+                color: #ffffff;
             }
             QPushButton.stepBtn {
                 min-width: 22px;
@@ -89,43 +91,45 @@ class ControlCenter(QWidget):
                 font-weight: bold;
             }
             QRadioButton {
-                color: #c0d8f0;
+                color: #9ea4b0;
                 font-size: 11px;
+                font-family: 'Arial', sans-serif;
             }
             QRadioButton::indicator:checked {
-                background-color: #50a0ff;
+                background-color: #3b82f6;
                 border: 2px solid #ffffff;
-                border-radius: 6px;
+                border-radius: 5px;
                 width: 10px;
                 height: 10px;
             }
             QSlider::groove:horizontal {
                 height: 4px;
-                background: rgba(60, 100, 150, 150);
+                background: rgba(255, 255, 255, 0.12);
                 border-radius: 2px;
             }
             QSlider::sub-page:horizontal {
-                background: #50a0ff;
+                background: #3b82f6;
                 border-radius: 2px;
             }
             QSlider::handle:horizontal {
                 background: #ffffff;
-                border: 1px solid #50a0ff;
+                border: 1px solid #3b82f6;
                 width: 14px;
                 height: 14px;
                 margin: -5px 0;
                 border-radius: 7px;
             }
             QCheckBox {
-                color: #a0c4e8;
+                color: #9ea4b0;
                 font-size: 11px;
+                font-family: 'Arial', sans-serif;
             }
         """)
 
         # Shadow
         shadow = QGraphicsDropShadowEffect(card)
-        shadow.setBlurRadius(24)
-        shadow.setColor(QColor(20, 80, 180, 90))
+        shadow.setBlurRadius(20)
+        shadow.setColor(QColor(0, 0, 0, 140))
         shadow.setOffset(0, 4)
         card.setGraphicsEffect(shadow)
 
@@ -139,11 +143,11 @@ class ControlCenter(QWidget):
         title_box.setSpacing(1)
 
         title_label = QLabel("Ohverlay", card)
-        title_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title_label.setFont(QFont("Arial", 12, QFont.Bold))
 
         subtitle_label = QLabel("Nature is alive", card)
-        subtitle_label.setFont(QFont("Segoe UI", 8))
-        subtitle_label.setStyleSheet("color: #70a0d0;")
+        subtitle_label.setFont(QFont("Arial", 8))
+        subtitle_label.setStyleSheet("color: #9ea4b0;")
 
         title_box.addWidget(title_label)
         title_box.addWidget(subtitle_label)
@@ -163,13 +167,13 @@ class ControlCenter(QWidget):
             QPushButton {
                 background: transparent;
                 border: none;
-                color: #88aacc;
+                color: #9ea4b0;
                 font-size: 16px;
                 font-weight: bold;
             }
             QPushButton:hover {
                 color: #ffffff;
-                background: rgba(255, 255, 255, 30);
+                background: rgba(255, 255, 255, 0.1);
                 border-radius: 11px;
             }
         """)
@@ -192,7 +196,7 @@ class ControlCenter(QWidget):
             row_layout = QHBoxLayout()
 
             sp_label = QLabel(label_text, card)
-            sp_label.setFont(QFont("Segoe UI", 10, QFont.DemiBold))
+            sp_label.setFont(QFont("Arial", 10, QFont.DemiBold))
 
             toggle_btn = QPushButton("OFF", card)
             toggle_btn.setCheckable(True)
@@ -206,7 +210,7 @@ class ControlCenter(QWidget):
             count_label = QLabel(str(default_count), card)
             count_label.setFixedWidth(20)
             count_label.setAlignment(Qt.AlignCenter)
-            count_label.setFont(QFont("Segoe UI", 10, QFont.Bold))
+            count_label.setFont(QFont("Arial", 10, QFont.Bold))
 
             plus_btn = QPushButton("+", card)
             plus_btn.setProperty("class", "stepBtn")
@@ -230,14 +234,14 @@ class ControlCenter(QWidget):
             size_subrow.setContentsMargins(18, 0, 0, 0)
             
             size_lbl = QLabel("Size:", card)
-            size_lbl.setFont(QFont("Segoe UI", 8))
-            size_lbl.setStyleSheet("color: #a0c4e8;")
+            size_lbl.setFont(QFont("Arial", 8))
+            size_lbl.setStyleSheet("color: #9ea4b0;")
             size_subrow.addWidget(size_lbl)
             
             bg = QButtonGroup(self)
             for sz_label, sz_val in [("Small", 0.5), ("Normal", 1.0), ("Large", 1.5)]:
                 rb = QRadioButton(sz_label, card)
-                rb.setStyleSheet("QRadioButton { font-size: 10px; color: #a0c4e8; }")
+                rb.setStyleSheet("QRadioButton { font-size: 10px; color: #9ea4b0; font-family: 'Arial', sans-serif; }")
                 rb.setProperty("scaleValue", sz_val)
                 rb.setProperty("speciesId", oid)
                 if sz_val == 1.0:
@@ -264,7 +268,7 @@ class ControlCenter(QWidget):
         physics_layout = QVBoxLayout()
         phys_hdr_layout = QHBoxLayout()
         phys_label = QLabel("Nature Physics", card)
-        phys_label.setFont(QFont("Segoe UI", 9, QFont.Bold))
+        phys_label.setFont(QFont("Arial", 9, QFont.Bold))
         phys_hdr_layout.addWidget(phys_label)
         physics_layout.addLayout(phys_hdr_layout)
 
@@ -285,7 +289,7 @@ class ControlCenter(QWidget):
         # Interaction Strength Slider (25% - 200%)
         slider_row = QHBoxLayout()
         slider_lbl = QLabel("Interaction:", card)
-        slider_lbl.setFont(QFont("Segoe UI", 8))
+        slider_lbl.setFont(QFont("Arial", 8))
 
         self.strength_slider = QSlider(Qt.Horizontal, card)
         self.strength_slider.setRange(25, 200)
@@ -294,7 +298,7 @@ class ControlCenter(QWidget):
 
         self.strength_val_lbl = QLabel("100%", card)
         self.strength_val_lbl.setFixedWidth(36)
-        self.strength_val_lbl.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        self.strength_val_lbl.setFont(QFont("Arial", 8, QFont.Bold))
 
         slider_row.addWidget(slider_lbl)
         slider_row.addWidget(self.strength_slider)
@@ -318,11 +322,13 @@ class ControlCenter(QWidget):
         quit_btn = QPushButton("Quit", card)
         quit_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(180, 40, 40, 180);
-                border-color: rgba(220, 80, 80, 180);
+                background-color: rgba(239, 68, 68, 0.15);
+                border: 1px solid rgba(239, 68, 68, 0.4);
+                color: #fca5a5;
             }
             QPushButton:hover {
-                background-color: rgba(220, 50, 50, 220);
+                background-color: rgba(239, 68, 68, 0.3);
+                border-color: rgba(239, 68, 68, 0.6);
             }
         """)
         quit_btn.clicked.connect(self.quit_requested.emit)
@@ -340,7 +346,7 @@ class ControlCenter(QWidget):
         line = QFrame(self)
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet("background-color: rgba(60, 110, 180, 60); border: none; min-height: 1px; max-height: 1px;")
+        line.setStyleSheet("background-color: rgba(255, 255, 255, 0.08); border: none; min-height: 1px; max-height: 1px;")
         return line
 
     def _position_above_taskbar(self):
