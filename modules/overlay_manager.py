@@ -156,63 +156,9 @@ class OverlayManager:
         from PySide6.QtCore import QRect
         return QRect(min_x, min_y, max_right - min_x + 1, max_bottom - min_y + 1)
 
-    def reload_nature_world(self):
-        """Reload or open the unified nature world window with current config parameters."""
-        if not self.available:
-            return False
-
-        ff_active = bool(self.config.get("overlays", "fireflies")) if self.config else True
-        df_active = bool(self.config.get("overlays", "dragonflies")) if self.config else True
-        dd_active = bool(self.config.get("overlays", "dandelions")) if self.config else True
-
-        if not (ff_active or df_active or dd_active):
-            if "nature_world" in self._active:
-                win = self._active.pop("nature_world")
-                win.close()
-                win.deleteLater()
-            return True
-
-        extra_params = {
-            "fireflies_active": "true" if ff_active else "false",
-            "dragonflies_active": "true" if df_active else "false",
-            "dandelions_active": "true" if dd_active else "false",
-            "fireflies_count": self.config.get("overlays", "fireflies_count") or 6,
-            "dragonflies_count": self.config.get("overlays", "dragonflies_count") or 2,
-            "dandelions_count": self.config.get("overlays", "dandelions_count") or 3,
-            "fireflies_scale": self.config.get("overlays", "fireflies_scale") or 1.0,
-            "dragonflies_scale": self.config.get("overlays", "dragonflies_scale") or 1.0,
-            "dandelions_scale": self.config.get("overlays", "dandelions_scale") or 1.0,
-            "physics_preset": self.config.get("nature", "physics_preset") or "lively",
-            "interaction_strength": self.config.get("nature", "interaction_strength") or 1.0,
-        }
-
-        info = next((o for o in OVERLAY_REGISTRY if o["id"] == "nature_world"), None)
-        geometry = self._get_total_virtual_geometry()
-        if not info or not geometry:
-            return False
-
-        if "nature_world" not in self._active:
-            win = OverlayWindow(info, geometry)
-            self._active["nature_world"] = win
-        else:
-            win = self._active["nature_world"]
-
-        win.load_local_html(info["file"], extra_params=extra_params)
-        if self._global_visible:
-            win.show()
-            win.setWindowFlags(win.windowFlags() | Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool | Qt.WindowTransparentForInput)
-            win.show()
-        return True
-
     def open_overlay(self, overlay_id, save_state=True):
         if not self.available:
             return False
-
-        if save_state and self.config:
-            self.config.set("overlays", overlay_id, True)
-
-        if overlay_id in ["fireflies", "dragonflies", "dandelions", "nature_world"]:
-            return self.reload_nature_world()
 
         if overlay_id in self._active:
             self._active[overlay_id].show()
@@ -228,30 +174,45 @@ class OverlayManager:
             return False
 
         win = OverlayWindow(info, geometry)
-        if win.load_local_html(info["file"]):
+
+        scale = 1.0
+        count = None
+        if self.config:
+            scale_val = self.config.get("overlays", f"{overlay_id}_scale")
+            if scale_val is None:
+                scale_val = self.config.get("overlays", "global_scale")
+            scale = float(scale_val or 1.0)
+            count_val = self.config.get("overlays", f"{overlay_id}_count")
+            if count_val is not None:
+                try:
+                    count = int(count_val)
+                except (ValueError, TypeError):
+                    count = None
+
+        if win.load_local_html(info["file"], scale=scale, count=count):
             self._active[overlay_id] = win
             if self._global_visible:
                 win.show()
                 win.setWindowFlags(win.windowFlags() | Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool | Qt.WindowTransparentForInput)
                 win.show()
+
+            if save_state and self.config:
+                self.config.set("overlays", overlay_id, True)
             return True
         return False
 
     def close_overlay(self, overlay_id, save_state=True):
-        if save_state and self.config:
-            self.config.set("overlays", overlay_id, False)
-
-        if overlay_id in ["fireflies", "dragonflies", "dandelions", "nature_world"]:
-            return self.reload_nature_world()
-
         if overlay_id in self._active:
             win = self._active.pop(overlay_id)
             win.close()
             win.deleteLater()
             logger.info(f"Closed overlay: {overlay_id}")
 
+            if save_state and self.config:
+                self.config.set("overlays", overlay_id, False)
+
     def toggle_overlay(self, overlay_id):
-        if self.is_active(overlay_id):
+        if overlay_id in self._active:
             self.close_overlay(overlay_id)
             return False
         else:
@@ -259,12 +220,6 @@ class OverlayManager:
             return True
 
     def is_active(self, overlay_id):
-        if overlay_id in ["fireflies", "dragonflies", "dandelions", "nature_world"]:
-            if "nature_world" in self._active:
-                if self.config:
-                    return bool(self.config.get("overlays", overlay_id))
-                return True
-            return False
         return overlay_id in self._active
 
     def get_active_ids(self):
@@ -282,7 +237,13 @@ class OverlayManager:
     def restore_state(self):
         if not self.config or not self.available:
             return
-        self.reload_nature_world()
+
+        for info in OVERLAY_REGISTRY:
+            oid = info["id"]
+            if oid == "nature_world":
+                continue
+            if self.config.get("overlays", oid):
+                self.open_overlay(oid, save_state=False)
 
     def close_all(self):
         for win in list(self._active.values()):

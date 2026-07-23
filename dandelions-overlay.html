@@ -235,13 +235,17 @@
         }
       }
 
+      let lastBreezeTime = 0;
+      const BREEZE_INTERVAL_SEC = 20 * 60; // 20 minutes
+
       function update(dt) {
         elapsed += dt;
         globalGust *= Math.exp(-1.65 * dt);
         
-        // Trigger a strong breeze occasionally (roughly 5-10 times an hour, or manually tested scale)
-        if (Math.random() < dt * 0.003) {
-          globalGust += (Math.random() > 0.5 ? 1 : -1) * (150 + Math.random() * 200);
+        // Trigger a gentle breeze every 20 minutes (plus initial welcome breeze at 3s)
+        if (elapsed - lastBreezeTime >= BREEZE_INTERVAL_SEC || (lastBreezeTime === 0 && elapsed > 3.0)) {
+          lastBreezeTime = elapsed;
+          globalGust += (Math.random() > 0.5 ? 1 : -1) * (180 + Math.random() * 120);
         }
 
         for (const seed of seeds) updateSeed(seed, dt);
