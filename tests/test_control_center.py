@@ -51,6 +51,17 @@ class TestControlCenterAndOnboarding(unittest.TestCase):
         guide._on_got_it()
         self.assertTrue(self.settings.get("onboarding", "welcome_completed"))
 
+    def test_individual_size_toggles(self):
+        cc = ControlCenter(config=self.settings)
+        # Select "Small" for dragonflies
+        for btn in cc._species_widgets["dragonflies"]["size_group"].buttons():
+            if btn.property("scaleValue") == 0.5:
+                btn.setChecked(True)
+                break
+        self.assertEqual(self.settings.get("overlays", "dragonflies_scale"), 0.5)
+        # Check that fireflies remain 1.0
+        self.assertEqual(self.settings.get("overlays", "fireflies_scale"), 1.0)
+
 
 if __name__ == '__main__':
     unittest.main()

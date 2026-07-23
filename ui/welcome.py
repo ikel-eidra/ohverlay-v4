@@ -112,10 +112,11 @@ class WelcomeGuide(QWidget):
 
         # Body text
         body_label = QLabel(
-            "Ohverlay is running quietly in your system tray.\n"
+            "Ohverlay is running quietly in your system tray.<br/>"
             "Look for the glowing <b>O</b> icon near the clock—or inside the <b>^</b> hidden-icons menu to open your Nature Controls.",
             card
         )
+        body_label.setTextFormat(Qt.RichText)
         body_label.setWordWrap(True)
         body_label.setFont(QFont("Segoe UI", 10))
 

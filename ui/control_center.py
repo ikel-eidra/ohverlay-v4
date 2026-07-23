@@ -225,36 +225,37 @@ class ControlCenter(QWidget):
 
             card_layout.addLayout(row_layout)
 
+            # Sub-row for individual size
+            size_subrow = QHBoxLayout()
+            size_subrow.setContentsMargins(18, 0, 0, 0)
+            
+            size_lbl = QLabel("Size:", card)
+            size_lbl.setFont(QFont("Segoe UI", 8))
+            size_lbl.setStyleSheet("color: #a0c4e8;")
+            size_subrow.addWidget(size_lbl)
+            
+            bg = QButtonGroup(self)
+            for sz_label, sz_val in [("Small", 0.5), ("Normal", 1.0), ("Large", 1.5)]:
+                rb = QRadioButton(sz_label, card)
+                rb.setStyleSheet("QRadioButton { font-size: 10px; color: #a0c4e8; }")
+                rb.setProperty("scaleValue", sz_val)
+                rb.setProperty("speciesId", oid)
+                if sz_val == 1.0:
+                    rb.setChecked(True)
+                bg.addButton(rb)
+                size_subrow.addWidget(rb)
+                
+            size_subrow.addStretch()
+            card_layout.addLayout(size_subrow)
+            bg.buttonToggled.connect(self._on_species_size_toggled)
+
             self._species_widgets[oid] = {
                 "toggle": toggle_btn,
                 "count_label": count_label,
                 "minus": minus_btn,
                 "plus": plus_btn,
+                "size_group": bg,
             }
-
-        # Separator line
-        card_layout.addWidget(self._make_h_line())
-
-        # ── Size Controls ──
-        size_layout = QVBoxLayout()
-        size_label = QLabel("Object Size", card)
-        size_label.setFont(QFont("Segoe UI", 9, QFont.Bold))
-        size_layout.addWidget(size_label)
-
-        size_btn_layout = QHBoxLayout()
-        self.size_group = QButtonGroup(self)
-
-        for label_text, val in [("Small", 0.5), ("Normal", 1.0), ("Large", 1.5)]:
-            rb = QRadioButton(label_text, card)
-            rb.setProperty("scaleValue", val)
-            if val == 1.0:
-                rb.setChecked(True)
-            self.size_group.addButton(rb)
-            size_btn_layout.addWidget(rb)
-
-        self.size_group.buttonToggled.connect(self._on_size_toggled)
-        size_layout.addLayout(size_btn_layout)
-        card_layout.addLayout(size_layout)
 
         # Separator line
         card_layout.addWidget(self._make_h_line())
@@ -410,14 +411,15 @@ class ControlCenter(QWidget):
             widgets["count_label"].setText(str(count))
             widgets["count_label"].setToolTip(f"{oid.capitalize()}: {count} of 12")
 
-        # Global size/scale
-        global_scale = float(self.config.get("overlays", "global_scale") or 1.0)
-        for btn in self.size_group.buttons():
-            val = float(btn.property("scaleValue"))
-            if abs(val - global_scale) < 0.05:
-                btn.blockSignals(True)
-                btn.setChecked(True)
-                btn.blockSignals(False)
+        # Species scale/size
+        for oid, widgets in self._species_widgets.items():
+            scale_val = float(self.config.get("overlays", f"{oid}_scale") or 1.0)
+            for btn in widgets["size_group"].buttons():
+                val = float(btn.property("scaleValue"))
+                if abs(val - scale_val) < 0.05:
+                    btn.blockSignals(True)
+                    btn.setChecked(True)
+                    btn.blockSignals(False)
 
         # Physics mode
         preset = str(self.config.get("nature", "physics_preset") or "lively").lower()
@@ -477,23 +479,21 @@ class ControlCenter(QWidget):
 
         self.count_changed.emit(species_id, new_count)
 
-    def _on_size_toggled(self, button, checked):
+    def _on_species_size_toggled(self, button, checked):
         if not checked:
             return
+        species_id = button.property("speciesId")
         val = float(button.property("scaleValue"))
         if self.config:
-            self.config.set("overlays", "global_scale", val)
-            for oid in ["fireflies", "dragonflies", "dandelions"]:
-                self.config.set("overlays", f"{oid}_scale", val)
+            self.config.set("overlays", f"{species_id}_scale", val)
             self.config.save()
 
-        # Reload all active overlays to apply size
-        if self.overlay_manager:
-            for oid in self.overlay_manager.get_active_ids():
-                self.overlay_manager.close_overlay(oid)
-                self.overlay_manager.open_overlay(oid)
+        # Reload the overlay if active to apply new scale/size
+        if self.overlay_manager and self.overlay_manager.is_active(species_id):
+            self.overlay_manager.close_overlay(species_id)
+            self.overlay_manager.open_overlay(species_id)
 
-        self.scale_changed.emit("global", val)
+        self.scale_changed.emit(species_id, val)
 
     def _on_physics_preset_toggled(self, button, checked):
         if not checked:
