@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Unified Nature World — Interactive Physics Engine</title>
+  <title>Unified Nature World — 100% High Fidelity Single-Canvas Simulation</title>
   <style>
     html, body {
       width: 100%;
@@ -24,14 +24,14 @@
   </style>
 </head>
 <body>
-  <canvas id="natureCanvas" aria-label="Unified Nature World canvas with cross-species physics interactions"></canvas>
+  <canvas id="natureCanvas" aria-label="Unified Nature World canvas displaying dragonflies, fireflies, and dandelions"></canvas>
 
   <script>
     (() => {
       'use strict';
 
       const canvas = document.getElementById('natureCanvas');
-      const ctx = canvas.getContext('2d', { alpha: true });
+      const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
       const query = new URLSearchParams(location.search);
 
       // Quantities & Scales per species
@@ -43,24 +43,26 @@
       const DRAGONFLY_COUNT = dragonfliesActive ? clamp(Math.round(Number(query.get('dragonflies_count')) || 2), 1, 12) : 0;
       const DANDELION_COUNT = dandelionsActive ? clamp(Math.round(Number(query.get('dandelions_count')) || 3), 1, 12) : 0;
 
-      const fireflyScale = parseFloat(query.get('fireflies_scale')) || 1.0;
-      const dragonflyScale = parseFloat(query.get('dragonflies_scale')) || 1.0;
-      const dandelionScale = parseFloat(query.get('dandelions_scale')) || 1.0;
+      const globalScale = parseFloat(query.get('scale')) || 1.0;
+      const fireflyScale = (parseFloat(query.get('fireflies_scale')) || 1.0) * globalScale;
+      const dragonflyScale = (parseFloat(query.get('dragonflies_scale')) || 1.0) * globalScale;
+      const dandelionScale = (parseFloat(query.get('dandelions_scale')) || 1.0) * globalScale;
 
       const physicsPreset = (query.get('physics_preset') || 'lively').toLowerCase();
       const interactionStrength = parseFloat(query.get('interaction_strength')) || 1.0;
-
-      // Physics Preset Multipliers
       const presetMult = physicsPreset === 'calm' ? 0.5 : (physicsPreset === 'dramatic' ? 1.8 : 1.0);
       const K_INTERACTION = interactionStrength * presetMult;
 
       const TAU = Math.PI * 2;
+      const PX_PER_MM = 96 / 25.4;
+      const DISPLAY_HEIGHT = 17 * 2 * PX_PER_MM;
 
       let width = 1;
       let height = 1;
-      let pixelRatio = 1;
+      let dpr = 1;
       let elapsed = 0;
       let lastTime = performance.now();
+      let fitScale = 1;
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -80,7 +82,9 @@
         return value - Math.floor(value);
       }
 
-      // ── Glow Sprite for Fireflies ──
+      // ──────────────────────────────────────────
+      // 1. FIREFLIES HIGH-FIDELITY ENGINE
+      // ──────────────────────────────────────────
       function makeGlowSprite() {
         const sprite = document.createElement('canvas');
         sprite.width = 256;
@@ -100,7 +104,6 @@
 
       const glowSprite = makeGlowSprite();
 
-      // ── Firefly Entity Creation ──
       function createFirefly(index) {
         return {
           x: -0.05 + seeded(index, 3) * 1.10,
@@ -108,10 +111,21 @@
           z: 0.32 + seeded(index, 1) * 0.68,
           vx: (seeded(index, 5) - 0.5) * 0.15,
           vy: (seeded(index, 6) - 0.5) * 0.15,
+          vz: (seeded(index, 7) - 0.5) * 0.012,
+          targetX: -0.10 + seeded(index, 8) * 1.20,
+          targetY: -0.10 + seeded(index, 9) * 1.20,
+          targetZ: 0.30 + seeded(index, 10) * 0.70,
+          targetTimer: 4.0 + seeded(index, 11) * 6.0,
           wanderPhase: seeded(index, 12) * TAU,
           wanderRate: 0.41 + seeded(index, 13) * 0.39,
+          wingPhase: seeded(index, 14) * TAU,
+          facing: seeded(index, 15) * TAU,
+          bank: 0,
           flashCycle: 2.10 + seeded(index, 6) * 1.45,
           flashOffset: seeded(index, 7) * 4.0,
+          flashShape: 0.85 + seeded(index, 8) * 0.30,
+          speedMult: 1.2 + seeded(index, 11) * 1.8,
+          restTimer: seeded(index, 12) * 2,
           startled: 0,
           seed: index + 1
         };
@@ -119,7 +133,131 @@
 
       const fireflies = Array.from({ length: FIREFLY_COUNT }, (_, i) => createFirefly(i));
 
-      // ── Dragonfly Entity Creation ──
+      function flashIntensity(firefly) {
+        const phase = ((elapsed + firefly.flashOffset) % firefly.flashCycle) / firefly.flashCycle;
+        const rise = smoothstep(0.035, 0.105, phase);
+        const fall = 1 - smoothstep(0.17, 0.36, phase);
+        const primary = rise * fall;
+        const afterglow = smoothstep(0.20, 0.25, phase) * (1 - smoothstep(0.25, 0.43, phase)) * 0.16;
+        const livingFlicker = 0.94 + Math.sin(elapsed * 17.0 + firefly.seed * 5.7) * 0.06;
+        return clamp((primary + afterglow) * livingFlicker * firefly.flashShape, 0, 1);
+      }
+
+      function drawFireflyWing(side, length, widthValue, beat, alpha) {
+        ctx.save();
+        ctx.scale(1, side);
+        ctx.rotate(-0.24 - beat * 0.24);
+        ctx.beginPath();
+        ctx.moveTo(-length * 0.05, 0);
+        ctx.bezierCurveTo(length * 0.18, -widthValue * 0.36, length * 0.83, -widthValue * 0.22, length, 0);
+        ctx.bezierCurveTo(length * 0.72, widthValue * 0.42, length * 0.20, widthValue * 0.40, -length * 0.05, 0);
+        const wingGradient = ctx.createLinearGradient(0, 0, length, 0);
+        wingGradient.addColorStop(0, `rgba(178,153,103,${alpha * 0.50})`);
+        wingGradient.addColorStop(0.45, `rgba(224,214,178,${alpha * 0.28})`);
+        wingGradient.addColorStop(1, 'rgba(195,210,188,0)');
+        ctx.fillStyle = wingGradient;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(218,210,175,${alpha * 0.22})`;
+        ctx.lineWidth = 0.42;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawFirefly(firefly) {
+        const x = firefly.x * width;
+        const y = firefly.y * height;
+        const depthScale = 0.62 + firefly.z * 0.78;
+        const bodyLength = clamp(Math.min(width, height) * 0.0135 * depthScale, 7.2, 17.5) * fireflyScale;
+        const flash = flashIntensity(firefly);
+        const speed = Math.hypot(firefly.vx, firefly.vy);
+        const perspectiveOpacity = 0.42 + firefly.z * 0.54;
+
+        if (flash > 0.006) {
+          const glowSize = bodyLength * (5.8 + flash * 4.8);
+          const tailX = x + Math.cos(firefly.facing) * bodyLength * 0.43;
+          const tailY = y + Math.sin(firefly.facing) * bodyLength * 0.43;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = flash * perspectiveOpacity * 0.82;
+          ctx.drawImage(glowSprite, tailX - glowSize, tailY - glowSize, glowSize * 2, glowSize * 2);
+          ctx.restore();
+        }
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(firefly.facing);
+        ctx.scale(depthScale, depthScale * (1 - Math.abs(firefly.bank) * 0.14));
+
+        const wingBeat = Math.sin(firefly.wingPhase);
+        const wingAlpha = clamp(0.16 + speed * 4.8 + firefly.startled * 0.12, 0.15, 0.43) * perspectiveOpacity;
+        drawFireflyWing(-1, bodyLength * 0.86, bodyLength * 0.42, wingBeat, wingAlpha);
+        drawFireflyWing(1, bodyLength * 0.86, bodyLength * 0.42, -wingBeat, wingAlpha);
+
+        // Legs
+        ctx.strokeStyle = `rgba(76,55,31,${0.38 * perspectiveOpacity})`;
+        ctx.lineWidth = Math.max(0.45, bodyLength * 0.045);
+        ctx.lineCap = 'round';
+        for (let pair = -1; pair <= 1; pair++) {
+          const legX = pair * bodyLength * 0.12;
+          ctx.beginPath(); ctx.moveTo(legX, -bodyLength * 0.09); ctx.lineTo(legX + bodyLength * (0.12 + pair * 0.02), -bodyLength * 0.30); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(legX, bodyLength * 0.09); ctx.lineTo(legX + bodyLength * (0.12 + pair * 0.02), bodyLength * 0.30); ctx.stroke();
+        }
+
+        // Shell
+        const shellGradient = ctx.createLinearGradient(0, -bodyLength * 0.16, 0, bodyLength * 0.16);
+        shellGradient.addColorStop(0, '#120d08');
+        shellGradient.addColorStop(0.40, '#49301a');
+        shellGradient.addColorStop(0.68, '#1d130c');
+        shellGradient.addColorStop(1, '#070504');
+        ctx.fillStyle = shellGradient;
+        ctx.beginPath();
+        ctx.ellipse(bodyLength * 0.05, 0, bodyLength * 0.43, bodyLength * 0.16, 0, 0, TAU);
+        ctx.fill();
+
+        // Thorax
+        const thoraxGradient = ctx.createRadialGradient(-bodyLength * 0.28, -bodyLength * 0.07, 0, -bodyLength * 0.22, 0, bodyLength * 0.28);
+        thoraxGradient.addColorStop(0, '#6f4721');
+        thoraxGradient.addColorStop(0.38, '#2f1c0e');
+        thoraxGradient.addColorStop(1, '#090604');
+        ctx.fillStyle = thoraxGradient;
+        ctx.beginPath();
+        ctx.ellipse(-bodyLength * 0.27, 0, bodyLength * 0.27, bodyLength * 0.20, 0, 0, TAU);
+        ctx.fill();
+
+        // Head
+        ctx.fillStyle = '#080604';
+        ctx.beginPath();
+        ctx.ellipse(-bodyLength * 0.53, 0, bodyLength * 0.14, bodyLength * 0.13, 0, 0, TAU);
+        ctx.fill();
+
+        // Antennae
+        ctx.strokeStyle = `rgba(104,75,41,${0.34 * perspectiveOpacity})`;
+        ctx.lineWidth = Math.max(0.28, bodyLength * 0.018);
+        for (const side of [-1, 1]) {
+          ctx.beginPath();
+          ctx.moveTo(-bodyLength * 0.60, side * bodyLength * 0.035);
+          ctx.quadraticCurveTo(-bodyLength * 0.78, side * bodyLength * 0.12, -bodyLength * 0.89, side * bodyLength * 0.20);
+          ctx.stroke();
+        }
+
+        // Lantern
+        const lanternGradient = ctx.createLinearGradient(bodyLength * 0.23, -bodyLength * 0.12, bodyLength * 0.54, bodyLength * 0.12);
+        const lanternAlpha = 0.32 + flash * 0.68;
+        lanternGradient.addColorStop(0, `rgba(91,84,22,${lanternAlpha})`);
+        lanternGradient.addColorStop(0.48, `rgba(211,241,62,${lanternAlpha})`);
+        lanternGradient.addColorStop(0.78, `rgba(244,255,144,${lanternAlpha})`);
+        lanternGradient.addColorStop(1, `rgba(68,55,12,${lanternAlpha})`);
+        ctx.fillStyle = lanternGradient;
+        ctx.beginPath();
+        ctx.ellipse(bodyLength * 0.38, 0, bodyLength * 0.16, bodyLength * 0.11, 0, 0, TAU);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // ──────────────────────────────────────────
+      // 2. DRAGONFLIES HIGH-FIDELITY ENGINE
+      // ──────────────────────────────────────────
       function createDragonfly(index) {
         const x = 0.20 + seeded(index, 1) * 0.60;
         const y = 0.22 + seeded(index, 2) * 0.56;
@@ -127,11 +265,10 @@
         return {
           x, y,
           z: 0.44 + seeded(index, 4) * 0.48,
-          vx: Math.cos(facing) * 0.05,
-          vy: Math.sin(facing) * 0.05,
+          vx: Math.cos(facing) * 0.018,
+          vy: Math.sin(facing) * 0.018,
           facing,
           wingPhase: seeded(index, 5) * TAU,
-          hoverX: x, hoverY: y,
           hoverPhase: seeded(index, 8) * TAU,
           species: index % 2,
           seed: index + 1
@@ -140,7 +277,169 @@
 
       const dragonflies = Array.from({ length: DRAGONFLY_COUNT }, (_, i) => createDragonfly(i));
 
-      // ── Dandelion Seed Filaments Data ──
+      function dragonflyWingPath(length, widthValue, hindWing = false) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        if (hindWing) {
+          ctx.bezierCurveTo(length * 0.12, -widthValue * 0.55, length * 0.48, -widthValue * 0.95, length * 0.88, -widthValue * 0.38);
+          ctx.bezierCurveTo(length * 1.02, -widthValue * 0.15, length * 0.92, widthValue * 0.32, length * 0.64, widthValue * 0.52);
+          ctx.bezierCurveTo(length * 0.36, widthValue * 0.68, length * 0.14, widthValue * 0.48, 0, 0);
+        } else {
+          ctx.bezierCurveTo(length * 0.16, -widthValue * 0.42, length * 0.55, -widthValue * 0.68, length * 0.94, -widthValue * 0.22);
+          ctx.bezierCurveTo(length * 1.04, -0.05, length * 0.92, widthValue * 0.28, length * 0.68, widthValue * 0.38);
+          ctx.bezierCurveTo(length * 0.40, widthValue * 0.46, length * 0.18, widthValue * 0.32, 0, 0);
+        }
+        ctx.closePath();
+      }
+
+      function drawDragonflyWingVeins(length, widthValue, alpha, hindWing = false) {
+        ctx.strokeStyle = `rgba(10,20,30,${alpha * 0.82})`;
+        ctx.lineWidth = 0.75;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(length * 0.92, -widthValue * 0.12);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(15,25,35,${alpha * 0.55})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(length * 0.18, 0); ctx.lineTo(length * 0.82, -widthValue * 0.38);
+        ctx.moveTo(length * 0.28, 0); ctx.lineTo(length * 0.75, widthValue * 0.32);
+        ctx.stroke();
+      }
+
+      function drawOneDragonflyWing(side, fore, length, bodyLength, beat, alpha, dragonfly) {
+        const hindWing = !fore;
+        const attachmentX = bodyLength * (fore ? 0.15 : 0.05);
+        const baseAngle = fore ? 1.05 : 1.45;
+        const sweep = beat * (fore ? 0.15 : 0.12);
+        const widthValue = length * (fore ? 0.35 : 0.42);
+        const projection = 0.62 + Math.abs(Math.cos(beat * 1.18)) * 0.38;
+
+        ctx.save();
+        ctx.translate(attachmentX, 0);
+        ctx.rotate(side * (baseAngle + sweep));
+        ctx.scale(projection, 0.78 + projection * 0.22);
+        dragonflyWingPath(length, widthValue, hindWing);
+
+        const gradient = ctx.createLinearGradient(0, 0, length, 0);
+        if (dragonfly.species === 0) {
+          gradient.addColorStop(0, `rgba(10, 20, 60, ${alpha * 0.9})`);
+          gradient.addColorStop(0.3, `rgba(25, 70, 130, ${alpha * 0.7})`);
+          gradient.addColorStop(0.6, `rgba(130, 180, 140, ${alpha * 0.6})`);
+          gradient.addColorStop(0.8, `rgba(200, 100, 130, ${alpha * 0.5})`);
+          gradient.addColorStop(1, `rgba(50, 25, 80, ${alpha * 0.4})`);
+        } else {
+          gradient.addColorStop(0, `rgba(20, 15, 50, ${alpha * 0.9})`);
+          gradient.addColorStop(0.3, `rgba(70, 35, 110, ${alpha * 0.7})`);
+          gradient.addColorStop(0.6, `rgba(150, 90, 160, ${alpha * 0.6})`);
+          gradient.addColorStop(0.8, `rgba(210, 160, 110, ${alpha * 0.5})`);
+          gradient.addColorStop(1, `rgba(50, 20, 70, ${alpha * 0.4})`);
+        }
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(0,5,15,${alpha})`;
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+        drawDragonflyWingVeins(length, widthValue, alpha * 0.9, hindWing);
+        ctx.restore();
+      }
+
+      function drawDragonflyBody(dragonfly, bodyLength) {
+        const speciesBlue = dragonfly.species === 0;
+        const abdomenLength = bodyLength * 1.1;
+        const segmentCount = 10;
+        const startX = -bodyLength * 0.10;
+
+        for (let segment = segmentCount - 1; segment >= 0; segment--) {
+          const amount = segment / (segmentCount - 1);
+          const segmentX = startX - amount * abdomenLength;
+          const radiusX = bodyLength * 0.055;
+          const radiusY = bodyLength * (0.02 - amount * 0.012);
+          const bodyGradient = ctx.createLinearGradient(segmentX, -radiusY, segmentX, radiusY);
+          if (speciesBlue) {
+            bodyGradient.addColorStop(0, segment % 2 ? '#040b12' : '#081a29');
+            bodyGradient.addColorStop(0.35, segment % 2 ? '#104875' : '#288ab5');
+            bodyGradient.addColorStop(0.60, segment % 2 ? '#061d2b' : '#145778');
+            bodyGradient.addColorStop(1, '#020508');
+          } else {
+            bodyGradient.addColorStop(0, segment % 2 ? '#0a0a1a' : '#141432');
+            bodyGradient.addColorStop(0.35, segment % 2 ? '#5a2d8a' : '#994cd6');
+            bodyGradient.addColorStop(0.60, segment % 2 ? '#3a1a5c' : '#6a2a9e');
+            bodyGradient.addColorStop(1, '#050510');
+          }
+          ctx.fillStyle = bodyGradient;
+          ctx.beginPath();
+          ctx.ellipse(segmentX, 0, radiusX * 1.05, radiusY, 0, 0, TAU);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(2,5,4,0.72)';
+          ctx.lineWidth = Math.max(0.35, bodyLength * 0.009);
+          ctx.stroke();
+        }
+
+        const thoraxGradient = ctx.createRadialGradient(bodyLength * 0.03, -bodyLength * 0.08, bodyLength * 0.01, bodyLength * 0.01, 0, bodyLength * 0.28);
+        if (speciesBlue) {
+          thoraxGradient.addColorStop(0, '#5bb8c1');
+          thoraxGradient.addColorStop(0.31, '#215e69');
+          thoraxGradient.addColorStop(0.68, '#102b32');
+          thoraxGradient.addColorStop(1, '#03090b');
+        } else {
+          thoraxGradient.addColorStop(0, '#9db14a');
+          thoraxGradient.addColorStop(0.31, '#446b2b');
+          thoraxGradient.addColorStop(0.68, '#1b351b');
+          thoraxGradient.addColorStop(1, '#050b05');
+        }
+        ctx.fillStyle = thoraxGradient;
+        ctx.beginPath();
+        ctx.ellipse(bodyLength * 0.06, 0, bodyLength * 0.16, bodyLength * 0.08, 0, 0, TAU);
+        ctx.fill();
+
+        ctx.fillStyle = speciesBlue ? '#172c2f' : '#25351a';
+        ctx.beginPath();
+        ctx.ellipse(bodyLength * 0.22, 0, bodyLength * 0.12, bodyLength * 0.10, 0, 0, TAU);
+        ctx.fill();
+
+        for (const side of [-1, 1]) {
+          const eyeGradient = ctx.createRadialGradient(bodyLength * 0.24, side * bodyLength * 0.06, 0, bodyLength * 0.24, side * bodyLength * 0.06, bodyLength * 0.08);
+          eyeGradient.addColorStop(0, speciesBlue ? '#65796e' : '#8b8142');
+          eyeGradient.addColorStop(0.30, speciesBlue ? '#263e3a' : '#3f4523');
+          eyeGradient.addColorStop(0.72, '#111913');
+          eyeGradient.addColorStop(1, '#020302');
+          ctx.fillStyle = eyeGradient;
+          ctx.beginPath();
+          ctx.ellipse(bodyLength * 0.24, side * bodyLength * 0.06, bodyLength * 0.08, bodyLength * 0.06, 0, 0, TAU);
+          ctx.fill();
+        }
+      }
+
+      function drawDragonfly(dragonfly) {
+        const x = dragonfly.x * width;
+        const y = dragonfly.y * height;
+        const depthScale = 1.0 / dragonfly.z;
+        const bodyLength = clamp(Math.min(width, height) * 0.057 * depthScale, 31, 72) * dragonflyScale;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(dragonfly.facing);
+        ctx.scale(depthScale, depthScale);
+
+        const wingLength = bodyLength * 1.5;
+        const leftBeat = Math.sin(dragonfly.wingPhase);
+        const rightBeat = Math.sin(dragonfly.wingPhase + 0.16);
+        const alpha = clamp(0.35 + dragonfly.z * 0.15, 0.35, 0.65);
+
+        drawOneDragonflyWing(-1, true, wingLength, bodyLength, leftBeat, alpha, dragonfly);
+        drawOneDragonflyWing(1, true, wingLength, bodyLength, rightBeat, alpha, dragonfly);
+        drawOneDragonflyWing(-1, false, wingLength * 0.92, bodyLength, -leftBeat, alpha * 0.95, dragonfly);
+        drawOneDragonflyWing(1, false, wingLength * 0.92, bodyLength, -rightBeat, alpha * 0.95, dragonfly);
+
+        drawDragonflyBody(dragonfly, bodyLength);
+        ctx.restore();
+      }
+
+      // ──────────────────────────────────────────
+      // 3. DANDELION SEEDS HIGH-FIDELITY ENGINE
+      // ──────────────────────────────────────────
       const REFERENCE_FILAMENTS = [
         {"c1":[-10.48,-3.83],"c2":[-35.67,-7.79],"e":[-50.7,-12.09],"a":0.5,"w":0.29,"p":0.0,"k":0.7},
         {"c1":[-10.36,-4.34],"c2":[-36.97,-6.58],"e":[-50.7,-14.43],"a":0.87,"w":0.31,"p":2.4,"k":0.99},
@@ -152,61 +451,235 @@
         {"c1":[-9.61,-7.69],"c2":[-47.01,-14.98],"e":[-42.12,-29.64],"a":0.63,"w":0.43,"p":4.234,"k":1.03},
         {"c1":[-9.24,-8.72],"c2":[-41.53,-17.71],"e":[-44.85,-34.32],"a":0.59,"w":0.45,"p":0.351,"k":0.98},
         {"c1":[-8.49,-8.12],"c2":[-27.56,-22.13],"e":[-39.39,-31.59],"a":0.55,"w":0.3,"p":2.751,"k":0.93},
+        {"c1":[-8.55,-8.29],"c2":[-29.89,-19.87],"e":[-38.22,-32.37],"a":0.51,"w":0.32,"p":5.151,"k":0.88},
+        {"c1":[-9.26,-8.72],"c2":[-29.38,-21.7],"e":[-38.22,-34.32],"a":0.88,"w":0.34,"p":1.268,"k":0.83},
+        {"c1":[-7.33,-8.98],"c2":[-27.26,-23.41],"e":[-36.66,-35.49],"a":0.84,"w":0.36,"p":3.668,"k":0.78},
+        {"c1":[-6.45,-9.49],"c2":[-29.13,-23.25],"e":[-32.37,-37.83],"a":0.8,"w":0.38,"p":6.068,"k":0.73},
+        {"c1":[-4.64,-7.43],"c2":[-23.4,-17.41],"e":[-23.4,-28.47],"a":0.76,"w":0.4,"p":2.184,"k":1.02},
+        {"c1":[-5.82,-7.52],"c2":[-11.62,-28.86],"e":[-22.62,-28.86],"a":0.72,"w":0.42,"p":4.584,"k":0.97},
+        {"c1":[-5.98,-10.26],"c2":[-23.61,-27.23],"e":[-29.25,-41.34],"a":0.68,"w":0.44,"p":0.701,"k":0.92},
+        {"c1":[-4.73,-10.01],"c2":[-22.56,-26.2],"e":[-25.35,-40.17],"a":0.64,"w":0.29,"p":3.101,"k":0.87},
+        {"c1":[-6.13,-11.21],"c2":[-26.91,-29.74],"e":[-26.91,-45.63],"a":0.6,"w":0.31,"p":5.501,"k":0.82},
+        {"c1":[-4.0,-8.46],"c2":[-15.06,-22.27],"e":[-18.33,-33.15],"a":0.56,"w":0.33,"p":1.618,"k":0.77},
+        {"c1":[-4.27,-10.18],"c2":[-13.02,-28.06],"e":[-15.6,-40.95],"a":0.52,"w":0.35,"p":4.018,"k":0.72},
+        {"c1":[-2.03,-8.12],"c2":[-16.93,-23.92],"e":[-10.53,-31.59],"a":0.89,"w":0.37,"p":0.135,"k":1.01},
+        {"c1":[-3.0,-8.03],"c2":[-3.62,-23.54],"e":[-9.75,-31.2],"a":0.85,"w":0.39,"p":2.535,"k":0.96},
+        {"c1":[-2.99,-10.18],"c2":[-8.49,-28.38],"e":[-9.75,-40.95],"a":0.81,"w":0.41,"p":4.935,"k":0.91},
         {"c1":[-0.16,-8.63],"c2":[-2.96,-23.78],"e":[-1.95,-33.93],"a":0.77,"w":0.43,"p":1.052,"k":0.86},
         {"c1":[1.7,-8.03],"c2":[2.05,-21.95],"e":[3.9,-31.2],"a":0.73,"w":0.45,"p":3.452,"k":0.81},
         {"c1":[2.34,-10.09],"c2":[6.15,-28.57],"e":[9.75,-40.56],"a":0.69,"w":0.3,"p":5.852,"k":0.76},
-        {"c1":[8.6,-6.49],"c2":[25.67,-17.35],"e":[21.84,-38.22],"a":0.61,"w":0.34,"p":4.369,"k":1.0}
-      ];
+        {"c1":[2.08,-9.66],"c2":[6.7,-27.14],"e":[10.14,-38.61],"a":0.65,"w":0.32,"p":1.969,"k":0.71},
+        {"c1":[4.0,-9.58],"c2":[14.27,-27.4],"e":[21.84,-38.22],"a":0.61,"w":0.34,"p":4.369,"k":1.0},
+        {"c1":[4.96,-9.24],"c2":[18.11,-25.25],"e":[24.96,-36.66],"a":0.57,"w":0.36,"p":0.486,"k":0.95},
+        {"c1":[5.77,-7.61],"c2":[16.13,-21.2],"e":[24.18,-29.25],"a":0.53,"w":0.38,"p":2.886,"k":0.9},
+        {"c1":[6.34,-7.26],"c2":[17.48,-19.38],"e":[24.96,-27.69],"a":0.9,"w":0.4,"p":5.286,"k":0.85},
+        {"c1":[4.46,-4.6],"c2":[12.49,-10.04],"e":[16.38,-15.6],"a":0.86,"w":0.42,"p":1.403,"k":0.8},
+        {"c1":[5.48,-5.29],"c2":[14.78,-13.07],"e":[21.06,-18.72],"a":0.82,"w":0.44,"p":3.803,"k":0.75},
+        {"c1":[5.66,-5.03],"c2":[15.9,-11.61],"e":[21.84,-17.55],"a":0.78,"w":0.29,"p":6.203,"k":0.7},
+        {"c1":[6.48,-6.32],"c2":[21.79,-17.28],"e":[31.98,-23.4],"a":0.74,"w":0.31,"p":2.32,"k":0.99},
+        {"c1":[8.6,-6.49],"c2":[25.67,-17.35],"e":[37.05,-24.18],"a":0.7,"w":0.33,"p":4.72,"k":0.94},
+        {"c1":[10.12,-6.15],"c2":[29.29,-16.21],"e":[42.12,-22.62],"a":0.66,"w":0.35,"p":0.837,"k":0.89},
+        {"c1":[9.08,-4.52],"c2":[27.52,-10.11],"e":[39.0,-15.21],"a":0.62,"w":0.37,"p":3.237,"k":0.84},
+        {"c1":[8.49,-3.92],"c2":[24.44,-8.37],"e":[34.71,-12.48],"a":0.58,"w":0.39,"p":5.637,"k":0.79},
+        {"c1":[9.42,-4.26],"c2":[30.5,-8.03],"e":[42.51,-14.04],"a":0.54,"w":0.41,"p":1.754,"k":0.74},
+        {"c1":[8.11,-3.57],"c2":[27.68,-10.92],"e":[40.17,-10.92],"a":0.5,"w":0.43,"p":4.153,"k":1.03},
+        {"c1":[8.88,-2.8],"c2":[31.23,-3.56],"e":[44.07,-7.41],"a":0.87,"w":0.45,"p":0.27,"k":0.98},
+        {"c1":[8.69,-2.03],"c2":[28.18,-2.19],"e":[40.17,-3.9],"a":0.83,"w":0.3,"p":2.67,"k":0.93},
+        {"c1":[7.86,-1.08],"c2":[23.12,2.32],"e":[32.76,0.39],"a":0.79,"w":0.32,"p":5.07,"k":0.88},
+        {"c1":[7.42,-0.83],"c2":[22.42,0.6],"e":[31.98,1.56],"a":0.75,"w":0.34,"p":1.187,"k":0.83},
+        {"c1":[8.32,-0.23],"c2":[26.68,4.29],"e":[38.22,4.29],"a":0.71,"w":0.36,"p":3.587,"k":0.78},
+        {"c1":[5.51,0.8],"c2":[18.4,8.97],"e":[26.91,8.97],"a":0.67,"w":0.38,"p":5.987,"k":0.73}]
+      ;
 
       function makeDandelionSeed(i) {
-        const rx = 0.15 + (i / Math.max(1, DANDELION_COUNT - 1)) * 0.70;
-        const ry = 0.20 + (i % 3) * 0.25;
+        const variation = Math.random();
         return {
-          x: rx,
-          y: ry,
-          vx: Math.sin(i * 2.3) * 0.005,
-          vy: 0.003 + Math.cos(i * 1.7) * 0.002,
+          x: width * (0.15 + (i / Math.max(1, DANDELION_COUNT - 1)) * 0.70),
+          y: height * (0.20 + (i % 3) * 0.25),
+          vx: Math.sin(i * 2.3) * 6.0,
+          vy: 3.5 + Math.cos(i * 1.7) * 2.0,
+          angularVelocity: 0,
           phase: i * 2.1,
           size: 0.85 + (i % 4) * 0.08,
           angle: (i % 2 === 0 ? -0.1 : 0.1) * (0.5 + Math.sin(i)),
-          bendAngle: 0
+          filaments: REFERENCE_FILAMENTS.map((source, index) => {
+            const scale = 0.85 + (variation * 0.3) + (Math.sin(index * 1.7 + i * 2.1) * 0.15);
+            return {
+              ...source,
+              e: [source.e[0] * scale, source.e[1] * scale],
+              c1: [source.c1[0] * scale, source.c1[1] * scale],
+              c2: [source.c2[0] * scale, source.c2[1] * scale],
+              depth: Math.sin(source.p + i * 0.19),
+              deflection: 0,
+              deflectionVelocity: 0,
+              index
+            };
+          })
         };
       }
 
       const dandelions = Array.from({ length: DANDELION_COUNT }, (_, i) => makeDandelionSeed(i));
 
-      // ── Resize handler ──
+      function dandelionUnitScale(seed) {
+        const unit = (DISPLAY_HEIGHT / 136) * 0.8 * dandelionScale;
+        return unit * fitScale * seed.size;
+      }
+
+      function deformFilamentPoint(point, fraction, filament) {
+        const angle = filament.deflection * Math.pow(fraction, 1.72);
+        const cosine = Math.cos(angle);
+        const sine = Math.sin(angle);
+        const x = point[0] * cosine - point[1] * sine;
+        const y = point[0] * sine + point[1] * cosine;
+        const ripple = Math.sin(elapsed * 2.0 + filament.p + fraction * 1.8) * 0.34 * fraction * filament.k;
+        return [x, y + ripple];
+      }
+
+      function drawDandelionFilament(filament, index) {
+        const c1 = deformFilamentPoint(filament.c1, 0.30, filament);
+        const c2 = deformFilamentPoint(filament.c2, 0.66, filament);
+        const tip = deformFilamentPoint(filament.e, 1, filament);
+        const frontFactor = 0.76 + (filament.depth + 1) * 0.12;
+        const alpha = filament.a * frontFactor;
+
+        ctx.strokeStyle = 'rgba(255,255,246,' + alpha.toFixed(3) + ')';
+        ctx.lineWidth = filament.w;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], tip[0], tip[1]);
+        ctx.stroke();
+
+        if (Math.sin(filament.p * 2.7 + index) > 0.18) {
+          const baseX = lerp(c2[0], tip[0], 0.50);
+          const baseY = lerp(c2[1], tip[1], 0.50);
+          const length = Math.max(1, Math.hypot(tip[0], tip[1]));
+          const normalX = -tip[1] / length;
+          const normalY = tip[0] / length;
+          ctx.strokeStyle = 'rgba(255,255,248,' + (alpha * 0.62).toFixed(3) + ')';
+          ctx.lineWidth = 0.27;
+          ctx.beginPath();
+          ctx.moveTo(baseX, baseY);
+          ctx.lineTo(baseX + normalX * 1.55, baseY + normalY * 1.55);
+          ctx.moveTo(baseX, baseY);
+          ctx.lineTo(baseX - normalX * 1.2, baseY - normalY * 1.2);
+          ctx.stroke();
+        }
+      }
+
+      function drawDandelionAchene() {
+        const bodyGradient = ctx.createLinearGradient(-2.2, 71, 2.4, 94);
+        bodyGradient.addColorStop(0, '#6b4428');
+        bodyGradient.addColorStop(0.28, '#a66f3e');
+        bodyGradient.addColorStop(0.55, '#bc8750');
+        bodyGradient.addColorStop(0.80, '#84552f');
+        bodyGradient.addColorStop(1, '#4e311f');
+        ctx.fillStyle = bodyGradient;
+        ctx.beginPath();
+        ctx.moveTo(0.05, 71.0);
+        ctx.bezierCurveTo(1.85, 72.7, 2.35, 77.6, 2.05, 83.3);
+        ctx.bezierCurveTo(1.8, 88.2, 0.95, 93.4, 0.15, 96.1);
+        ctx.bezierCurveTo(-0.45, 97.5, -1.05, 97.4, -1.55, 95.9);
+        ctx.bezierCurveTo(-2.55, 91.8, -2.65, 84.0, -2.25, 78.2);
+        ctx.bezierCurveTo(-1.95, 74.1, -1.0, 71.7, 0.05, 71.0);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(72,43,25,0.64)';
+        ctx.lineWidth = 0.30;
+        for (let rib = -1; rib <= 1; rib++) {
+          const x = rib * 0.82;
+          ctx.beginPath();
+          ctx.moveTo(x * 0.30, 73.0);
+          ctx.bezierCurveTo(x * 0.82, 79.2, x, 88.1, x * 0.34, 94.8);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#50311e';
+        ctx.beginPath();
+        ctx.moveTo(-0.55, 95.4);
+        ctx.lineTo(0, 98.2);
+        ctx.lineTo(0.52, 95.4);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawDandelionSeed(seed) {
+        ctx.save();
+        ctx.translate(seed.x, seed.y);
+        ctx.rotate(seed.angle);
+        const scale = dandelionUnitScale(seed);
+        ctx.scale(scale, scale);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        for (let i = 0; i < seed.filaments.length; i++) {
+          if (seed.filaments[i].depth <= 0) drawDandelionFilament(seed.filaments[i], i);
+        }
+
+        const beakGradient = ctx.createLinearGradient(0, 0, 0, 72);
+        beakGradient.addColorStop(0, 'rgba(229,214,170,0.98)');
+        beakGradient.addColorStop(0.38, 'rgba(188,155,103,0.96)');
+        beakGradient.addColorStop(1, 'rgba(123,82,48,0.98)');
+        ctx.strokeStyle = beakGradient;
+        ctx.lineWidth = 0.48;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-0.34, 19, 0.42, 46, 0, 71.4);
+        ctx.stroke();
+
+        const hubGradient = ctx.createRadialGradient(-0.35, -0.6, 0.15, 0, 0, 2);
+        hubGradient.addColorStop(0, '#fffceb');
+        hubGradient.addColorStop(0.62, '#e9dfb7');
+        hubGradient.addColorStop(1, '#a88455');
+        ctx.fillStyle = hubGradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 1.7, 1.15, 0, 0, TAU);
+        ctx.fill();
+
+        for (let i = 0; i < seed.filaments.length; i++) {
+          if (seed.filaments[i].depth > 0) drawDandelionFilament(seed.filaments[i], i);
+        }
+
+        drawDandelionAchene();
+        ctx.restore();
+      }
+
+      // ──────────────────────────────────────────
+      // 4. RESIZE HANDLER
+      // ──────────────────────────────────────────
       function resize() {
         width = Math.max(1, innerWidth);
         height = Math.max(1, innerHeight);
-        pixelRatio = Math.min(devicePixelRatio || 1, 2);
-        canvas.width = Math.round(width * pixelRatio);
-        canvas.height = Math.round(height * pixelRatio);
+        dpr = Math.min(devicePixelRatio || 1, 2.5);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
         canvas.style.width = width + 'px';
         canvas.style.height = height + 'px';
-        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        fitScale = Math.min(1, width / 620, height / 480);
       }
 
       window.addEventListener('resize', resize);
       resize();
 
-      // ── Main Simulation & Draw Loop ──
-      function tick(now) {
-        const delta = Math.min(0.05, (now - lastTime) / 1000);
+      // ──────────────────────────────────────────
+      // 5. MAIN SIMULATION & DRAW LOOP
+      // ──────────────────────────────────────────
+      function frame(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
         lastTime = now;
-        elapsed += delta;
+        elapsed += dt;
 
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
 
-        // ──────────────────────────────────────────
-        // 1. UPDATE DRAGONFLIES & AVOIDANCE PHYSICS
-        // ──────────────────────────────────────────
+        // ── UPDATE DRAGONFLIES ──
         for (let i = 0; i < dragonflies.length; i++) {
           const df = dragonflies[i];
-          df.hoverPhase += delta * (3 + df.species);
-          
-          let ax = Math.sin(df.hoverPhase) * 0.04;
-          let ay = Math.cos(df.hoverPhase * 0.7) * 0.04;
+          df.wingPhase = (df.wingPhase + dt * 32) % TAU;
+          df.hoverPhase += dt * (2.8 + df.species);
+
+          let ax = Math.sin(df.hoverPhase) * 0.03;
+          let ay = Math.cos(df.hoverPhase * 0.7) * 0.03;
 
           // Dragonfly-to-Dragonfly Avoidance
           for (let j = 0; j < dragonflies.length; j++) {
@@ -216,17 +689,16 @@
             const dy = df.y - other.y;
             const dist = Math.hypot(dx, dy);
             if (dist < 0.14 && dist > 0.001) {
-              const repel = ((0.14 - dist) / dist) * 0.2 * K_INTERACTION;
-              ax += dx * repel;
-              ay += dy * repel;
+              const push = ((0.14 - dist) / dist) * 0.15 * K_INTERACTION;
+              ax += dx * push;
+              ay += dy * push;
             }
           }
 
-          df.vx = lerp(df.vx, ax, delta * 3);
-          df.vy = lerp(df.vy, ay, delta * 3);
-
-          df.x += df.vx * delta;
-          df.y += df.vy * delta;
+          df.vx = lerp(df.vx, ax, dt * 3);
+          df.vy = lerp(df.vy, ay, dt * 3);
+          df.x += df.vx * dt;
+          df.y += df.vy * dt;
 
           if (df.x < 0.08) { df.x = 0.08; df.vx *= -1; }
           if (df.x > 0.92) { df.x = 0.92; df.vx *= -1; }
@@ -236,186 +708,111 @@
           df.facing = Math.atan2(df.vy, df.vx) + Math.PI / 2;
         }
 
-        // ──────────────────────────────────────────
-        // 2. UPDATE DANDELIONS & CROSS-SPECIES WAKES
-        // ──────────────────────────────────────────
-        if (DANDELION_COUNT > 0) {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.70)';
-          ctx.lineWidth = 1.3 * dandelionScale;
-
-          for (const seed of dandelions) {
-            let wakePushX = 0;
-            let wakePushY = 0;
-
-            // Dragonfly Wake Effect on Dandelion Stems & Seeds
-            for (const df of dragonflies) {
-              const dx = seed.x - df.x;
-              const dy = seed.y - df.y;
-              const dist = Math.hypot(dx, dy);
-              if (dist < 0.20 && dist > 0.001) {
-                const force = ((0.20 - dist) / dist) * 0.08 * K_INTERACTION;
-                wakePushX += (dx + df.vx * 2) * force;
-                wakePushY += (dy + df.vy * 2) * force;
-              }
-            }
-
-            // Firefly micro disturbance on seeds
-            for (const ff of fireflies) {
-              const dx = seed.x - ff.x;
-              const dy = seed.y - ff.y;
-              const dist = Math.hypot(dx, dy);
-              if (dist < 0.08 && dist > 0.001) {
-                wakePushX += dx * 0.02 * K_INTERACTION;
-                wakePushY += dy * 0.02 * K_INTERACTION;
-              }
-            }
-
-            seed.vx = lerp(seed.vx, wakePushX + Math.sin(elapsed + seed.phase) * 0.002, delta * 2);
-            seed.vy = lerp(seed.vy, wakePushY + 0.003 + Math.cos(elapsed * 0.8 + seed.phase) * 0.001, delta * 2);
-
-            seed.x += seed.vx * delta;
-            seed.y += seed.vy * delta;
-
-            seed.bendAngle = lerp(seed.bendAngle, wakePushX * 2.5, delta * 4);
-
-            if (seed.x < 0.05) seed.x = 0.95;
-            if (seed.x > 0.95) seed.x = 0.05;
-            if (seed.y > 0.95) seed.y = 0.05;
-
-            const px = seed.x * width;
-            const py = seed.y * height;
-            const sz = 24 * dandelionScale * seed.size;
-
-            ctx.save();
-            ctx.translate(px, py);
-            ctx.rotate(seed.angle + seed.bendAngle + Math.sin(elapsed * 1.5 + seed.phase) * 0.1);
-
-            // Stem
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(0, sz * 1.5);
-            ctx.stroke();
-
-            // Pappus Filaments
-            for (const f of REFERENCE_FILAMENTS) {
-              ctx.beginPath();
-              ctx.moveTo(0, 0);
-              ctx.quadraticCurveTo(f.c1[0] * sz * 0.03, f.c1[1] * sz * 0.03, f.e[0] * sz * 0.03, f.e[1] * sz * 0.03);
-              ctx.stroke();
-            }
-
-            ctx.restore();
+        // ── UPDATE FIREFLIES & TURBULENCE ──
+        for (let i = 0; i < fireflies.length; i++) {
+          const ff = fireflies[i];
+          ff.targetTimer -= dt;
+          if (ff.targetTimer <= 0) {
+            ff.targetX = -0.1 + seeded(elapsed, 21 + ff.seed) * 1.20;
+            ff.targetY = -0.1 + seeded(elapsed, 22 + ff.seed) * 1.20;
+            ff.targetTimer = 4.0 + seeded(elapsed, 24 + ff.seed) * 6.0;
           }
-        }
 
-        // ──────────────────────────────────────────
-        // 3. UPDATE FIREFLIES & TURBULENCE SCATTERING
-        // ──────────────────────────────────────────
-        if (FIREFLY_COUNT > 0) {
-          for (const ff of fireflies) {
-            let scatterX = 0;
-            let scatterY = 0;
+          let ax = (ff.targetX - ff.x) * 0.4;
+          let ay = (ff.targetY - ff.y) * 0.4;
 
-            // Dragonflies scatter fireflies with air turbulence
-            for (const df of dragonflies) {
-              const dx = ff.x - df.x;
-              const dy = ff.y - df.y;
-              const dist = Math.hypot(dx, dy);
-              if (dist < 0.16 && dist > 0.001) {
-                const force = ((0.16 - dist) / dist) * 0.25 * K_INTERACTION;
-                scatterX += dx * force;
-                scatterY += dy * force;
-                ff.startled = 1.0;
-              }
-            }
-
-            ff.startled = Math.max(0, ff.startled - delta * 2);
-
-            ff.vx = lerp(ff.vx, scatterX + Math.sin(elapsed * ff.wanderRate + ff.wanderPhase) * 0.03, delta * 3);
-            ff.vy = lerp(ff.vy, scatterY + Math.cos(elapsed * (ff.wanderRate * 0.9) + ff.wanderPhase) * 0.02, delta * 3);
-
-            ff.x += ff.vx * delta;
-            ff.y += ff.vy * delta;
-
-            if (ff.x < 0) ff.x = 1.0;
-            if (ff.x > 1.0) ff.x = 0;
-            if (ff.y < 0) ff.y = 1.0;
-            if (ff.y > 1.0) ff.y = 0;
-
-            const px = ff.x * width;
-            const py = ff.y * height;
-
-            const phase = ((elapsed + ff.flashOffset) % ff.flashCycle) / ff.flashCycle;
-            const flash = smoothstep(0.04, 0.12, phase) * (1 - smoothstep(0.18, 0.38, phase));
-            const intensity = clamp(flash + ff.startled * 0.5, 0, 1);
-
-            if (intensity > 0.01) {
-              const radius = 38 * fireflyScale * ff.z * (0.8 + intensity * 0.6);
-              ctx.save();
-              ctx.globalAlpha = intensity * 0.9;
-              ctx.drawImage(glowSprite, px - radius, py - radius, radius * 2, radius * 2);
-              ctx.restore();
-            }
-
-            // Core dot
-            ctx.fillStyle = `rgba(245, 255, 200, ${0.4 + intensity * 0.6})`;
-            ctx.beginPath();
-            ctx.arc(px, py, 2.0 * fireflyScale, 0, TAU);
-            ctx.fill();
-          }
-        }
-
-        // ──────────────────────────────────────────
-        // 4. DRAW DRAGONFLIES (FOREGROUND LAYER)
-        // ──────────────────────────────────────────
-        if (DRAGONFLY_COUNT > 0) {
+          // Dragonflies scatter fireflies with turbulence
           for (const df of dragonflies) {
-            const px = df.x * width;
-            const py = df.y * height;
-            const sz = 28 * dragonflyScale;
-
-            ctx.save();
-            ctx.translate(px, py);
-            ctx.rotate(df.facing);
-
-            // Body
-            ctx.fillStyle = df.species === 0 ? '#38bdf8' : '#34d399';
-            ctx.beginPath();
-            ctx.ellipse(0, 0, sz * 0.5, sz * 0.1, 0, 0, TAU);
-            ctx.fill();
-
-            // Eyes
-            ctx.fillStyle = '#1e293b';
-            ctx.beginPath();
-            ctx.arc(sz * 0.4, -sz * 0.08, sz * 0.08, 0, TAU);
-            ctx.arc(sz * 0.4, sz * 0.08, sz * 0.08, 0, TAU);
-            ctx.fill();
-
-            // Wings (rapid flutter)
-            const wingFlap = Math.sin(now * 0.06 + df.wingPhase) * 0.4;
-            ctx.fillStyle = 'rgba(224, 242, 254, 0.45)';
-            ctx.strokeStyle = 'rgba(186, 230, 253, 0.7)';
-            ctx.lineWidth = 0.8;
-
-            // Wings Pair
-            ctx.save();
-            ctx.scale(1, wingFlap);
-            ctx.beginPath();
-            ctx.ellipse(0, -sz * 0.5, sz * 0.15, sz * 0.5, -0.2, 0, TAU);
-            ctx.fill(); ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(0, sz * 0.5, sz * 0.15, sz * 0.5, 0.2, 0, TAU);
-            ctx.fill(); ctx.stroke();
-            ctx.restore();
-
-            ctx.restore();
+            const dx = ff.x - df.x;
+            const dy = ff.y - df.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 0.18 && dist > 0.001) {
+              const push = ((0.18 - dist) / dist) * 0.35 * K_INTERACTION;
+              ax += dx * push;
+              ay += dy * push;
+              ff.startled = 1.0;
+            }
           }
+
+          ff.vx += ax * dt;
+          ff.vy += ay * dt;
+          ff.vx *= Math.exp(-0.85 * dt);
+          ff.vy *= Math.exp(-0.85 * dt);
+
+          ff.x += ff.vx * dt;
+          ff.y += ff.vy * dt;
+          if (ff.x < -0.05) ff.x = 1.05;
+          if (ff.x > 1.05) ff.x = -0.05;
+          if (ff.y < -0.05) ff.y = 1.05;
+          if (ff.y > 1.05) ff.y = -0.05;
+
+          if (Math.hypot(ff.vx, ff.vy) > 0.002) {
+            ff.facing = Math.atan2(ff.vy, ff.vx) + Math.PI;
+          }
+          ff.wingPhase = (ff.wingPhase + dt * 45) % TAU;
+          ff.startled *= Math.exp(-1.15 * dt);
         }
 
-        requestAnimationFrame(tick);
+        // ── UPDATE DANDELIONS & DRAGONFLY WAKES ──
+        for (let i = 0; i < dandelions.length; i++) {
+          const seed = dandelions[i];
+          let wakePushX = 0;
+          let wakePushY = 0;
+
+          for (const df of dragonflies) {
+            const screenDfX = df.x * width;
+            const screenDfY = df.y * height;
+            const dx = seed.x - screenDfX;
+            const dy = seed.y - screenDfY;
+            const dist = Math.max(1, Math.hypot(dx, dy));
+            if (dist < 180 * K_INTERACTION) {
+              const push = (1 - dist / (180 * K_INTERACTION)) * 120 * K_INTERACTION;
+              wakePushX += (dx / dist) * push;
+              wakePushY += (dy / dist) * push;
+            }
+          }
+
+          seed.vx += (wakePushX + Math.sin(elapsed * 0.31) * 7.6 - seed.vx) * dt * 0.82;
+          seed.vy += (wakePushY + 5.8 - seed.vy) * dt * 0.82;
+
+          seed.x += seed.vx * dt;
+          seed.y += seed.vy * dt;
+
+          const targetAngle = clamp(seed.vx * 0.0102, -0.30, 0.72);
+          const torque = (targetAngle - seed.angle) * 1.12 - seed.angularVelocity * 1.60;
+          seed.angularVelocity += torque * dt;
+          seed.angle += seed.angularVelocity * dt;
+
+          const localWind = clamp(wakePushX / 34, -1.25, 1.25);
+          for (const filament of seed.filaments) {
+            const target = localWind * 0.070 * filament.k;
+            const stiffness = 10.5 + filament.k * 5.8;
+            filament.deflectionVelocity += ((target - filament.deflection) * stiffness - filament.deflectionVelocity * 6.5) * dt;
+            filament.deflection += filament.deflectionVelocity * dt;
+          }
+
+          if (seed.x < 40) seed.x = width - 40;
+          if (seed.x > width - 40) seed.x = 40;
+          if (seed.y > height - 60) seed.y = 60;
+        }
+
+        // ── DRAW ALL LAYERS IN HIGH FIDELITY ──
+        if (DANDELION_COUNT > 0) {
+          for (const seed of dandelions) drawDandelionSeed(seed);
+        }
+
+        if (FIREFLY_COUNT > 0) {
+          for (const ff of fireflies) drawFirefly(ff);
+        }
+
+        if (DRAGONFLY_COUNT > 0) {
+          for (const df of dragonflies) drawDragonfly(df);
+        }
+
+        requestAnimationFrame(frame);
       }
 
-      requestAnimationFrame(tick);
+      requestAnimationFrame(frame);
     })();
   </script>
 </body>
