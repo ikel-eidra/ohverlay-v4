@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Unified Nature World — Shared Canvas</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      cursor: none;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="natureCanvas" aria-label="Unified Nature World canvas displaying dragonflies, fireflies, and dandelions"></canvas>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('natureCanvas');
+      const ctx = canvas.getContext('2d', { alpha: true });
+      const query = new URLSearchParams(location.search);
+
+      // Quantities & Scales per species
+      const firefliesActive = query.get('fireflies_active') !== 'false';
+      const dragonfliesActive = query.get('dragonflies_active') !== 'false';
+      const dandelionsActive = query.get('dandelions_active') !== 'false';
+
+      const FIREFLY_COUNT = firefliesActive ? clamp(Math.round(Number(query.get('fireflies_count')) || 6), 1, 12) : 0;
+      const DRAGONFLY_COUNT = dragonfliesActive ? clamp(Math.round(Number(query.get('dragonflies_count')) || 2), 1, 12) : 0;
+      const DANDELION_COUNT = dandelionsActive ? clamp(Math.round(Number(query.get('dandelions_count')) || 3), 1, 12) : 0;
+
+      const fireflyScale = parseFloat(query.get('fireflies_scale')) || 1.0;
+      const dragonflyScale = parseFloat(query.get('dragonflies_scale')) || 1.0;
+      const dandelionScale = parseFloat(query.get('dandelions_scale')) || 1.0;
+
+      const physicsPreset = (query.get('physics_preset') || 'lively').toLowerCase();
+      const interactionStrength = parseFloat(query.get('interaction_strength')) || 1.0;
+
+      const TAU = Math.PI * 2;
+
+      let width = 1;
+      let height = 1;
+      let pixelRatio = 1;
+      let elapsed = 0;
+      let lastTime = performance.now();
+
+      const pointer = {
+        x: -10000,
+        y: -10000,
+        velocityX: 0,
+        velocityY: 0,
+        active: false,
+        down: false,
+        lastMove: performance.now()
+      };
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function lerp(from, to, amount) {
+        return from + (to - from) * amount;
+      }
+
+      function smoothstep(edge0, edge1, value) {
+        const amount = clamp((value - edge0) / Math.max(0.000001, edge1 - edge0), 0, 1);
+        return amount * amount * (3 - 2 * amount);
+      }
+
+      function seeded(index, salt = 0) {
+        const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453123;
+        return value - Math.floor(value);
+      }
+
+      // ── Glow Sprite for Fireflies ──
+      function makeGlowSprite() {
+        const sprite = document.createElement('canvas');
+        sprite.width = 256;
+        sprite.height = 256;
+        const spriteContext = sprite.getContext('2d');
+        const gradient = spriteContext.createRadialGradient(128, 128, 1, 128, 128, 128);
+        gradient.addColorStop(0, 'rgba(255,255,197,1)');
+        gradient.addColorStop(0.035, 'rgba(239,255,123,0.98)');
+        gradient.addColorStop(0.12, 'rgba(174,255,55,0.55)');
+        gradient.addColorStop(0.31, 'rgba(112,235,22,0.19)');
+        gradient.addColorStop(0.62, 'rgba(76,190,8,0.045)');
+        gradient.addColorStop(1, 'rgba(25,90,0,0)');
+        spriteContext.fillStyle = gradient;
+        spriteContext.fillRect(0, 0, 256, 256);
+        return sprite;
+      }
+
+      const glowSprite = makeGlowSprite();
+
+      // ── Firefly Entity Creation ──
+      function createFirefly(index) {
+        return {
+          x: -0.05 + seeded(index, 3) * 1.10,
+          y: -0.05 + seeded(index, 4) * 1.10,
+          z: 0.32 + seeded(index, 1) * 0.68,
+          vx: (seeded(index, 5) - 0.5) * 0.15,
+          vy: (seeded(index, 6) - 0.5) * 0.15,
+          targetX: -0.10 + seeded(index, 8) * 1.20,
+          targetY: -0.10 + seeded(index, 9) * 1.20,
+          targetZ: 0.30 + seeded(index, 10) * 0.70,
+          targetTimer: 4.0 + seeded(index, 11) * 6.0,
+          wanderPhase: seeded(index, 12) * TAU,
+          wanderRate: 0.41 + seeded(index, 13) * 0.39,
+          flashCycle: 2.10 + seeded(index, 6) * 1.45,
+          flashOffset: seeded(index, 7) * 4.0,
+          restTimer: seeded(index, 12) * 2,
+          seed: index + 1
+        };
+      }
+
+      const fireflies = Array.from({ length: FIREFLY_COUNT }, (_, i) => createFirefly(i));
+
+      // ── Dragonfly Entity Creation ──
+      function createDragonfly(index) {
+        const x = 0.20 + seeded(index, 1) * 0.60;
+        const y = 0.22 + seeded(index, 2) * 0.56;
+        const facing = seeded(index, 3) * TAU;
+        return {
+          x, y,
+          z: 0.44 + seeded(index, 4) * 0.48,
+          vx: Math.cos(facing) * 0.018,
+          vy: Math.sin(facing) * 0.018,
+          facing,
+          visualFacing: facing,
+          bank: 0,
+          pitch: 0,
+          wingPhase: seeded(index, 5) * TAU,
+          wingRate: 28 + seeded(index, 6) * 9,
+          behavior: 'hover',
+          behaviorTimer: 0.9 + seeded(index, 7) * 1.6,
+          hoverX: x, hoverY: y,
+          hoverPhase: seeded(index, 8) * TAU,
+          startled: 0,
+          species: index % 2,
+          seed: index + 1
+        };
+      }
+
+      const dragonflies = Array.from({ length: DRAGONFLY_COUNT }, (_, i) => createDragonfly(i));
+
+      // ── Dandelion Seed Filaments Data ──
+      const REFERENCE_FILAMENTS = [
+        {"c1":[-10.48,-3.83],"c2":[-35.67,-7.79],"e":[-50.7,-12.09],"a":0.5,"w":0.29,"p":0.0,"k":0.7},
+        {"c1":[-10.36,-4.34],"c2":[-36.97,-6.58],"e":[-50.7,-14.43],"a":0.87,"w":0.31,"p":2.4,"k":0.99},
+        {"c1":[-9.0,-4.69],"c2":[-30.85,-11.19],"e":[-44.07,-15.99],"a":0.83,"w":0.33,"p":4.8,"k":0.94},
+        {"c1":[-11.12,-6.06],"c2":[-42.46,-7.81],"e":[-50.7,-22.23],"a":0.79,"w":0.35,"p":0.917,"k":0.89},
+        {"c1":[-10.52,-6.4],"c2":[-38.82,-11.91],"e":[-50.7,-23.79],"a":0.75,"w":0.37,"p":3.317,"k":0.84},
+        {"c1":[-8.26,-6.4],"c2":[-26.14,-17.75],"e":[-38.22,-23.79],"a":0.71,"w":0.39,"p":5.717,"k":0.79},
+        {"c1":[-8.24,-7.26],"c2":[-34.09,-14.64],"e":[-41.34,-27.69],"a":0.67,"w":0.41,"p":1.834,"k":0.74},
+        {"c1":[-9.61,-7.69],"c2":[-47.01,-14.98],"e":[-42.12,-29.64],"a":0.63,"w":0.43,"p":4.234,"k":1.03},
+        {"c1":[-9.24,-8.72],"c2":[-41.53,-17.71],"e":[-44.85,-34.32],"a":0.59,"w":0.45,"p":0.351,"k":0.98},
+        {"c1":[-8.49,-8.12],"c2":[-27.56,-22.13],"e":[-39.39,-31.59],"a":0.55,"w":0.3,"p":2.751,"k":0.93},
+        {"c1":[-0.16,-8.63],"c2":[-2.96,-23.78],"e":[-1.95,-33.93],"a":0.77,"w":0.43,"p":1.052,"k":0.86},
+        {"c1":[1.7,-8.03],"c2":[2.05,-21.95],"e":[3.9,-31.2],"a":0.73,"w":0.45,"p":3.452,"k":0.81},
+        {"c1":[2.34,-10.09],"c2":[6.15,-28.57],"e":[9.75,-40.56],"a":0.69,"w":0.3,"p":5.852,"k":0.76},
+        {"c1":[8.6,-6.49],"c2":[25.67,-17.35],"e":[37.05,-24.18],"a":0.7,"w":0.33,"p":4.72,"k":0.94}
+      ];
+
+      function makeDandelionSeed(i) {
+        const rx = 0.15 + (i / Math.max(1, DANDELION_COUNT - 1)) * 0.70;
+        const ry = 0.20 + (i % 3) * 0.25;
+        return {
+          x: rx,
+          y: ry,
+          vx: Math.sin(i * 2.3) * 0.005,
+          vy: 0.003 + Math.cos(i * 1.7) * 0.002,
+          phase: i * 2.1,
+          size: 0.85 + (i % 4) * 0.08,
+          angle: (i % 2 === 0 ? -0.1 : 0.1) * (0.5 + Math.sin(i))
+        };
+      }
+
+      const dandelions = Array.from({ length: DANDELION_COUNT }, (_, i) => makeDandelionSeed(i));
+
+      // ── Resize handler ──
+      function resize() {
+        width = Math.max(1, innerWidth);
+        height = Math.max(1, innerHeight);
+        pixelRatio = Math.min(devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+
+      // ── Main Simulation & Draw Loop ──
+      function tick(now) {
+        const delta = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        elapsed += delta;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // 1. Draw Dandelions (Background Layer)
+        if (DANDELION_COUNT > 0) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+          ctx.lineWidth = 1.2 * dandelionScale;
+
+          for (const seed of dandelions) {
+            seed.x += (seed.vx + Math.sin(elapsed + seed.phase) * 0.002) * delta;
+            seed.y += (seed.vy + Math.cos(elapsed * 0.8 + seed.phase) * 0.001) * delta;
+
+            if (seed.x < 0.05) seed.x = 0.95;
+            if (seed.x > 0.95) seed.x = 0.05;
+            if (seed.y > 0.95) seed.y = 0.05;
+
+            const px = seed.x * width;
+            const py = seed.y * height;
+            const sz = 24 * dandelionScale * seed.size;
+
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.rotate(seed.angle + Math.sin(elapsed * 1.5 + seed.phase) * 0.1);
+
+            // Stem
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, sz * 1.5);
+            ctx.stroke();
+
+            // Pappus Filaments
+            for (const f of REFERENCE_FILAMENTS) {
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.quadraticCurveTo(f.c1[0] * sz * 0.03, f.c1[1] * sz * 0.03, f.e[0] * sz * 0.03, f.e[1] * sz * 0.03);
+              ctx.stroke();
+            }
+
+            ctx.restore();
+          }
+        }
+
+        // 2. Draw Fireflies (Midground Layer)
+        if (FIREFLY_COUNT > 0) {
+          for (const ff of fireflies) {
+            ff.x += (Math.sin(elapsed * ff.wanderRate + ff.wanderPhase) * 0.03 + ff.vx) * delta;
+            ff.y += (Math.cos(elapsed * (ff.wanderRate * 0.9) + ff.wanderPhase) * 0.02 + ff.vy) * delta;
+
+            if (ff.x < 0) ff.x = 1.0;
+            if (ff.x > 1.0) ff.x = 0;
+            if (ff.y < 0) ff.y = 1.0;
+            if (ff.y > 1.0) ff.y = 0;
+
+            const px = ff.x * width;
+            const py = ff.y * height;
+
+            const phase = ((elapsed + ff.flashOffset) % ff.flashCycle) / ff.flashCycle;
+            const flash = smoothstep(0.04, 0.12, phase) * (1 - smoothstep(0.18, 0.38, phase));
+            const intensity = clamp(flash, 0, 1);
+
+            if (intensity > 0.01) {
+              const radius = 38 * fireflyScale * ff.z * (0.8 + intensity * 0.6);
+              ctx.save();
+              ctx.globalAlpha = intensity * 0.9;
+              ctx.drawImage(glowSprite, px - radius, py - radius, radius * 2, radius * 2);
+              ctx.restore();
+            }
+
+            // Core dot
+            ctx.fillStyle = `rgba(245, 255, 200, ${0.4 + intensity * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 2.0 * fireflyScale, 0, TAU);
+            ctx.fill();
+          }
+        }
+
+        // 3. Draw Dragonflies (Foreground Layer)
+        if (DRAGONFLY_COUNT > 0) {
+          for (const df of dragonflies) {
+            df.hoverPhase += delta * 4;
+            df.x += (Math.sin(df.hoverPhase) * 0.01 + df.vx) * delta;
+            df.y += (Math.cos(df.hoverPhase * 0.8) * 0.01 + df.vy) * delta;
+
+            if (df.x < 0.08) { df.x = 0.08; df.vx = Math.abs(df.vx); }
+            if (df.x > 0.92) { df.x = 0.92; df.vx = -Math.abs(df.vx); }
+            if (df.y < 0.08) { df.y = 0.08; df.vy = Math.abs(df.vy); }
+            if (df.y > 0.92) { df.y = 0.92; df.vy = -Math.abs(df.vy); }
+
+            const px = df.x * width;
+            const py = df.y * height;
+            const sz = 28 * dragonflyScale;
+
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.rotate(df.facing);
+
+            // Body
+            ctx.fillStyle = df.species === 0 ? '#38bdf8' : '#34d399';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, sz * 0.5, sz * 0.1, 0, 0, TAU);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.arc(sz * 0.4, -sz * 0.08, sz * 0.08, 0, TAU);
+            ctx.arc(sz * 0.4, sz * 0.08, sz * 0.08, 0, TAU);
+            ctx.fill();
+
+            // Wings (rapid flutter)
+            const wingFlap = Math.sin(now * 0.06 + df.wingPhase) * 0.4;
+            ctx.fillStyle = 'rgba(224, 242, 254, 0.45)';
+            ctx.strokeStyle = 'rgba(186, 230, 253, 0.7)';
+            ctx.lineWidth = 0.8;
+
+            // Top Wings
+            ctx.save();
+            ctx.scale(1, wingFlap);
+            ctx.beginPath();
+            ctx.ellipse(0, -sz * 0.5, sz * 0.15, sz * 0.5, -0.2, 0, TAU);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(0, sz * 0.5, sz * 0.15, sz * 0.5, 0.2, 0, TAU);
+            ctx.fill(); ctx.stroke();
+            ctx.restore();
+
+            ctx.restore();
+          }
+        }
+
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>

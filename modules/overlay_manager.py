@@ -21,6 +21,13 @@ from utils.logger import logger
 
 OVERLAY_REGISTRY = [
     {
+        "id": "nature_world",
+        "name": "Unified Nature World",
+        "file": "nature-world-overlay.html",
+        "category": "ambient",
+        "description": "Unified single-canvas nature world with dragonflies, fireflies, and dandelions",
+    },
+    {
         "id": "fireflies",
         "name": "Fireflies",
         "file": "fireflies-overlay.html",
@@ -100,11 +107,10 @@ class OverlayWindow(QMainWindow):
         self.setFixedSize(screen_geometry.width(), screen_geometry.height())
         self.move(screen_geometry.topLeft())
 
-    def load_local_html(self, file_name, scale=1.0, count=None):
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        file_path = os.path.join(base_dir, file_name)
+    def load_local_html(self, relative_path, scale=1.0, count=None, extra_params=None):
+        file_path = os.path.abspath(relative_path)
         if not os.path.exists(file_path):
-            logger.error(f"Overlay file not found: {file_path}")
+            logger.error(f"HTML overlay file not found: {file_path}")
             return False
 
         url = QUrl.fromLocalFile(file_path)
@@ -114,6 +120,9 @@ class OverlayWindow(QMainWindow):
             params.append(f"scale={scale}")
         if count is not None:
             params.append(f"count={count}")
+        if extra_params:
+            for k, v in extra_params.items():
+                params.append(f"{k}={v}")
         if params:
             url_string += "?" + "&".join(params)
         self.web_view.load(QUrl(url_string))
