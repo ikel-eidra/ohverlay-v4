@@ -23,7 +23,7 @@ We will attempt to review and acknowledge receipt of the vulnerability report pr
 Ohverlay stores minimal configuration data locally in `~/.ohverlay/config.json`. Users are responsible for securing access to their local machines.
 
 ### Screen-Capture and Monitoring Risks
-The minimal nature baseline intends to operate with a pristine privacy surface without telemetry, screen capture, or inactivity tracking; pending final verification.
+The minimal nature baseline is designed without telemetry, screen capture, or inactivity tracking; final verification is pending.
 
 ### Credential Storage
 The minimal nature baseline is designed to operate completely offline; pending final verification.

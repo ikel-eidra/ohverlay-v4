@@ -48,4 +48,4 @@ You can use PyInstaller to bundle Ohverlay into a standalone executable.
 3. The standalone executable will be generated in the `dist/` folder.
 
 ## Privacy & Security
-Ohverlay is pending final desktop and network verification to ensure a minimal data footprint. For complete details, see [SECURITY.md](SECURITY.md).
+Ohverlay is pending final desktop and network verification to ensure a minimal data footprint. For complete details, see [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
