@@ -9,6 +9,8 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTimer
 
 from ui.tray import SystemTray
+from ui.control_center import ControlCenter
+from ui.welcome import WelcomeGuide
 from config.settings import Settings
 from modules.overlay_manager import OverlayManager
 from utils.logger import logger
@@ -40,8 +42,12 @@ class OhverlayApp:
 
         # Initialize subsystems
         self._init_overlay_manager()
-        self._init_tray()
+        self._init_ui_subsystems()
         self._init_hotkeys()
+
+        # First-run onboarding check
+        if not self.config.get("onboarding", "welcome_completed"):
+            QTimer.singleShot(800, self._on_show_welcome)
 
         logger.info("Ohverlay initialized — Minimal Nature Overlay Runtime ready!")
 
@@ -54,13 +60,27 @@ class OhverlayApp:
         else:
             logger.warning("Overlay Manager: QWebEngine not installed — HTML overlays disabled")
 
-    def _init_tray(self):
-        """Create system tray icon with settings menu."""
+    def _init_ui_subsystems(self):
+        """Create system tray icon, persistent control center, and onboarding guide."""
         self.tray = SystemTray(config=self.config, overlay_manager=self.overlay_manager)
+        self.control_center = ControlCenter(config=self.config, overlay_manager=self.overlay_manager)
+        self.welcome_guide = WelcomeGuide(config=self.config, tray=self.tray)
+
+        # Tray signals
+        self.tray.signals.open_control_center.connect(self._on_open_control_center)
+        self.tray.signals.show_welcome.connect(self._on_show_welcome)
         self.tray.signals.toggle_visibility.connect(self._on_toggle_visibility)
         self.tray.signals.quit_app.connect(self._on_quit)
-        self.tray.signals.overlay_toggled.connect(self._on_overlay_toggled)
         self.tray.signals.debug_canvas_extents.connect(self._on_debug_canvas_extents)
+
+        # Control Center signals
+        self.control_center.show_welcome_requested.connect(self._on_show_welcome)
+        self.control_center.toggle_all_requested.connect(self._on_toggle_visibility)
+        self.control_center.quit_requested.connect(self._on_quit)
+
+        # Welcome Guide signals
+        self.welcome_guide.open_control_center_requested.connect(self._on_open_control_center)
+
         self.tray.show()
 
     def _init_hotkeys(self):
@@ -99,10 +119,19 @@ class OhverlayApp:
 
     # --- Signal handlers ---
 
-    def _on_overlay_toggled(self, overlay_id):
-        """Handle overlay toggle from tray menu."""
-        result = self.overlay_manager.toggle_overlay(overlay_id)
-        self.tray.update_overlay_state(overlay_id, result)
+    def _on_open_control_center(self):
+        """Open or toggle the persistent Control Center."""
+        if self.control_center.isVisible() and self.control_center.isActiveWindow():
+            if not self.control_center.is_pinned():
+                self.control_center.hide()
+        else:
+            self.control_center.show_panel()
+
+    def _on_show_welcome(self):
+        """Show the onboarding welcome guide."""
+        self.welcome_guide.show()
+        self.welcome_guide.raise_()
+        self.welcome_guide.activateWindow()
 
     def _on_toggle_visibility(self):
         """Toggle visibility of all overlays."""

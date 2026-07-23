@@ -33,7 +33,7 @@
       const canvas = document.getElementById('world');
       const context = canvas.getContext('2d', { alpha: true });
       const query = new URLSearchParams(location.search);
-      const DRAGONFLY_COUNT = clamp(Math.round(Number(query.get('count')) || 2), 1, 2);
+      const DRAGONFLY_COUNT = clamp(Math.round(Number(query.get('count')) || 2), 1, 12);
       const globalScale = parseFloat(query.get('scale')) || 1.0;
       const TAU = Math.PI * 2;
 

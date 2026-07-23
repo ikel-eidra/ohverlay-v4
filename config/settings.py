@@ -15,7 +15,24 @@ DEFAULT_CONFIG = {
     "overlays": {
         "fireflies": True,
         "dragonflies": False,
-        "dandelions": False
+        "dandelions": False,
+        "fireflies_count": 6,
+        "dragonflies_count": 2,
+        "dandelions_count": 3,
+        "fireflies_scale": 1.0,
+        "dragonflies_scale": 1.0,
+        "dandelions_scale": 1.0
+    },
+    "nature": {
+        "render_mode": "standalone_compatibility",
+        "physics_preset": "lively",
+        "interaction_strength": 1.0
+    },
+    "control_center": {
+        "pinned": False
+    },
+    "onboarding": {
+        "welcome_completed": False
     },
     "hotkeys": {
         "toggle_visibility": "ctrl+alt+h"
@@ -63,6 +80,7 @@ class Settings:
                 with open(self.config_path, "r", encoding="utf-8") as f:
                     user_data = json.load(f)
                     self._merge(self.data, user_data)
+                self._validate()
                 logger.debug(f"Loaded config from {self.config_path}")
             except Exception as e:
                 logger.error(f"Failed to load config {self.config_path}, using defaults: {e}")
@@ -70,6 +88,21 @@ class Settings:
         else:
             logger.info("No config file found. Creating default config.")
             self.save()
+
+    def _validate(self):
+        """Validate and clamp configuration values."""
+        overlays = self.data.get("overlays", {})
+        species_defaults = {"fireflies_count": 6, "dragonflies_count": 2, "dandelions_count": 3}
+        for key, default_val in species_defaults.items():
+            val = overlays.get(key)
+            try:
+                val_int = int(val)
+                if not (1 <= val_int <= 12):
+                    overlays[key] = default_val
+                else:
+                    overlays[key] = val_int
+            except (ValueError, TypeError):
+                overlays[key] = default_val
 
     def save(self):
         """Write the current settings back to disk atomically."""

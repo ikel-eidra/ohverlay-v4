@@ -1,0 +1,174 @@
+"""
+First-Run Welcome Guide for Ohverlay.
+Displays onboarding instructions directing the user to the system tray.
+"""
+
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, QGraphicsDropShadowEffect
+)
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QFont, QGuiApplication
+from utils.logger import logger
+
+
+class WelcomeGuide(QWidget):
+    """Compact onboarding window that guides users to the system tray icon."""
+
+    open_control_center_requested = Signal()
+
+    def __init__(self, config=None, tray=None, parent=None):
+        super().__init__(parent)
+        self.config = config
+        self.tray = tray
+
+        self.setWindowFlags(
+            Qt.FramelessWindowHint |
+            Qt.WindowStaysOnTopHint |
+            Qt.Tool
+        )
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, False)
+
+        self._build_ui()
+        self._position_near_tray()
+
+    def _build_ui(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(12, 12, 12, 12)
+
+        card = QFrame(self)
+        card.setObjectName("cardFrame")
+        card.setStyleSheet("""
+            #cardFrame {
+                background-color: rgba(18, 24, 38, 245);
+                border: 1px solid rgba(80, 160, 255, 120);
+                border-radius: 12px;
+            }
+            QLabel {
+                color: #e0f0ff;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+            QPushButton {
+                background-color: rgba(40, 90, 160, 180);
+                color: #ffffff;
+                border: 1px solid rgba(100, 180, 255, 150);
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: rgba(60, 120, 210, 220);
+                border-color: rgba(140, 200, 255, 220);
+            }
+            QPushButton#gotItBtn {
+                background-color: rgba(46, 125, 50, 200);
+                border-color: rgba(100, 220, 120, 180);
+            }
+            QPushButton#gotItBtn:hover {
+                background-color: rgba(60, 160, 70, 240);
+            }
+        """)
+
+        # Glow shadow
+        shadow = QGraphicsDropShadowEffect(card)
+        shadow.setBlurRadius(20)
+        shadow.setColor(QColor(40, 120, 255, 80))
+        shadow.setOffset(0, 4)
+        card.setGraphicsEffect(shadow)
+
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(16, 16, 16, 16)
+        card_layout.setSpacing(10)
+
+        # Header
+        header_layout = QHBoxLayout()
+        title_label = QLabel("Welcome to Ohverlay", card)
+        title_font = QFont("Segoe UI", 13, QFont.Bold)
+        title_label.setFont(title_font)
+
+        close_btn = QPushButton("×", card)
+        close_btn.setFixedSize(22, 22)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                color: #88aacc;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 0;
+            }
+            QPushButton:hover {
+                color: #ffffff;
+                background: rgba(255, 255, 255, 30);
+                border-radius: 11px;
+            }
+        """)
+        close_btn.clicked.connect(self.close)
+
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
+        header_layout.addWidget(close_btn)
+
+        # Body text
+        body_label = QLabel(
+            "Ohverlay is running quietly in your system tray.\n"
+            "Look for the glowing <b>O</b> icon near the clock—or inside the <b>^</b> hidden-icons menu to open your Nature Controls.",
+            card
+        )
+        body_label.setWordWrap(True)
+        body_label.setFont(QFont("Segoe UI", 10))
+
+        # Buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(8)
+
+        btn_controls = QPushButton("Open Nature Controls", card)
+        btn_controls.clicked.connect(self._on_open_controls)
+
+        btn_show = QPushButton("Show Me Where", card)
+        btn_show.clicked.connect(self._on_show_me_where)
+
+        btn_gotit = QPushButton("Got It", card)
+        btn_gotit.setObjectName("gotItBtn")
+        btn_gotit.clicked.connect(self._on_got_it)
+
+        btn_layout.addWidget(btn_controls)
+        btn_layout.addWidget(btn_show)
+        btn_layout.addWidget(btn_gotit)
+
+        card_layout.addLayout(header_layout)
+        card_layout.addWidget(body_label)
+        card_layout.addLayout(btn_layout)
+
+        main_layout.addWidget(card)
+        self.setFixedWidth(380)
+
+    def _position_near_tray(self):
+        screen = QGuiApplication.primaryScreen()
+        if not screen:
+            return
+        geo = screen.availableGeometry()
+        x = geo.right() - self.width() - 16
+        y = geo.bottom() - self.sizeHint().height() - 16
+        self.move(max(geo.left() + 16, x), max(geo.top() + 16, y))
+
+    def _on_open_controls(self):
+        self.open_control_center_requested.emit()
+        self.close()
+
+    def _on_show_me_where(self):
+        if self.tray:
+            self.tray.showMessage(
+                "Ohverlay",
+                "Ohverlay is running here! Click the glowing O or ^ menu to open controls.",
+                self.tray.icon(),
+                4000
+            )
+
+    def _on_got_it(self):
+        if self.config:
+            self.config.set("onboarding", "welcome_completed", True)
+            self.config.save()
+        logger.info("Onboarding completed by user.")
+        self.close()

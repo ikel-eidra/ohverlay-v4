@@ -100,7 +100,7 @@ class OverlayWindow(QMainWindow):
         self.setFixedSize(screen_geometry.width(), screen_geometry.height())
         self.move(screen_geometry.topLeft())
 
-    def load_local_html(self, file_name, scale=1.0):
+    def load_local_html(self, file_name, scale=1.0, count=None):
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         file_path = os.path.join(base_dir, file_name)
         if not os.path.exists(file_path):
@@ -109,10 +109,15 @@ class OverlayWindow(QMainWindow):
 
         url = QUrl.fromLocalFile(file_path)
         url_string = url.toString()
+        params = []
         if scale != 1.0:
-            url_string += f"?scale={scale}"
+            params.append(f"scale={scale}")
+        if count is not None:
+            params.append(f"count={count}")
+        if params:
+            url_string += "?" + "&".join(params)
         self.web_view.load(QUrl(url_string))
-        logger.info(f"Loading overlay {self.overlay_id} from {file_path} (scale={scale})")
+        logger.info(f"Loading overlay {self.overlay_id} from {file_path} (scale={scale}, count={count})")
         return True
 
 
@@ -162,13 +167,20 @@ class OverlayManager:
         win = OverlayWindow(info, geometry)
         
         scale = 1.0
+        count = None
         if self.config:
             scale_val = self.config.get("overlays", f"{overlay_id}_scale")
             if scale_val is None:
                 scale_val = self.config.get("overlays", "global_scale")
             scale = float(scale_val or 1.0)
+            count_val = self.config.get("overlays", f"{overlay_id}_count")
+            if count_val is not None:
+                try:
+                    count = int(count_val)
+                except (ValueError, TypeError):
+                    count = None
             
-        if win.load_local_html(info["file"], scale=scale):
+        if win.load_local_html(info["file"], scale=scale, count=count):
             self._active[overlay_id] = win
             if self._global_visible:
                 win.show()

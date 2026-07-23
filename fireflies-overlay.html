@@ -33,7 +33,7 @@
       const canvas = document.getElementById('night');
       const context = canvas.getContext('2d', { alpha: true });
       const parameters = new URLSearchParams(location.search);
-      const FIREFLY_COUNT = Math.round(clamp(Number(parameters.get('count')) || 12, 5, 100));
+      const FIREFLY_COUNT = clamp(Math.round(Number(parameters.get('count')) || 6), 1, 12);
       const globalScale = parseFloat(parameters.get('scale')) || 1.0;
       const TAU = Math.PI * 2;
 
