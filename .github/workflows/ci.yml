@@ -2,13 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "experiment/*", "feature/*", "fix/*" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
 
     steps:
     - uses: actions/checkout@v4
@@ -20,11 +22,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install flake8 pytest
-        if (Test-Path requirements.txt) { pip install -r requirements.txt }
+        pip install -r requirements.txt
     - name: Lint with flake8
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 . --count --exclude=.venv*,.git,build,dist --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --exclude=.venv*,.git,build,dist --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
         pytest tests/
+

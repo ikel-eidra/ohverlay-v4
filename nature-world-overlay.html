@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Unified Nature World — Shared Canvas</title>
+  <title>Unified Nature World — Interactive Physics Engine</title>
   <style>
     html, body {
       width: 100%;
@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-  <canvas id="natureCanvas" aria-label="Unified Nature World canvas displaying dragonflies, fireflies, and dandelions"></canvas>
+  <canvas id="natureCanvas" aria-label="Unified Nature World canvas with cross-species physics interactions"></canvas>
 
   <script>
     (() => {
@@ -50,6 +50,10 @@
       const physicsPreset = (query.get('physics_preset') || 'lively').toLowerCase();
       const interactionStrength = parseFloat(query.get('interaction_strength')) || 1.0;
 
+      // Physics Preset Multipliers
+      const presetMult = physicsPreset === 'calm' ? 0.5 : (physicsPreset === 'dramatic' ? 1.8 : 1.0);
+      const K_INTERACTION = interactionStrength * presetMult;
+
       const TAU = Math.PI * 2;
 
       let width = 1;
@@ -57,16 +61,6 @@
       let pixelRatio = 1;
       let elapsed = 0;
       let lastTime = performance.now();
-
-      const pointer = {
-        x: -10000,
-        y: -10000,
-        velocityX: 0,
-        velocityY: 0,
-        active: false,
-        down: false,
-        lastMove: performance.now()
-      };
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -114,15 +108,11 @@
           z: 0.32 + seeded(index, 1) * 0.68,
           vx: (seeded(index, 5) - 0.5) * 0.15,
           vy: (seeded(index, 6) - 0.5) * 0.15,
-          targetX: -0.10 + seeded(index, 8) * 1.20,
-          targetY: -0.10 + seeded(index, 9) * 1.20,
-          targetZ: 0.30 + seeded(index, 10) * 0.70,
-          targetTimer: 4.0 + seeded(index, 11) * 6.0,
           wanderPhase: seeded(index, 12) * TAU,
           wanderRate: 0.41 + seeded(index, 13) * 0.39,
           flashCycle: 2.10 + seeded(index, 6) * 1.45,
           flashOffset: seeded(index, 7) * 4.0,
-          restTimer: seeded(index, 12) * 2,
+          startled: 0,
           seed: index + 1
         };
       }
@@ -137,19 +127,12 @@
         return {
           x, y,
           z: 0.44 + seeded(index, 4) * 0.48,
-          vx: Math.cos(facing) * 0.018,
-          vy: Math.sin(facing) * 0.018,
+          vx: Math.cos(facing) * 0.05,
+          vy: Math.sin(facing) * 0.05,
           facing,
-          visualFacing: facing,
-          bank: 0,
-          pitch: 0,
           wingPhase: seeded(index, 5) * TAU,
-          wingRate: 28 + seeded(index, 6) * 9,
-          behavior: 'hover',
-          behaviorTimer: 0.9 + seeded(index, 7) * 1.6,
           hoverX: x, hoverY: y,
           hoverPhase: seeded(index, 8) * TAU,
-          startled: 0,
           species: index % 2,
           seed: index + 1
         };
@@ -172,7 +155,7 @@
         {"c1":[-0.16,-8.63],"c2":[-2.96,-23.78],"e":[-1.95,-33.93],"a":0.77,"w":0.43,"p":1.052,"k":0.86},
         {"c1":[1.7,-8.03],"c2":[2.05,-21.95],"e":[3.9,-31.2],"a":0.73,"w":0.45,"p":3.452,"k":0.81},
         {"c1":[2.34,-10.09],"c2":[6.15,-28.57],"e":[9.75,-40.56],"a":0.69,"w":0.3,"p":5.852,"k":0.76},
-        {"c1":[8.6,-6.49],"c2":[25.67,-17.35],"e":[37.05,-24.18],"a":0.7,"w":0.33,"p":4.72,"k":0.94}
+        {"c1":[8.6,-6.49],"c2":[25.67,-17.35],"e":[21.84,-38.22],"a":0.61,"w":0.34,"p":4.369,"k":1.0}
       ];
 
       function makeDandelionSeed(i) {
@@ -185,7 +168,8 @@
           vy: 0.003 + Math.cos(i * 1.7) * 0.002,
           phase: i * 2.1,
           size: 0.85 + (i % 4) * 0.08,
-          angle: (i % 2 === 0 ? -0.1 : 0.1) * (0.5 + Math.sin(i))
+          angle: (i % 2 === 0 ? -0.1 : 0.1) * (0.5 + Math.sin(i)),
+          bendAngle: 0
         };
       }
 
@@ -214,14 +198,85 @@
 
         ctx.clearRect(0, 0, width, height);
 
-        // 1. Draw Dandelions (Background Layer)
+        // ──────────────────────────────────────────
+        // 1. UPDATE DRAGONFLIES & AVOIDANCE PHYSICS
+        // ──────────────────────────────────────────
+        for (let i = 0; i < dragonflies.length; i++) {
+          const df = dragonflies[i];
+          df.hoverPhase += delta * (3 + df.species);
+          
+          let ax = Math.sin(df.hoverPhase) * 0.04;
+          let ay = Math.cos(df.hoverPhase * 0.7) * 0.04;
+
+          // Dragonfly-to-Dragonfly Avoidance
+          for (let j = 0; j < dragonflies.length; j++) {
+            if (i === j) continue;
+            const other = dragonflies[j];
+            const dx = df.x - other.x;
+            const dy = df.y - other.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 0.14 && dist > 0.001) {
+              const repel = ((0.14 - dist) / dist) * 0.2 * K_INTERACTION;
+              ax += dx * repel;
+              ay += dy * repel;
+            }
+          }
+
+          df.vx = lerp(df.vx, ax, delta * 3);
+          df.vy = lerp(df.vy, ay, delta * 3);
+
+          df.x += df.vx * delta;
+          df.y += df.vy * delta;
+
+          if (df.x < 0.08) { df.x = 0.08; df.vx *= -1; }
+          if (df.x > 0.92) { df.x = 0.92; df.vx *= -1; }
+          if (df.y < 0.08) { df.y = 0.08; df.vy *= -1; }
+          if (df.y > 0.92) { df.y = 0.92; df.vy *= -1; }
+
+          df.facing = Math.atan2(df.vy, df.vx) + Math.PI / 2;
+        }
+
+        // ──────────────────────────────────────────
+        // 2. UPDATE DANDELIONS & CROSS-SPECIES WAKES
+        // ──────────────────────────────────────────
         if (DANDELION_COUNT > 0) {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-          ctx.lineWidth = 1.2 * dandelionScale;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.70)';
+          ctx.lineWidth = 1.3 * dandelionScale;
 
           for (const seed of dandelions) {
-            seed.x += (seed.vx + Math.sin(elapsed + seed.phase) * 0.002) * delta;
-            seed.y += (seed.vy + Math.cos(elapsed * 0.8 + seed.phase) * 0.001) * delta;
+            let wakePushX = 0;
+            let wakePushY = 0;
+
+            // Dragonfly Wake Effect on Dandelion Stems & Seeds
+            for (const df of dragonflies) {
+              const dx = seed.x - df.x;
+              const dy = seed.y - df.y;
+              const dist = Math.hypot(dx, dy);
+              if (dist < 0.20 && dist > 0.001) {
+                const force = ((0.20 - dist) / dist) * 0.08 * K_INTERACTION;
+                wakePushX += (dx + df.vx * 2) * force;
+                wakePushY += (dy + df.vy * 2) * force;
+              }
+            }
+
+            // Firefly micro disturbance on seeds
+            for (const ff of fireflies) {
+              const dx = seed.x - ff.x;
+              const dy = seed.y - ff.y;
+              const dist = Math.hypot(dx, dy);
+              if (dist < 0.08 && dist > 0.001) {
+                wakePushX += dx * 0.02 * K_INTERACTION;
+                wakePushY += dy * 0.02 * K_INTERACTION;
+              }
+            }
+
+            seed.vx = lerp(seed.vx, wakePushX + Math.sin(elapsed + seed.phase) * 0.002, delta * 2);
+            seed.vy = lerp(seed.vy, wakePushY + 0.003 + Math.cos(elapsed * 0.8 + seed.phase) * 0.001, delta * 2);
+
+            seed.x += seed.vx * delta;
+            seed.y += seed.vy * delta;
+
+            seed.bendAngle = lerp(seed.bendAngle, wakePushX * 2.5, delta * 4);
 
             if (seed.x < 0.05) seed.x = 0.95;
             if (seed.x > 0.95) seed.x = 0.05;
@@ -233,7 +288,7 @@
 
             ctx.save();
             ctx.translate(px, py);
-            ctx.rotate(seed.angle + Math.sin(elapsed * 1.5 + seed.phase) * 0.1);
+            ctx.rotate(seed.angle + seed.bendAngle + Math.sin(elapsed * 1.5 + seed.phase) * 0.1);
 
             // Stem
             ctx.beginPath();
@@ -253,11 +308,34 @@
           }
         }
 
-        // 2. Draw Fireflies (Midground Layer)
+        // ──────────────────────────────────────────
+        // 3. UPDATE FIREFLIES & TURBULENCE SCATTERING
+        // ──────────────────────────────────────────
         if (FIREFLY_COUNT > 0) {
           for (const ff of fireflies) {
-            ff.x += (Math.sin(elapsed * ff.wanderRate + ff.wanderPhase) * 0.03 + ff.vx) * delta;
-            ff.y += (Math.cos(elapsed * (ff.wanderRate * 0.9) + ff.wanderPhase) * 0.02 + ff.vy) * delta;
+            let scatterX = 0;
+            let scatterY = 0;
+
+            // Dragonflies scatter fireflies with air turbulence
+            for (const df of dragonflies) {
+              const dx = ff.x - df.x;
+              const dy = ff.y - df.y;
+              const dist = Math.hypot(dx, dy);
+              if (dist < 0.16 && dist > 0.001) {
+                const force = ((0.16 - dist) / dist) * 0.25 * K_INTERACTION;
+                scatterX += dx * force;
+                scatterY += dy * force;
+                ff.startled = 1.0;
+              }
+            }
+
+            ff.startled = Math.max(0, ff.startled - delta * 2);
+
+            ff.vx = lerp(ff.vx, scatterX + Math.sin(elapsed * ff.wanderRate + ff.wanderPhase) * 0.03, delta * 3);
+            ff.vy = lerp(ff.vy, scatterY + Math.cos(elapsed * (ff.wanderRate * 0.9) + ff.wanderPhase) * 0.02, delta * 3);
+
+            ff.x += ff.vx * delta;
+            ff.y += ff.vy * delta;
 
             if (ff.x < 0) ff.x = 1.0;
             if (ff.x > 1.0) ff.x = 0;
@@ -269,7 +347,7 @@
 
             const phase = ((elapsed + ff.flashOffset) % ff.flashCycle) / ff.flashCycle;
             const flash = smoothstep(0.04, 0.12, phase) * (1 - smoothstep(0.18, 0.38, phase));
-            const intensity = clamp(flash, 0, 1);
+            const intensity = clamp(flash + ff.startled * 0.5, 0, 1);
 
             if (intensity > 0.01) {
               const radius = 38 * fireflyScale * ff.z * (0.8 + intensity * 0.6);
@@ -287,18 +365,11 @@
           }
         }
 
-        // 3. Draw Dragonflies (Foreground Layer)
+        // ──────────────────────────────────────────
+        // 4. DRAW DRAGONFLIES (FOREGROUND LAYER)
+        // ──────────────────────────────────────────
         if (DRAGONFLY_COUNT > 0) {
           for (const df of dragonflies) {
-            df.hoverPhase += delta * 4;
-            df.x += (Math.sin(df.hoverPhase) * 0.01 + df.vx) * delta;
-            df.y += (Math.cos(df.hoverPhase * 0.8) * 0.01 + df.vy) * delta;
-
-            if (df.x < 0.08) { df.x = 0.08; df.vx = Math.abs(df.vx); }
-            if (df.x > 0.92) { df.x = 0.92; df.vx = -Math.abs(df.vx); }
-            if (df.y < 0.08) { df.y = 0.08; df.vy = Math.abs(df.vy); }
-            if (df.y > 0.92) { df.y = 0.92; df.vy = -Math.abs(df.vy); }
-
             const px = df.x * width;
             const py = df.y * height;
             const sz = 28 * dragonflyScale;
@@ -326,7 +397,7 @@
             ctx.strokeStyle = 'rgba(186, 230, 253, 0.7)';
             ctx.lineWidth = 0.8;
 
-            // Top Wings
+            // Wings Pair
             ctx.save();
             ctx.scale(1, wingFlap);
             ctx.beginPath();

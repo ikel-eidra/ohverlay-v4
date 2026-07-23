@@ -6,7 +6,7 @@ Roams across desktop, fires torpedoes every 20 minutes for eye rest
 import math
 import random
 from typing import List, Tuple
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import (
     QPainter, QPainterPath, QColor, QLinearGradient, 
     QRadialGradient, QPen, QBrush, QFont
