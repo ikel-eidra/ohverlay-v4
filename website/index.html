@@ -588,8 +588,13 @@
       window.addEventListener('resize', resize);
       resize();
 
+      function pseudoRandom(seed) {
+        const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+        return x - Math.floor(x);
+      }
+
       // ──────────────────────────────────────────
-      // 1. SCIENTIFIC PULSED-JET JELLYFISH (3 count)
+      // 1. ORGANIC ROAMING CYAN JELLYFISH (3 count)
       // ──────────────────────────────────────────
       function makeCyanGlowSprite() {
         const sprite = document.createElement('canvas');
@@ -606,51 +611,63 @@
       }
       const cyanGlowSprite = makeCyanGlowSprite();
 
-      const jellies = Array.from({ length: 3 }, (_, i) => ({
-        x: 0.18 + i * 0.32,
-        y: 0.30 + (i % 2) * 0.30,
-        z: 0.5 + i * 0.2,
-        vx: (Math.random() - 0.5) * 0.008,
-        vy: -0.015,
-        visualFacing: 0,
-        pulsePhase: i * 2.1,
-        pulseSpeed: 1.1 + i * 0.25,
-        seed: i + 1
-      }));
+      const jellies = Array.from({ length: 3 }, (_, i) => {
+        const seed = i + 1;
+        const x = 0.12 + pseudoRandom(seed * 1.3) * 0.76;
+        const y = 0.18 + pseudoRandom(seed * 2.7) * 0.64;
+        const z = 0.35 + pseudoRandom(seed * 3.9) * 0.65;
+        const targetAngle = (pseudoRandom(seed * 4.1) - 0.5) * 0.8;
+
+        return {
+          x, y, z,
+          vx: (pseudoRandom(seed * 5.3) - 0.5) * 0.02,
+          vy: -0.01 - pseudoRandom(seed * 6.7) * 0.02,
+          facing: targetAngle, visualFacing: targetAngle, targetAngle,
+          pulsePhase: pseudoRandom(seed * 7.1) * TAU,
+          pulseSpeed: 0.75 + pseudoRandom(seed * 8.5) * 0.95,
+          thrustPower: 0.07 + pseudoRandom(seed * 9.3) * 0.05,
+          seed, wanderTimer: 0
+        };
+      });
 
       function updateJellyfish(jelly, dt) {
         jelly.pulsePhase = (jelly.pulsePhase + dt * jelly.pulseSpeed) % TAU;
         const pulse = Math.sin(jelly.pulsePhase);
-        
-        // Systole jet contraction vs Diastole refill buoyancy
+
+        jelly.wanderTimer -= dt;
+        if (jelly.wanderTimer <= 0) {
+          jelly.wanderTimer = 3.0 + pseudoRandom(elapsed + jelly.seed) * 5.0;
+          jelly.targetAngle = (pseudoRandom(elapsed * 1.3 + jelly.seed) - 0.5) * 0.9;
+        }
+
+        const marginX = 0.12; const marginY = 0.14;
+        if (jelly.x < marginX) jelly.targetAngle = Math.abs(jelly.targetAngle) + 0.3;
+        if (jelly.x > 1 - marginX) jelly.targetAngle = -Math.abs(jelly.targetAngle) - 0.3;
+        if (jelly.y < marginY) jelly.targetAngle = Math.PI * 0.6 * (jelly.x > 0.5 ? -1 : 1);
+        if (jelly.y > 1 - marginY) jelly.targetAngle = (pseudoRandom(elapsed + jelly.seed) - 0.5) * 0.4;
+
+        jelly.facing = lerp(jelly.facing, jelly.targetAngle, dt * 1.2);
+        jelly.visualFacing = lerp(jelly.visualFacing, jelly.facing, dt * 2.5);
+
         const isSystole = pulse > 0.35;
         if (isSystole) {
           const contractionPower = Math.pow((pulse - 0.35) / 0.65, 1.8);
-          jelly.vy -= contractionPower * 0.075 * dt;
+          const thrust = contractionPower * jelly.thrustPower * dt;
+          jelly.vx += Math.sin(jelly.facing) * thrust * 0.6;
+          jelly.vy -= Math.cos(jelly.facing) * thrust;
         } else {
-          jelly.vy += 0.006 * dt;
+          jelly.vy += 0.0015 * dt;
         }
 
-        jelly.vx += Math.sin(elapsed * 0.7 + jelly.seed * 2.3) * 0.004 * dt;
-
-        const dragFactor = isSystole ? 0.95 : 1.65;
+        const dragFactor = isSystole ? 0.90 : 1.35;
         jelly.vx *= Math.exp(-dragFactor * dt);
         jelly.vy *= Math.exp(-dragFactor * dt);
 
         jelly.x += jelly.vx * dt;
         jelly.y += jelly.vy * dt;
 
-        const marginX = 0.06; const marginY = 0.08;
-        if (jelly.x < marginX) jelly.vx += (marginX - jelly.x) * 0.25;
-        if (jelly.x > 1 - marginX) jelly.vx -= (jelly.x - (1 - marginX)) * 0.25;
-        if (jelly.y < marginY) jelly.vy += (marginY - jelly.y) * 0.25;
-        if (jelly.y > 1 - marginY) jelly.vy -= (jelly.y - (1 - marginY)) * 0.25;
-
-        jelly.x = clamp(jelly.x, 0.04, 0.96);
-        jelly.y = clamp(jelly.y, 0.06, 0.94);
-
-        const targetFacing = clamp(jelly.vx * 4.5 + Math.sin(elapsed * 0.4 + jelly.seed) * 0.12, -0.25, 0.25);
-        jelly.visualFacing = lerp(jelly.visualFacing, targetFacing, dt * 2.5);
+        jelly.x = clamp(jelly.x, 0.05, 0.95);
+        jelly.y = clamp(jelly.y, 0.07, 0.93);
       }
 
       function drawJellyfish(jelly) {
@@ -672,7 +689,7 @@
         ctx.drawImage(cyanGlowSprite, -glowSize * 0.5, -glowSize * 0.5, glowSize, glowSize);
         ctx.restore();
 
-        // 8 Trailing Marginal Tentacles with fluid drag
+        // 8 Trailing Tentacles
         ctx.lineWidth = 0.8;
         for (let t = 0; t < 8; t++) {
           const spread = ((t / 7) - 0.5) * bellRadius * 1.5 * contractX;
@@ -712,7 +729,7 @@
           ctx.strokeStyle = armGradient; ctx.stroke();
         }
 
-        // Umbrella Bell
+        // Bell
         ctx.save();
         ctx.scale(contractX, contractY);
         const bellGradient = ctx.createRadialGradient(0, -bellRadius * 0.2, bellRadius * 0.1, 0, 0, bellRadius);
@@ -1044,7 +1061,7 @@
 
         ctx.clearRect(0, 0, width, height);
 
-        // Jellyfish (Scientific Pulsed Jet)
+        // Organic Roaming Jellyfish
         if (jellyfishActive) {
           for (const jelly of jellies) {
             updateJellyfish(jelly, dt);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bioluminescent Cyan Jellyfish Overlay — Pulsed-Jet Physics Engine</title>
+  <title>Bioluminescent Cyan Jellyfish Overlay — Organic Roaming Physics</title>
   <style>
     * {
       box-sizing: border-box;
@@ -80,69 +80,84 @@
       }
       const glowSprite = createGlowSprite();
 
+      // Pseudo-random helper based on index and seed
+      function pseudoRandom(seed) {
+        const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+        return x - Math.floor(x);
+      }
+
       function createJellyfish(index) {
         const seed = index + 1;
-        const x = 0.15 + (index / Math.max(1, targetCount - 1)) * 0.70;
-        const y = 0.25 + (index % 3) * 0.25;
+        // 100% Random initial positions across the display
+        const x = 0.12 + pseudoRandom(seed * 1.3) * 0.76;
+        const y = 0.18 + pseudoRandom(seed * 2.7) * 0.64;
+        const z = 0.35 + pseudoRandom(seed * 3.9) * 0.65;
+        const targetAngle = (pseudoRandom(seed * 4.1) - 0.5) * 0.8;
 
         return {
           x,
           y,
-          z: 0.5 + (index % 3) * 0.22,
-          vx: (Math.random() - 0.5) * 0.008,
-          vy: -0.015,
-          facing: 0,
-          visualFacing: 0,
-          // Pulsed-Jet Locomotion States: 'systole' (rapid contraction jet) vs 'diastole' (slow refill glide)
-          pulsePhase: Math.random() * TAU,
-          pulseSpeed: 1.1 + (index % 3) * 0.25,
-          seed
+          z,
+          vx: (pseudoRandom(seed * 5.3) - 0.5) * 0.02,
+          vy: -0.01 - pseudoRandom(seed * 6.7) * 0.02,
+          facing: targetAngle,
+          visualFacing: targetAngle,
+          targetAngle,
+          pulsePhase: pseudoRandom(seed * 7.1) * TAU, // Asynchronous pulse phases
+          pulseSpeed: 0.75 + pseudoRandom(seed * 8.5) * 0.95, // Unique pulse speed
+          thrustPower: 0.07 + pseudoRandom(seed * 9.3) * 0.05, // Unique propulsion force
+          seed,
+          wanderTimer: 0
         };
       }
 
       let jellies = Array.from({ length: targetCount }, (_, i) => createJellyfish(i));
 
-      // Scientific Pulsed-Jet Locomotion Physics
+      // Organic Random Roaming & Directional Pulsed-Jet Physics
       function updateJellyfish(jelly, dt) {
         jelly.pulsePhase = (jelly.pulsePhase + dt * jelly.pulseSpeed) % TAU;
         const pulse = Math.sin(jelly.pulsePhase);
-        
-        // 1. SYSTOLE (RAPID CONTRACTION JET PROPULSION):
-        // When pulse rises past 0.35, high-velocity water jet is ejected downwards out of the bell cavity, propelling jelly upwards (-Y)
+
+        // Periodically update random target swimming direction
+        jelly.wanderTimer -= dt;
+        if (jelly.wanderTimer <= 0) {
+          jelly.wanderTimer = 3.0 + pseudoRandom(elapsed + jelly.seed) * 5.0;
+          jelly.targetAngle = (pseudoRandom(elapsed * 1.3 + jelly.seed) - 0.5) * 0.9;
+        }
+
+        // Boundary Repulsion: Smoothly steer away from screen edges
+        const marginX = 0.12; const marginY = 0.14;
+        if (jelly.x < marginX) jelly.targetAngle = Math.abs(jelly.targetAngle) + 0.3;
+        if (jelly.x > 1 - marginX) jelly.targetAngle = -Math.abs(jelly.targetAngle) - 0.3;
+        if (jelly.y < marginY) jelly.targetAngle = Math.PI * 0.6 * (jelly.x > 0.5 ? -1 : 1);
+        if (jelly.y > 1 - marginY) jelly.targetAngle = (pseudoRandom(elapsed + jelly.seed) - 0.5) * 0.4; // Aim upward
+
+        jelly.facing = lerp(jelly.facing, jelly.targetAngle, dt * 1.2);
+        jelly.visualFacing = lerp(jelly.visualFacing, jelly.facing, dt * 2.5);
+
+        // SYSTOLE (Contraction Jet Thrust along facing vector)
         const isSystole = pulse > 0.35;
         if (isSystole) {
           const contractionPower = Math.pow((pulse - 0.35) / 0.65, 1.8);
-          jelly.vy -= contractionPower * 0.075 * dt; // Upward jet thrust
+          const thrust = contractionPower * jelly.thrustPower * dt;
+          jelly.vx += Math.sin(jelly.facing) * thrust * 0.6;
+          jelly.vy -= Math.cos(jelly.facing) * thrust; // Upward along facing angle
         } else {
-          // 2. DIASTOLE (PASSIVE REFILL & SLOW VISCOUS GLIDE):
-          // Water refills cavity; viscous drag slows forward momentum and gravity induces gentle buoyant sinking
-          jelly.vy += 0.006 * dt; // Buoyancy sink
+          // DIASTOLE (Gentle Refill Glide - Neutral Buoyancy without sinking)
+          jelly.vy += 0.0015 * dt; // Soft neutral buoyancy drift
         }
 
-        // Horizontal ambient sway
-        jelly.vx += Math.sin(elapsed * 0.7 + jelly.seed * 2.3) * 0.004 * dt;
-
-        // Hydrodynamic viscous drag dampening
-        const dragFactor = isSystole ? 0.95 : 1.65;
+        // Viscous Fluid Drag
+        const dragFactor = isSystole ? 0.90 : 1.35;
         jelly.vx *= Math.exp(-dragFactor * dt);
         jelly.vy *= Math.exp(-dragFactor * dt);
 
         jelly.x += jelly.vx * dt;
         jelly.y += jelly.vy * dt;
 
-        // Strict Margin Clamping (0.05 to 0.95 relative screen bounds)
-        const marginX = 0.06; const marginY = 0.08;
-        if (jelly.x < marginX) jelly.vx += (marginX - jelly.x) * 0.25;
-        if (jelly.x > 1 - marginX) jelly.vx -= (jelly.x - (1 - marginX)) * 0.25;
-        if (jelly.y < marginY) jelly.vy += (marginY - jelly.y) * 0.25;
-        if (jelly.y > 1 - marginY) jelly.vy -= (jelly.y - (1 - marginY)) * 0.25;
-
-        jelly.x = clamp(jelly.x, 0.04, 0.96);
-        jelly.y = clamp(jelly.y, 0.06, 0.94);
-
-        // Smooth sway tilt in direction of velocity
-        const targetFacing = clamp(jelly.vx * 4.5 + Math.sin(elapsed * 0.4 + jelly.seed) * 0.12, -0.25, 0.25);
-        jelly.visualFacing = lerp(jelly.visualFacing, targetFacing, dt * 2.5);
+        // Keep strictly within visible screen bounds (0.05 to 0.95)
+        jelly.x = clamp(jelly.x, 0.05, 0.95);
+        jelly.y = clamp(jelly.y, 0.07, 0.93);
       }
 
       function drawJellyfish(jelly) {
@@ -181,7 +196,6 @@
           const segCount = 10;
           for (let s = 1; s <= segCount; s++) {
             const segRatio = s / segCount;
-            // Fluid drag vector: tentacles bend backwards during upward pulse thrust
             const dragLag = -jelly.vy * 80 * segRatio * segRatio;
             const wave = Math.sin(elapsed * 2.8 - segRatio * 4.2 + t * 0.8 + jelly.seed) * (7 * segRatio);
             const nodeX = startX + wave - jelly.vx * 60 * segRatio;
@@ -232,15 +246,12 @@
 
         ctx.fillStyle = bellGradient;
         ctx.beginPath();
-        // Umbrella Dome
         ctx.moveTo(-bellRadius, 0);
         ctx.bezierCurveTo(-bellRadius, -bellRadius * 1.35, bellRadius, -bellRadius * 1.35, bellRadius, 0);
-        // Scalloped Margin Lappets
         ctx.bezierCurveTo(bellRadius * 0.6, bellRadius * 0.25, -bellRadius * 0.6, bellRadius * 0.25, -bellRadius, 0);
         ctx.closePath();
         ctx.fill();
 
-        // Glowing Glassy Rim Highlight
         ctx.strokeStyle = 'rgba(160, 245, 255, 0.80)';
         ctx.lineWidth = 1.2;
         ctx.stroke();
@@ -262,8 +273,8 @@
           ctx.fill();
         }
 
-        ctx.restore(); // Restore contraction scale
-        ctx.restore(); // Restore global matrix
+        ctx.restore();
+        ctx.restore();
       }
 
       function frame(now) {
