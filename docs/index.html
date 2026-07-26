@@ -554,7 +554,7 @@
     </p>
   </footer>
 
-  <!-- 100% IDENTICAL EXACT REPLICA SIMULATION SCRIPT WITH HEAD-FORWARD FACING -->
+  <!-- 100% IDENTICAL EXACT REPLICA SIMULATION SCRIPT (PRISTINE ON-SCREEN BOUNDS) -->
   <script>
     (() => {
       'use strict';
@@ -567,7 +567,6 @@
       let dragonfliesActive = true;
       let dandelionsActive = true;
       let firefliesActive = true;
-      let globalGust = 0;
 
       function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
       function lerp(from, to, t) { return from + (to - from) * t; }
@@ -588,7 +587,7 @@
       resize();
 
       // ──────────────────────────────────────────
-      // 1. CALM EXACT REPLICA: FIREFLIES (6 count)
+      // 1. EXACT REPLICA: FIREFLIES (6 count)
       // ──────────────────────────────────────────
       function makeGlowSprite() {
         const sprite = document.createElement('canvas');
@@ -612,7 +611,7 @@
         z: 0.4 + (i * 0.1),
         vx: Math.cos(i * 1.3) * 12,
         vy: Math.sin(i * 1.3) * 12,
-        facing: Math.atan2(Math.sin(i * 1.3), Math.cos(i * 1.3)),
+        facing: Math.atan2(Math.sin(i * 1.3), Math.cos(i * 1.3)) + Math.PI,
         flashCycle: 2.5 + i * 0.4,
         flashOffset: i * 1.2,
         flashShape: 0.85 + (i % 3) * 0.1,
@@ -721,17 +720,19 @@
       }
 
       // ──────────────────────────────────────────
-      // 2. CALM EXACT REPLICA: DRAGONFLIES (2 count)
+      // 2. EXACT REPLICA: DRAGONFLIES (2 count, STRICT ON-SCREEN BOUNDS)
       // ──────────────────────────────────────────
       const dragonflies = Array.from({ length: 2 }, (_, i) => ({
-        x: (0.2 + i * 0.55) * width,
-        y: (0.35 + i * 0.25) * height,
+        x: 0.25 + i * 0.50,
+        y: 0.35 + i * 0.25,
         z: 0.65 + i * 0.2,
-        vx: 22 * (i === 0 ? 1 : -1),
-        vy: 15 * (i === 0 ? -1 : 1),
+        vx: 0.06 * (i === 0 ? 1 : -1),
+        vy: 0.04 * (i === 0 ? -1 : 1),
         facing: 0,
+        visualFacing: 0,
         wingPhase: i * 2.1,
-        species: i
+        species: i,
+        seed: i + 1
       }));
 
       function dragonflyWingPath(length, widthValue, hindWing = false) {
@@ -855,8 +856,8 @@
         const bodyLength = clamp(Math.min(width, height) * 0.057 * depthScale, 31, 64);
 
         ctx.save();
-        ctx.translate(dragonfly.x, dragonfly.y);
-        ctx.rotate(dragonfly.facing);
+        ctx.translate(dragonfly.x * width, dragonfly.y * height);
+        ctx.rotate(dragonfly.visualFacing);
         ctx.scale(depthScale, depthScale);
 
         const wingLength = bodyLength * 1.5;
@@ -1031,25 +1032,20 @@
         e.target.classList.toggle('active', firefliesActive);
       });
 
-      document.getElementById('triggerBreeze').addEventListener('click', () => {
-        globalGust += 180;
-      });
-
       // ──────────────────────────────────────────
-      // 5. ANIMATION LOOP WITH CALM FACING TURNS
+      // 5. ANIMATION LOOP WITH STRICT BOUNDS & HEAD-FORWARD FACING
       // ──────────────────────────────────────────
       function frame(now) {
         const dt = Math.min(0.05, (now - lastTime) / 1000);
         lastTime = now;
         elapsed += dt;
-        globalGust *= Math.exp(-1.65 * dt);
 
         ctx.clearRect(0, 0, width, height);
 
-        // Update & Draw Dandelions (7 count)
+        // Update & Draw Dandelions (7 count) - CLAMPED TO VIEWPORT
         if (dandelionsActive) {
           for (const seed of dandelions) {
-            seed.vx += (globalGust + Math.sin(elapsed * 0.31) * 7.6 - seed.vx) * dt * 0.82;
+            seed.vx += (Math.sin(elapsed * 0.31) * 7.6 - seed.vx) * dt * 0.82;
             seed.vy += (5.8 - seed.vy) * dt * 0.82;
             seed.x += seed.vx * dt; seed.y += seed.vy * dt;
             if (seed.x > width + 40) seed.x = -40;
@@ -1058,31 +1054,58 @@
           }
         }
 
-        // Update & Draw Fireflies (6 count) - HEAD FORWARD FACING
+        // Update & Draw Fireflies (6 count) - CLAMPED & HEAD FORWARD
         if (firefliesActive) {
           for (const ff of fireflies) {
             ff.x += ff.vx * dt; ff.y += ff.vy * dt;
-            // Firefly head is at -X, so facing forward in direction (vx, vy) requires angle = atan2(vy, vx) + PI
             const targetFacing = Math.atan2(ff.vy, ff.vx) + Math.PI;
             let turn = targetFacing - ff.facing;
             turn = Math.atan2(Math.sin(turn), Math.cos(turn));
             ff.facing += turn * Math.min(1, dt * 2.0);
             ff.wingPhase = (ff.wingPhase + dt * 35) % TAU;
 
-            if (ff.x < 0) ff.x = width; if (ff.x > width) ff.x = 0;
-            if (ff.y < 0) ff.y = height; if (ff.y > height) ff.y = 0;
+            // Strict Margin Bouncing
+            if (ff.x < width * 0.05 || ff.x > width * 0.95) ff.vx *= -1;
+            if (ff.y < height * 0.08 || ff.y > height * 0.92) ff.vy *= -1;
+            ff.x = clamp(ff.x, width * 0.04, width * 0.96);
+            ff.y = clamp(ff.y, height * 0.06, height * 0.94);
             drawFirefly(ff);
           }
         }
 
-        // Update & Draw Dragonflies (2 count)
+        // Update & Draw Dragonflies (2 count) - PRISTINE DESKTOP ENGINE WITH STRICT BOUNDS & HEAD FORWARD
         if (dragonfliesActive) {
           for (const df of dragonflies) {
-            df.wingPhase = (df.wingPhase + dt * 28) % TAU;
-            df.x += df.vx * dt; df.y += df.vy * dt;
-            df.facing = Math.atan2(df.vy, df.vx) + Math.PI / 2;
-            if (df.x < 60 || df.x > width - 60) df.vx *= -1;
-            if (df.y < 60 || df.y > height - 60) df.vy *= -1;
+            df.wingPhase = (df.wingPhase + dt * 30) % TAU;
+
+            // Smooth Acceleration & Boundary Forces
+            let ax = 0; let ay = 0;
+            const marginX = 0.08; const marginY = 0.10;
+            if (df.x < marginX) ax += (marginX - df.x) * 4.4;
+            if (df.x > 1 - marginX) ax -= (df.x - (1 - marginX)) * 4.4;
+            if (df.y < marginY) ay += (marginY - df.y) * 4.4;
+            if (df.y > 1 - marginY) ay -= (df.y - (1 - marginY)) * 4.4;
+
+            df.vx += ax * dt; df.vy += ay * dt;
+            df.vx *= Math.exp(-1.45 * dt);
+            df.vy *= Math.exp(-1.45 * dt);
+
+            // Maintain gentle forward momentum
+            const speed = Math.hypot(df.vx, df.vy);
+            if (speed < 0.03) {
+              df.vx += Math.cos(df.facing) * 0.04 * dt;
+              df.vy += Math.sin(df.facing) * 0.04 * dt;
+            }
+
+            df.x = clamp(df.x + df.vx * dt, 0.05, 0.95);
+            df.y = clamp(df.y + df.vy * dt, 0.07, 0.93);
+
+            // Facing angle math: Dragonfly head is at +X, so facing = atan2(vy, vx)
+            df.facing = Math.atan2(df.vy, df.vx);
+            let turn = df.facing - df.visualFacing;
+            turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+            df.visualFacing += turn * Math.min(1, dt * 6.5);
+
             drawDragonfly(df);
           }
         }
