@@ -48,6 +48,13 @@ OVERLAY_REGISTRY = [
         "category": "ambient",
         "description": "Two realistic dragonflies hovering and darting",
     },
+    {
+        "id": "jellyfish",
+        "name": "Cyan Jellyfish",
+        "file": "jellyfish-overlay.html",
+        "category": "ambient",
+        "description": "Translucent bioluminescent cyan jellyfish pulsating and drifting vertically",
+    },
 ]
 
 
