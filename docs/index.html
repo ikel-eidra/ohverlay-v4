@@ -10,15 +10,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #0b0f17;
-      --card-bg: rgba(17, 24, 39, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
+      --bg-dark: #070a12;
+      --card-bg: rgba(13, 19, 32, 0.70);
+      --card-border: rgba(255, 255, 255, 0.07);
       --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
+      --text-muted: #94a3b8;
       --accent-blue: #3b82f6;
       --accent-blue-hover: #2563eb;
       --accent-emerald: #10b981;
-      --accent-glow: rgba(59, 130, 246, 0.25);
+      --accent-glow: rgba(16, 185, 129, 0.2);
     }
 
     * {
@@ -34,6 +34,29 @@
       line-height: 1.6;
       overflow-x: hidden;
       position: relative;
+    }
+
+    /* Ambient Soft Aurora Background Glows */
+    .aurora-glow-1 {
+      position: fixed;
+      top: -10%;
+      left: 15%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(0,0,0,0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .aurora-glow-2 {
+      position: fixed;
+      bottom: 10%;
+      right: 10%;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.07) 0%, rgba(0,0,0,0) 70%);
+      pointer-events: none;
+      z-index: 0;
     }
 
     /* Live Hero Canvas Background */
@@ -57,9 +80,9 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(11, 15, 23, 0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: rgba(7, 10, 18, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--card-border);
       z-index: 100;
     }
@@ -74,7 +97,7 @@
     .brand-logo {
       width: 34px;
       height: 34px;
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-emerald));
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-blue));
       border-radius: 10px;
       display: flex;
       align-items: center;
@@ -113,18 +136,19 @@
     }
 
     .btn-download-sm {
-      background: var(--accent-blue);
-      color: #ffffff;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
       padding: 8px 18px;
       border-radius: 8px;
       font-weight: 600;
       font-size: 13px;
       text-decoration: none;
-      transition: background 0.2s ease, transform 0.2s ease;
+      transition: all 0.2s ease;
     }
 
     .btn-download-sm:hover {
-      background: var(--accent-blue-hover);
+      background: rgba(16, 185, 129, 0.25);
       transform: translateY(-1px);
     }
 
@@ -137,7 +161,7 @@
       justify-content: center;
       align-items: center;
       text-align: center;
-      padding: 120px 24px 80px 24px;
+      padding: 130px 24px 80px 24px;
       z-index: 10;
     }
 
@@ -145,14 +169,15 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 16px;
-      background: rgba(59, 130, 246, 0.12);
-      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 6px 18px;
+      background: rgba(16, 185, 129, 0.10);
+      border: 1px solid rgba(16, 185, 129, 0.25);
       border-radius: 20px;
-      color: #60a5fa;
+      color: #34d399;
       font-size: 13px;
       font-weight: 500;
       margin-bottom: 24px;
+      letter-spacing: 0.2px;
     }
 
     .badge-dot {
@@ -165,11 +190,11 @@
 
     h1 {
       font-family: 'Outfit', sans-serif;
-      font-size: 56px;
+      font-size: 58px;
       font-weight: 800;
       line-height: 1.15;
       letter-spacing: -1.5px;
-      max-width: 840px;
+      max-width: 860px;
       margin-bottom: 20px;
       background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
       -webkit-background-clip: text;
@@ -179,9 +204,17 @@
     .hero p {
       font-size: 19px;
       color: var(--text-muted);
-      max-width: 640px;
+      max-width: 660px;
       margin-bottom: 36px;
       font-weight: 400;
+    }
+
+    .zen-quote {
+      font-style: italic;
+      color: #64748b;
+      font-size: 14px;
+      margin-top: -16px;
+      margin-bottom: 32px;
     }
 
     .cta-group {
@@ -191,14 +224,14 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent-blue), #1d4ed8);
+      background: linear-gradient(135deg, #10b981, #059669);
       color: #ffffff;
       padding: 14px 32px;
       border-radius: 10px;
       font-weight: 600;
       font-size: 16px;
       text-decoration: none;
-      box-shadow: 0 10px 25px var(--accent-glow);
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25);
       transition: all 0.25s ease;
       display: flex;
       align-items: center;
@@ -207,11 +240,11 @@
 
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 14px 30px rgba(59, 130, 246, 0.4);
+      box-shadow: 0 14px 30px rgba(16, 185, 129, 0.35);
     }
 
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.05);
       color: var(--text-main);
       padding: 14px 28px;
       border-radius: 10px;
@@ -223,7 +256,7 @@
     }
 
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.10);
       transform: translateY(-2px);
     }
 
@@ -252,8 +285,8 @@
     }
 
     .toggle-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.10);
       color: var(--text-main);
       padding: 8px 16px;
       border-radius: 8px;
@@ -264,9 +297,9 @@
     }
 
     .toggle-btn.active {
-      background: rgba(59, 130, 246, 0.2);
-      border-color: var(--accent-blue);
-      color: #60a5fa;
+      background: rgba(16, 185, 129, 0.18);
+      border-color: var(--accent-emerald);
+      color: #34d399;
     }
 
     /* Features Section */
@@ -313,14 +346,14 @@
 
     .card:hover {
       transform: translateY(-4px);
-      border-color: rgba(59, 130, 246, 0.3);
-      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+      border-color: rgba(16, 185, 129, 0.3);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
     }
 
     .card-icon {
       width: 48px;
       height: 48px;
-      background: rgba(59, 130, 246, 0.12);
+      background: rgba(16, 185, 129, 0.12);
       border-radius: 12px;
       display: flex;
       align-items: center;
@@ -367,7 +400,7 @@
       font-family: 'Outfit', sans-serif;
       font-size: 28px;
       font-weight: 800;
-      color: var(--accent-blue);
+      color: var(--accent-emerald);
       margin-bottom: 8px;
     }
 
@@ -390,6 +423,10 @@
 </head>
 <body>
 
+  <!-- Ambient Soft Aurora Glows -->
+  <div class="aurora-glow-1"></div>
+  <div class="aurora-glow-2"></div>
+
   <!-- Live Canvas Background -->
   <canvas id="heroCanvas"></canvas>
 
@@ -400,7 +437,7 @@
       <span class="brand-name">Ohverlay</span>
     </a>
     <nav>
-      <a href="#features">Features</a>
+      <a href="#features">Serene Features</a>
       <a href="#install">Quickstart</a>
       <a href="https://github.com/michaelfutol/ohverlay-v4" target="_blank">GitHub</a>
       <a href="https://github.com/michaelfutol/ohverlay-v4/archive/refs/heads/main.zip" class="btn-download-sm">Download Free</a>
@@ -413,9 +450,11 @@
       <span class="badge-dot"></span>
       Ohverlay v4.0 Minimal Nature Release
     </div>
-    <h1>Bring Living Ambient Nature<br>To Your Windows Desktop</h1>
+    <h1>Bring Serene Ambient Nature<br>To Your Windows Desktop</h1>
     <p>Render ultra-lightweight, transparent fireflies, dragonflies, and dandelion seeds over your workspace with zero CPU distraction.</p>
     
+    <div class="zen-quote">"In the middle of a busy workday, find a quiet moment of calm."</div>
+
     <div class="cta-group">
       <a href="https://github.com/michaelfutol/ohverlay-v4/archive/refs/heads/main.zip" class="btn-primary">
         <span>⚡ Download Ohverlay (.zip)</span>
@@ -438,8 +477,8 @@
   <!-- Features -->
   <section class="features" id="features">
     <div class="section-header">
-      <h2>Crafted for Focus & Serenity</h2>
-      <p>Designed to enhance your desktop environment without getting in the way of work.</p>
+      <h2>Crafted for Focus, Calm & Serenity</h2>
+      <p>Designed to enhance your desktop environment quietly without getting in the way of work.</p>
     </div>
 
     <div class="grid">
@@ -516,7 +555,7 @@
     </p>
   </footer>
 
-  <!-- 100% IDENTICAL EXACT REPLICA SIMULATION SCRIPT -->
+  <!-- 100% IDENTICAL EXACT REPLICA SIMULATION SCRIPT WITH HEAD-FORWARD FACING -->
   <script>
     (() => {
       'use strict';
@@ -550,7 +589,7 @@
       resize();
 
       // ──────────────────────────────────────────
-      // 1. EXACT REPLICA: FIREFLIES (6 count)
+      // 1. CALM EXACT REPLICA: FIREFLIES (6 count)
       // ──────────────────────────────────────────
       function makeGlowSprite() {
         const sprite = document.createElement('canvas');
@@ -572,10 +611,10 @@
         x: (0.1 + i * 0.15) * width,
         y: (0.2 + (i % 3) * 0.25) * height,
         z: 0.4 + (i * 0.1),
-        vx: (Math.sin(i * 1.7) * 8),
-        vy: (Math.cos(i * 2.3) * 8),
-        facing: Math.random() * TAU,
-        flashCycle: 2.1 + i * 0.4,
+        vx: Math.cos(i * 1.3) * 12,
+        vy: Math.sin(i * 1.3) * 12,
+        facing: Math.atan2(Math.sin(i * 1.3), Math.cos(i * 1.3)),
+        flashCycle: 2.5 + i * 0.4,
         flashOffset: i * 1.2,
         flashShape: 0.85 + (i % 3) * 0.1,
         wingPhase: Math.random() * TAU,
@@ -604,11 +643,8 @@
         wingGradient.addColorStop(0, `rgba(178,153,103,${alpha * 0.50})`);
         wingGradient.addColorStop(0.45, `rgba(224,214,178,${alpha * 0.28})`);
         wingGradient.addColorStop(1, 'rgba(195,210,188,0)');
-        ctx.fillStyle = wingGradient;
-        ctx.fill();
-        ctx.strokeStyle = `rgba(218,210,175,${alpha * 0.22})`;
-        ctx.lineWidth = 0.42;
-        ctx.stroke();
+        ctx.fillStyle = wingGradient; ctx.fill();
+        ctx.strokeStyle = `rgba(218,210,175,${alpha * 0.22})`; ctx.lineWidth = 0.42; ctx.stroke();
         ctx.restore();
       }
 
@@ -620,12 +656,10 @@
 
         if (flash > 0.006) {
           const glowSize = bodyLength * (5.8 + flash * 4.8);
-          const tailX = ff.x + Math.cos(ff.facing) * bodyLength * 0.43;
-          const tailY = ff.y + Math.sin(ff.facing) * bodyLength * 0.43;
           ctx.save();
           ctx.globalCompositeOperation = 'lighter';
           ctx.globalAlpha = flash * perspectiveOpacity * 0.82;
-          ctx.drawImage(glowSprite, tailX - glowSize, tailY - glowSize, glowSize * 2, glowSize * 2);
+          ctx.drawImage(glowSprite, ff.x - glowSize, ff.y - glowSize, glowSize * 2, glowSize * 2);
           ctx.restore();
         }
 
@@ -650,37 +684,26 @@
 
         // Shell
         const shellGradient = ctx.createLinearGradient(0, -bodyLength * 0.16, 0, bodyLength * 0.16);
-        shellGradient.addColorStop(0, '#120d08');
-        shellGradient.addColorStop(0.40, '#49301a');
-        shellGradient.addColorStop(0.68, '#1d130c');
-        shellGradient.addColorStop(1, '#070504');
+        shellGradient.addColorStop(0, '#120d08'); shellGradient.addColorStop(0.40, '#49301a');
+        shellGradient.addColorStop(0.68, '#1d130c'); shellGradient.addColorStop(1, '#070504');
         ctx.fillStyle = shellGradient;
-        ctx.beginPath();
-        ctx.ellipse(bodyLength * 0.05, 0, bodyLength * 0.43, bodyLength * 0.16, 0, 0, TAU);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(bodyLength * 0.05, 0, bodyLength * 0.43, bodyLength * 0.16, 0, 0, TAU); ctx.fill();
 
         // Thorax
         const thoraxGradient = ctx.createRadialGradient(-bodyLength * 0.28, -bodyLength * 0.07, 0, -bodyLength * 0.22, 0, bodyLength * 0.28);
-        thoraxGradient.addColorStop(0, '#6f4721');
-        thoraxGradient.addColorStop(0.38, '#2f1c0e');
-        thoraxGradient.addColorStop(1, '#090604');
+        thoraxGradient.addColorStop(0, '#6f4721'); thoraxGradient.addColorStop(0.38, '#2f1c0e'); thoraxGradient.addColorStop(1, '#090604');
         ctx.fillStyle = thoraxGradient;
-        ctx.beginPath();
-        ctx.ellipse(-bodyLength * 0.27, 0, bodyLength * 0.27, bodyLength * 0.20, 0, 0, TAU);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-bodyLength * 0.27, 0, bodyLength * 0.27, bodyLength * 0.20, 0, 0, TAU); ctx.fill();
 
-        // Head
+        // Head (Facing Direction Forward)
         ctx.fillStyle = '#080604';
-        ctx.beginPath();
-        ctx.ellipse(-bodyLength * 0.53, 0, bodyLength * 0.14, bodyLength * 0.13, 0, 0, TAU);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-bodyLength * 0.53, 0, bodyLength * 0.14, bodyLength * 0.13, 0, 0, TAU); ctx.fill();
 
         // Antennae
         ctx.strokeStyle = `rgba(104,75,41,${0.34 * perspectiveOpacity})`;
         ctx.lineWidth = Math.max(0.28, bodyLength * 0.018);
         for (const side of [-1, 1]) {
-          ctx.beginPath();
-          ctx.moveTo(-bodyLength * 0.60, side * bodyLength * 0.035);
+          ctx.beginPath(); ctx.moveTo(-bodyLength * 0.60, side * bodyLength * 0.035);
           ctx.quadraticCurveTo(-bodyLength * 0.78, side * bodyLength * 0.12, -bodyLength * 0.89, side * bodyLength * 0.20);
           ctx.stroke();
         }
@@ -693,22 +716,20 @@
         lanternGradient.addColorStop(0.78, `rgba(244,255,144,${lanternAlpha})`);
         lanternGradient.addColorStop(1, `rgba(68,55,12,${lanternAlpha})`);
         ctx.fillStyle = lanternGradient;
-        ctx.beginPath();
-        ctx.ellipse(bodyLength * 0.38, 0, bodyLength * 0.16, bodyLength * 0.11, 0, 0, TAU);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(bodyLength * 0.38, 0, bodyLength * 0.16, bodyLength * 0.11, 0, 0, TAU); ctx.fill();
 
         ctx.restore();
       }
 
       // ──────────────────────────────────────────
-      // 2. EXACT REPLICA: DRAGONFLIES (2 count)
+      // 2. CALM EXACT REPLICA: DRAGONFLIES (2 count)
       // ──────────────────────────────────────────
       const dragonflies = Array.from({ length: 2 }, (_, i) => ({
         x: (0.2 + i * 0.55) * width,
         y: (0.35 + i * 0.25) * height,
         z: 0.65 + i * 0.2,
-        vx: 45 * (i === 0 ? 1 : -1),
-        vy: 30 * (i === 0 ? -1 : 1),
+        vx: 22 * (i === 0 ? 1 : -1),
+        vy: 15 * (i === 0 ? -1 : 1),
         facing: 0,
         wingPhase: i * 2.1,
         species: i
@@ -854,7 +875,7 @@
       }
 
       // ──────────────────────────────────────────
-      // 3. EXACT REPLICA: DANDELION SEEDS (7 count)
+      // 3. CALM EXACT REPLICA: DANDELION SEEDS (7 count)
       // ──────────────────────────────────────────
       const REFERENCE_FILAMENTS = [
         {"c1":[-10.48,-3.83],"c2":[-35.67,-7.79],"e":[-50.7,-12.09],"a":0.5,"w":0.29,"p":0.0,"k":0.7},
@@ -1016,7 +1037,7 @@
       });
 
       // ──────────────────────────────────────────
-      // 5. ANIMATION LOOP
+      // 5. ANIMATION LOOP WITH CALM FACING TURNS
       // ──────────────────────────────────────────
       function frame(now) {
         const dt = Math.min(0.05, (now - lastTime) / 1000);
@@ -1038,12 +1059,17 @@
           }
         }
 
-        // Update & Draw Fireflies (6 count)
+        // Update & Draw Fireflies (6 count) - HEAD FORWARD FACING
         if (firefliesActive) {
           for (const ff of fireflies) {
             ff.x += ff.vx * dt; ff.y += ff.vy * dt;
-            ff.facing = Math.atan2(ff.vy, ff.vx) + Math.PI;
-            ff.wingPhase = (ff.wingPhase + dt * 45) % TAU;
+            // Firefly head is at -X, so facing forward in direction (vx, vy) requires angle = atan2(vy, vx)
+            const targetFacing = Math.atan2(ff.vy, ff.vx);
+            let turn = targetFacing - ff.facing;
+            turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+            ff.facing += turn * Math.min(1, dt * 2.0);
+            ff.wingPhase = (ff.wingPhase + dt * 35) % TAU;
+
             if (ff.x < 0) ff.x = width; if (ff.x > width) ff.x = 0;
             if (ff.y < 0) ff.y = height; if (ff.y > height) ff.y = 0;
             drawFirefly(ff);
@@ -1053,7 +1079,7 @@
         // Update & Draw Dragonflies (2 count)
         if (dragonfliesActive) {
           for (const df of dragonflies) {
-            df.wingPhase = (df.wingPhase + dt * 32) % TAU;
+            df.wingPhase = (df.wingPhase + dt * 28) % TAU;
             df.x += df.vx * dt; df.y += df.vy * dt;
             df.facing = Math.atan2(df.vy, df.vx) + Math.PI / 2;
             if (df.x < 60 || df.x > width - 60) df.vx *= -1;
