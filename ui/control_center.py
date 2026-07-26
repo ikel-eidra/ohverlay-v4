@@ -264,52 +264,6 @@ class ControlCenter(QWidget):
         # Separator line
         card_layout.addWidget(self._make_h_line())
 
-        # ── Physics Preset Controls ──
-        physics_layout = QVBoxLayout()
-        phys_hdr_layout = QHBoxLayout()
-        phys_label = QLabel("Nature Physics", card)
-        phys_label.setFont(QFont("Arial", 9, QFont.Bold))
-        phys_hdr_layout.addWidget(phys_label)
-        physics_layout.addLayout(phys_hdr_layout)
-
-        phys_btn_layout = QHBoxLayout()
-        self.physics_group = QButtonGroup(self)
-
-        for mode in ["Calm", "Lively", "Dramatic"]:
-            rb = QRadioButton(mode, card)
-            rb.setProperty("physicsMode", mode.lower())
-            if mode == "Lively":
-                rb.setChecked(True)
-            self.physics_group.addButton(rb)
-            phys_btn_layout.addWidget(rb)
-
-        self.physics_group.buttonToggled.connect(self._on_physics_preset_toggled)
-        physics_layout.addLayout(phys_btn_layout)
-
-        # Interaction Strength Slider (25% - 200%)
-        slider_row = QHBoxLayout()
-        slider_lbl = QLabel("Interaction:", card)
-        slider_lbl.setFont(QFont("Arial", 8))
-
-        self.strength_slider = QSlider(Qt.Horizontal, card)
-        self.strength_slider.setRange(25, 200)
-        self.strength_slider.setValue(100)
-        self.strength_slider.valueChanged.connect(self._on_slider_changed)
-
-        self.strength_val_lbl = QLabel("100%", card)
-        self.strength_val_lbl.setFixedWidth(36)
-        self.strength_val_lbl.setFont(QFont("Arial", 8, QFont.Bold))
-
-        slider_row.addWidget(slider_lbl)
-        slider_row.addWidget(self.strength_slider)
-        slider_row.addWidget(self.strength_val_lbl)
-
-        physics_layout.addLayout(slider_row)
-        card_layout.addLayout(physics_layout)
-
-        # Separator line
-        card_layout.addWidget(self._make_h_line())
-
         # ── Action Buttons Footer ──
         act_layout = QHBoxLayout()
 
@@ -426,23 +380,6 @@ class ControlCenter(QWidget):
                     btn.blockSignals(True)
                     btn.setChecked(True)
                     btn.blockSignals(False)
-
-        # Physics mode
-        preset = str(self.config.get("nature", "physics_preset") or "lively").lower()
-        for btn in self.physics_group.buttons():
-            mode = str(btn.property("physicsMode")).lower()
-            if mode == preset:
-                btn.blockSignals(True)
-                btn.setChecked(True)
-                btn.blockSignals(False)
-
-        # Interaction strength
-        strength = float(self.config.get("nature", "interaction_strength") or 1.0)
-        slider_val = int(strength * 100)
-        self.strength_slider.blockSignals(True)
-        self.strength_slider.setValue(slider_val)
-        self.strength_val_lbl.setText(f"{slider_val}%")
-        self.strength_slider.blockSignals(False)
 
     def _on_species_toggled(self, species_id, checked):
         widgets = self._species_widgets.get(species_id)

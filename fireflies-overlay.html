@@ -113,7 +113,7 @@
           flashCycle: 2.10 + seeded(index, 6) * 1.45,
           flashOffset: seeded(index, 7) * 4.0,
           flashShape: 0.85 + seeded(index, 8) * 0.30,
-          speedMult: 1.2 + seeded(index, 11) * 1.8,
+          speedMult: 0.35 + seeded(index, 11) * 0.45,
           restTimer: seeded(index, 12) * 2,
           glowWarmth: seeded(index, 18),
           startled: 0,
@@ -133,7 +133,7 @@
         
         // 15% chance to rest
         if (seeded(timeSeed, 25) > 0.85) {
-            firefly.restTimer = 1.0 + seeded(timeSeed, 26) * 2.0;
+          firefly.restTimer = 2.0 + seeded(timeSeed, 26) * 4.0;
         }
       }
 
@@ -177,8 +177,8 @@
         const wander = elapsed * firefly.wanderRate + firefly.wanderPhase;
         const nervousness = 1 + firefly.startled * 1.8;
 
-        let ax = dx * 0.4 + Math.sin(wander * 1.37) * 0.03 * nervousness;
-        let ay = dy * 0.4 + Math.cos(wander * 1.11 + 0.7) * 0.025 * nervousness;
+        let ax = dx * 0.12 + Math.sin(wander * 1.37) * 0.015 * nervousness;
+        let ay = dy * 0.12 + Math.cos(wander * 1.11 + 0.7) * 0.012 * nervousness;
         let az = dz * 0.15 + Math.sin(wander * 0.83 + 1.4) * 0.01;
 
         if (firefly.restTimer > 0 && firefly.startled < 0.1) {
@@ -240,7 +240,7 @@
         firefly.vz *= drag;
 
         const speed = Math.hypot(firefly.vx, firefly.vy);
-        const maximumSpeed = (0.25 * firefly.speedMult) + firefly.startled * 0.35;
+        const maximumSpeed = (0.08 * firefly.speedMult) + firefly.startled * 0.25;
         if (speed > maximumSpeed) {
           firefly.vx *= maximumSpeed / speed;
           firefly.vy *= maximumSpeed / speed;
