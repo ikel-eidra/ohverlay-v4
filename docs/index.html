@@ -470,7 +470,6 @@
       <button class="toggle-btn active" id="toggleDragonflies">🪶 Dragonflies (2)</button>
       <button class="toggle-btn active" id="toggleDandelions">🌱 Dandelion Seeds (7)</button>
       <button class="toggle-btn active" id="toggleFireflies">✨ Fireflies (6)</button>
-      <button class="toggle-btn" id="triggerBreeze">🍃 Trigger Breeze</button>
     </div>
   </section>
 
@@ -1063,8 +1062,8 @@
         if (firefliesActive) {
           for (const ff of fireflies) {
             ff.x += ff.vx * dt; ff.y += ff.vy * dt;
-            // Firefly head is at -X, so facing forward in direction (vx, vy) requires angle = atan2(vy, vx)
-            const targetFacing = Math.atan2(ff.vy, ff.vx);
+            // Firefly head is at -X, so facing forward in direction (vx, vy) requires angle = atan2(vy, vx) + PI
+            const targetFacing = Math.atan2(ff.vy, ff.vx) + Math.PI;
             let turn = targetFacing - ff.facing;
             turn = Math.atan2(Math.sin(turn), Math.cos(turn));
             ff.facing += turn * Math.min(1, dt * 2.0);
