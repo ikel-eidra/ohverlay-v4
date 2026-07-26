@@ -555,7 +555,7 @@
     </p>
   </footer>
 
-  <!-- 100% IDENTICAL EXACT REPLICA SIMULATION SCRIPT WITH CYAN JELLYFISH -->
+  <!-- 100% IDENTICAL EXACT REPLICA ARTWORK & PHYSICS ENGINE SCRIPT -->
   <script>
     (() => {
       'use strict';
@@ -589,7 +589,7 @@
       resize();
 
       // ──────────────────────────────────────────
-      // 1. CYAN JELLYFISH (3 count)
+      // 1. SCIENTIFIC PULSED-JET JELLYFISH (3 count)
       // ──────────────────────────────────────────
       function makeCyanGlowSprite() {
         const sprite = document.createElement('canvas');
@@ -610,73 +610,84 @@
         x: 0.18 + i * 0.32,
         y: 0.30 + (i % 2) * 0.30,
         z: 0.5 + i * 0.2,
-        vx: (Math.random() - 0.5) * 0.012,
-        vy: -0.012,
+        vx: (Math.random() - 0.5) * 0.008,
+        vy: -0.015,
         visualFacing: 0,
         pulsePhase: i * 2.1,
-        pulseSpeed: 1.2 + i * 0.25,
+        pulseSpeed: 1.1 + i * 0.25,
         seed: i + 1
       }));
 
       function updateJellyfish(jelly, dt) {
         jelly.pulsePhase = (jelly.pulsePhase + dt * jelly.pulseSpeed) % TAU;
         const pulse = Math.sin(jelly.pulsePhase);
-        const contraction = Math.max(0, pulse - 0.2);
-        const thrust = contraction * contraction * 0.05;
         
-        jelly.vy -= thrust * dt;
-        jelly.vy += 0.008 * dt;
-        jelly.vx += Math.sin(elapsed * 0.8 + jelly.seed) * 0.005 * dt;
+        // Systole jet contraction vs Diastole refill buoyancy
+        const isSystole = pulse > 0.35;
+        if (isSystole) {
+          const contractionPower = Math.pow((pulse - 0.35) / 0.65, 1.8);
+          jelly.vy -= contractionPower * 0.075 * dt;
+        } else {
+          jelly.vy += 0.006 * dt;
+        }
 
-        jelly.vx *= Math.exp(-0.8 * dt);
-        jelly.vy *= Math.exp(-0.8 * dt);
+        jelly.vx += Math.sin(elapsed * 0.7 + jelly.seed * 2.3) * 0.004 * dt;
+
+        const dragFactor = isSystole ? 0.95 : 1.65;
+        jelly.vx *= Math.exp(-dragFactor * dt);
+        jelly.vy *= Math.exp(-dragFactor * dt);
 
         jelly.x += jelly.vx * dt;
         jelly.y += jelly.vy * dt;
 
-        const marginX = 0.08; const marginY = 0.10;
-        if (jelly.x < marginX) jelly.vx += (marginX - jelly.x) * 0.2;
-        if (jelly.x > 1 - marginX) jelly.vx -= (jelly.x - (1 - marginX)) * 0.2;
-        if (jelly.y < marginY) jelly.vy += (marginY - jelly.y) * 0.2;
-        if (jelly.y > 1 - marginY) jelly.vy -= (jelly.y - (1 - marginY)) * 0.2;
+        const marginX = 0.06; const marginY = 0.08;
+        if (jelly.x < marginX) jelly.vx += (marginX - jelly.x) * 0.25;
+        if (jelly.x > 1 - marginX) jelly.vx -= (jelly.x - (1 - marginX)) * 0.25;
+        if (jelly.y < marginY) jelly.vy += (marginY - jelly.y) * 0.25;
+        if (jelly.y > 1 - marginY) jelly.vy -= (jelly.y - (1 - marginY)) * 0.25;
 
-        jelly.x = clamp(jelly.x, 0.05, 0.95);
-        jelly.y = clamp(jelly.y, 0.08, 0.92);
-        jelly.visualFacing = lerp(jelly.visualFacing, Math.sin(elapsed * 0.5 + jelly.seed) * 0.15, dt * 2.0);
+        jelly.x = clamp(jelly.x, 0.04, 0.96);
+        jelly.y = clamp(jelly.y, 0.06, 0.94);
+
+        const targetFacing = clamp(jelly.vx * 4.5 + Math.sin(elapsed * 0.4 + jelly.seed) * 0.12, -0.25, 0.25);
+        jelly.visualFacing = lerp(jelly.visualFacing, targetFacing, dt * 2.5);
       }
 
       function drawJellyfish(jelly) {
         const depthScale = 0.7 + jelly.z * 0.6;
         const bellRadius = clamp(Math.min(width, height) * 0.042 * depthScale, 22, 54);
         const pulse = Math.sin(jelly.pulsePhase);
-        const contractX = 1.0 - pulse * 0.15;
-        const contractY = 1.0 + pulse * 0.22;
+        const contractX = 1.0 - pulse * 0.18;
+        const contractY = 1.0 + pulse * 0.25;
 
         ctx.save();
         ctx.translate(jelly.x * width, jelly.y * height);
         ctx.rotate(jelly.visualFacing);
         ctx.scale(depthScale, depthScale);
 
-        const glowSize = bellRadius * 4.5;
+        const glowSize = bellRadius * 4.8;
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 0.35 + Math.max(0, pulse) * 0.25;
+        ctx.globalAlpha = 0.35 + Math.max(0, pulse) * 0.30;
         ctx.drawImage(cyanGlowSprite, -glowSize * 0.5, -glowSize * 0.5, glowSize, glowSize);
         ctx.restore();
 
-        // 8 Trailing Tentacles
+        // 8 Trailing Marginal Tentacles with fluid drag
         ctx.lineWidth = 0.8;
         for (let t = 0; t < 8; t++) {
           const spread = ((t / 7) - 0.5) * bellRadius * 1.5 * contractX;
           const startX = spread; const startY = bellRadius * 0.3;
           ctx.beginPath(); ctx.moveTo(startX, startY);
-          const tentacleLength = bellRadius * 3.5;
+          const tentacleLength = bellRadius * 3.6;
           for (let s = 1; s <= 10; s++) {
             const segRatio = s / 10;
-            const wave = Math.sin(elapsed * 2.5 - segRatio * 4.0 + t * 0.8 + jelly.seed) * (8 * segRatio);
-            ctx.lineTo(startX + wave, startY + segRatio * tentacleLength);
+            const dragLag = -jelly.vy * 80 * segRatio * segRatio;
+            const wave = Math.sin(elapsed * 2.8 - segRatio * 4.2 + t * 0.8 + jelly.seed) * (7 * segRatio);
+            const nodeX = startX + wave - jelly.vx * 60 * segRatio;
+            const nodeY = startY + segRatio * tentacleLength + dragLag;
+            ctx.lineTo(nodeX, nodeY);
           }
-          ctx.strokeStyle = `rgba(0, 230, 255, ${clamp(0.35 - t * 0.02, 0.18, 0.45)})`;
+          ctx.strokeStyle = `rgba(0, 230, 255, ${clamp(0.38 - t * 0.02, 0.18, 0.48)})`;
           ctx.stroke();
         }
 
@@ -686,34 +697,36 @@
           const armSpread = ((a / 3) - 0.5) * bellRadius * 0.8 * contractX;
           const startX = armSpread; const startY = bellRadius * 0.4;
           ctx.beginPath(); ctx.moveTo(startX, startY);
-          const armLength = bellRadius * 2.8;
+          const armLength = bellRadius * 2.9;
           for (let s = 1; s <= 8; s++) {
             const segRatio = s / 8;
-            const wave = Math.sin(elapsed * 1.8 - segRatio * 3.2 + a * 1.2) * (12 * segRatio);
-            ctx.lineTo(startX + wave, startY + segRatio * armLength);
+            const wave = Math.sin(elapsed * 1.9 - segRatio * 3.4 + a * 1.2) * (11 * segRatio);
+            const nodeX = startX + wave - jelly.vx * 40 * segRatio;
+            const nodeY = startY + segRatio * armLength - jelly.vy * 50 * segRatio * segRatio;
+            ctx.lineTo(nodeX, nodeY);
           }
           const armGradient = ctx.createLinearGradient(0, startY, 0, startY + armLength);
-          armGradient.addColorStop(0, 'rgba(0, 255, 240, 0.65)');
-          armGradient.addColorStop(0.5, 'rgba(0, 180, 255, 0.42)');
+          armGradient.addColorStop(0, 'rgba(0, 255, 240, 0.68)');
+          armGradient.addColorStop(0.5, 'rgba(0, 180, 255, 0.45)');
           armGradient.addColorStop(1, 'rgba(0, 90, 200, 0.05)');
           ctx.strokeStyle = armGradient; ctx.stroke();
         }
 
-        // Bell
+        // Umbrella Bell
         ctx.save();
         ctx.scale(contractX, contractY);
         const bellGradient = ctx.createRadialGradient(0, -bellRadius * 0.2, bellRadius * 0.1, 0, 0, bellRadius);
-        bellGradient.addColorStop(0, 'rgba(215, 250, 255, 0.85)');
-        bellGradient.addColorStop(0.35, 'rgba(0, 220, 255, 0.50)');
+        bellGradient.addColorStop(0, 'rgba(215, 250, 255, 0.88)');
+        bellGradient.addColorStop(0.35, 'rgba(0, 220, 255, 0.52)');
         bellGradient.addColorStop(0.70, 'rgba(0, 110, 210, 0.28)');
         bellGradient.addColorStop(1, 'rgba(0, 40, 110, 0.08)');
         ctx.fillStyle = bellGradient;
         ctx.beginPath();
         ctx.moveTo(-bellRadius, 0);
-        ctx.bezierCurveTo(-bellRadius, -bellRadius * 1.3, bellRadius, -bellRadius * 1.3, bellRadius, 0);
+        ctx.bezierCurveTo(-bellRadius, -bellRadius * 1.35, bellRadius, -bellRadius * 1.35, bellRadius, 0);
         ctx.bezierCurveTo(bellRadius * 0.6, bellRadius * 0.25, -bellRadius * 0.6, bellRadius * 0.25, -bellRadius, 0);
         ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = 'rgba(160, 245, 255, 0.75)'; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.strokeStyle = 'rgba(160, 245, 255, 0.80)'; ctx.lineWidth = 1.2; ctx.stroke();
 
         // 4 Gonads
         for (let g = 0; g < 4; g++) {
@@ -721,8 +734,8 @@
           const gx = Math.cos(angle) * bellRadius * 0.35;
           const gy = Math.sin(angle) * bellRadius * 0.22 - bellRadius * 0.25;
           const gonadGradient = ctx.createRadialGradient(gx, gy, 0, gx, gy, bellRadius * 0.18);
-          gonadGradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-          gonadGradient.addColorStop(0.4, 'rgba(0, 245, 255, 0.80)');
+          gonadGradient.addColorStop(0, 'rgba(255, 255, 255, 0.96)');
+          gonadGradient.addColorStop(0.4, 'rgba(0, 245, 255, 0.82)');
           gonadGradient.addColorStop(1, 'rgba(0, 150, 220, 0)');
           ctx.fillStyle = gonadGradient;
           ctx.beginPath(); ctx.arc(gx, gy, bellRadius * 0.16, 0, TAU); ctx.fill();
@@ -732,7 +745,162 @@
       }
 
       // ──────────────────────────────────────────
-      // 2. FIREFLIES
+      // 2. 100% EXPLICIT FULL DRAGONFLIES ARTWORK ENGINE
+      // ──────────────────────────────────────────
+      const dragonflies = Array.from({ length: 2 }, (_, i) => ({
+        x: 0.25 + i * 0.50,
+        y: 0.35 + i * 0.25,
+        z: 0.65 + i * 0.2,
+        vx: 0.06 * (i === 0 ? 1 : -1),
+        vy: 0.04 * (i === 0 ? -1 : 1),
+        facing: 0,
+        visualFacing: 0,
+        wingPhase: i * 2.1,
+        species: i,
+        seed: i + 1
+      }));
+
+      function wingPath(length, widthValue, hindWing = false) {
+        const root = 0.08;
+        ctx.beginPath();
+        ctx.moveTo(root * length, 0);
+        if (hindWing) {
+          ctx.bezierCurveTo(length * 0.25, -widthValue * 0.10, length * 0.75, -widthValue * 1.05, length, 0);
+          ctx.bezierCurveTo(length * 0.75, widthValue * 1.05, length * 0.25, widthValue * 0.35, root * length, 0);
+        } else {
+          ctx.bezierCurveTo(length * 0.30, -widthValue * 0.15, length * 0.70, -widthValue * 0.95, length, 0);
+          ctx.bezierCurveTo(length * 0.70, widthValue * 0.95, length * 0.30, widthValue * 0.35, root * length, 0);
+        }
+        ctx.closePath();
+      }
+
+      function drawWingVeins(length, widthValue, alpha, hindWing) {
+        ctx.strokeStyle = `rgba(128,148,145,${alpha})`;
+        ctx.lineWidth = 0.46;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length * 0.92, 0); ctx.stroke();
+
+        for (let vein = 1; vein <= 5; vein++) {
+          const amount = vein / 6;
+          const x = length * amount;
+          const spread = Math.sin(amount * Math.PI) * widthValue * (hindWing ? 0.39 : 0.27);
+          ctx.beginPath();
+          ctx.moveTo(x * 0.52, 0); ctx.lineTo(x, -spread);
+          ctx.moveTo(x * 0.52, 0); ctx.lineTo(x, spread);
+          ctx.stroke();
+        }
+      }
+
+      function drawOneWing(side, fore, length, bodyLength, beat, alpha, dragonfly) {
+        const hindWing = !fore;
+        const attachmentX = bodyLength * (fore ? 0.15 : 0.05);
+        const baseAngle = fore ? 1.05 : 1.45;
+        const sweep = beat * (fore ? 0.15 : 0.12);
+        const widthValue = length * (fore ? 0.35 : 0.42);
+        const projection = 0.62 + Math.abs(Math.cos(beat * 1.18)) * 0.38;
+
+        ctx.save();
+        ctx.translate(attachmentX, 0);
+        ctx.rotate(side * (baseAngle + sweep));
+        ctx.scale(projection, 0.78 + projection * 0.22);
+        wingPath(length, widthValue, hindWing);
+
+        const gradient = ctx.createLinearGradient(0, 0, length, 0);
+        if (dragonfly.species === 0) {
+          gradient.addColorStop(0, `rgba(10, 20, 60, ${alpha * 0.9})`);
+          gradient.addColorStop(0.3, `rgba(25, 70, 130, ${alpha * 0.7})`);
+          gradient.addColorStop(0.6, `rgba(130, 180, 140, ${alpha * 0.6})`);
+          gradient.addColorStop(0.8, `rgba(200, 100, 130, ${alpha * 0.5})`);
+          gradient.addColorStop(1, `rgba(50, 25, 80, ${alpha * 0.4})`);
+        } else {
+          gradient.addColorStop(0, `rgba(20, 15, 50, ${alpha * 0.9})`);
+          gradient.addColorStop(0.3, `rgba(70, 35, 110, ${alpha * 0.7})`);
+          gradient.addColorStop(0.6, `rgba(150, 90, 160, ${alpha * 0.6})`);
+          gradient.addColorStop(0.8, `rgba(210, 160, 110, ${alpha * 0.5})`);
+          gradient.addColorStop(1, `rgba(50, 20, 70, ${alpha * 0.4})`);
+        }
+        ctx.fillStyle = gradient; ctx.fill();
+        ctx.strokeStyle = `rgba(0,5,15,${alpha})`; ctx.lineWidth = 1.0; ctx.stroke();
+        drawWingVeins(length, widthValue, alpha * 0.9, hindWing);
+        ctx.restore();
+      }
+
+      function drawDragonflyBody(dragonfly, bodyLength) {
+        const speciesBlue = dragonfly.species === 0;
+        const abdomenLength = bodyLength * 1.1;
+        const segmentCount = 10;
+        const startX = -bodyLength * 0.10;
+
+        for (let segment = segmentCount - 1; segment >= 0; segment--) {
+          const amount = segment / (segmentCount - 1);
+          const segmentX = startX - amount * abdomenLength;
+          const radiusX = bodyLength * 0.055;
+          const radiusY = bodyLength * (0.02 - amount * 0.012);
+          const bodyGradient = ctx.createLinearGradient(segmentX, -radiusY, segmentX, radiusY);
+          if (speciesBlue) {
+            bodyGradient.addColorStop(0, segment % 2 ? '#040b12' : '#081a29');
+            bodyGradient.addColorStop(0.35, segment % 2 ? '#104875' : '#288ab5');
+            bodyGradient.addColorStop(0.60, segment % 2 ? '#061d2b' : '#145778');
+            bodyGradient.addColorStop(1, '#020508');
+          } else {
+            bodyGradient.addColorStop(0, segment % 2 ? '#0a0a1a' : '#141432');
+            bodyGradient.addColorStop(0.35, segment % 2 ? '#5a2d8a' : '#994cd6');
+            bodyGradient.addColorStop(0.60, segment % 2 ? '#3a1a5c' : '#6a2a9e');
+            bodyGradient.addColorStop(1, '#050510');
+          }
+          ctx.fillStyle = bodyGradient;
+          ctx.beginPath(); ctx.ellipse(segmentX, 0, radiusX * 1.05, Math.max(1, radiusY), 0, 0, TAU); ctx.fill();
+          ctx.strokeStyle = 'rgba(2,5,4,0.72)'; ctx.lineWidth = Math.max(0.35, bodyLength * 0.009); ctx.stroke();
+        }
+
+        const thoraxGradient = ctx.createRadialGradient(bodyLength * 0.03, -bodyLength * 0.08, bodyLength * 0.01, bodyLength * 0.01, 0, bodyLength * 0.28);
+        if (speciesBlue) {
+          thoraxGradient.addColorStop(0, '#5bb8c1'); thoraxGradient.addColorStop(0.31, '#215e69');
+          thoraxGradient.addColorStop(0.68, '#102b32'); thoraxGradient.addColorStop(1, '#03090b');
+        } else {
+          thoraxGradient.addColorStop(0, '#9db14a'); thoraxGradient.addColorStop(0.31, '#446b2b');
+          thoraxGradient.addColorStop(0.68, '#1b351b'); thoraxGradient.addColorStop(1, '#050b05');
+        }
+        ctx.fillStyle = thoraxGradient;
+        ctx.beginPath(); ctx.ellipse(bodyLength * 0.06, 0, bodyLength * 0.16, bodyLength * 0.08, 0, 0, TAU); ctx.fill();
+
+        ctx.fillStyle = speciesBlue ? '#172c2f' : '#25351a';
+        ctx.beginPath(); ctx.ellipse(bodyLength * 0.22, 0, bodyLength * 0.12, bodyLength * 0.10, 0, 0, TAU); ctx.fill();
+
+        for (const side of [-1, 1]) {
+          const eyeGradient = ctx.createRadialGradient(bodyLength * 0.24, side * bodyLength * 0.06, 0, bodyLength * 0.24, side * bodyLength * 0.06, bodyLength * 0.08);
+          eyeGradient.addColorStop(0, speciesBlue ? '#65796e' : '#8b8142');
+          eyeGradient.addColorStop(0.30, speciesBlue ? '#263e3a' : '#3f4523');
+          eyeGradient.addColorStop(0.72, '#111913'); eyeGradient.addColorStop(1, '#020302');
+          ctx.fillStyle = eyeGradient;
+          ctx.beginPath(); ctx.ellipse(bodyLength * 0.24, side * bodyLength * 0.06, bodyLength * 0.08, bodyLength * 0.06, 0, 0, TAU); ctx.fill();
+        }
+      }
+
+      function drawDragonfly(df) {
+        const depthScale = 1.0 / df.z;
+        const bodyLength = clamp(Math.min(width, height) * 0.057 * depthScale, 31, 64);
+
+        ctx.save();
+        ctx.translate(df.x * width, df.y * height);
+        ctx.rotate(df.visualFacing);
+        ctx.scale(depthScale, depthScale);
+
+        const wingLength = bodyLength * 1.5;
+        const leftBeat = Math.sin(df.wingPhase);
+        const rightBeat = Math.sin(df.wingPhase + 0.16);
+        const alpha = clamp(0.35 + df.z * 0.15, 0.35, 0.65);
+
+        drawOneWing(-1, true, wingLength, bodyLength, leftBeat, alpha, df);
+        drawOneWing(1, true, wingLength, bodyLength, rightBeat, alpha, df);
+        drawOneWing(-1, false, wingLength * 0.92, bodyLength, -leftBeat, alpha * 0.95, df);
+        drawOneWing(1, false, wingLength * 0.92, bodyLength, -rightBeat, alpha * 0.95, df);
+
+        drawDragonflyBody(df, bodyLength);
+        ctx.restore();
+      }
+
+      // ──────────────────────────────────────────
+      // 3. FIREFLIES (6 count)
       // ──────────────────────────────────────────
       function makeGlowSprite() {
         const sprite = document.createElement('canvas');
@@ -774,23 +942,6 @@
         return clamp((primary + afterglow) * livingFlicker * ff.flashShape, 0, 1);
       }
 
-      function drawFireflyWing(side, length, widthValue, beat, alpha) {
-        ctx.save();
-        ctx.scale(1, side);
-        ctx.rotate(-0.24 - beat * 0.24);
-        ctx.beginPath();
-        ctx.moveTo(-length * 0.05, 0);
-        ctx.bezierCurveTo(length * 0.18, -widthValue * 0.36, length * 0.83, -widthValue * 0.22, length, 0);
-        ctx.bezierCurveTo(length * 0.72, widthValue * 0.42, length * 0.20, widthValue * 0.40, -length * 0.05, 0);
-        const wingGradient = ctx.createLinearGradient(0, 0, length, 0);
-        wingGradient.addColorStop(0, `rgba(178,153,103,${alpha * 0.50})`);
-        wingGradient.addColorStop(0.45, `rgba(224,214,178,${alpha * 0.28})`);
-        wingGradient.addColorStop(1, 'rgba(195,210,188,0)');
-        ctx.fillStyle = wingGradient; ctx.fill();
-        ctx.strokeStyle = `rgba(218,210,175,${alpha * 0.22})`; ctx.lineWidth = 0.42; ctx.stroke();
-        ctx.restore();
-      }
-
       function drawFirefly(ff) {
         const depthScale = 0.62 + ff.z * 0.78;
         const bodyLength = clamp(Math.min(width, height) * 0.0135 * depthScale, 7.2, 17.5);
@@ -810,10 +961,6 @@
         ctx.translate(ff.x, ff.y);
         ctx.rotate(ff.facing);
         ctx.scale(depthScale, depthScale);
-
-        const wingBeat = Math.sin(ff.wingPhase);
-        drawFireflyWing(-1, bodyLength * 0.86, bodyLength * 0.42, wingBeat, 0.35 * perspectiveOpacity);
-        drawFireflyWing(1, bodyLength * 0.86, bodyLength * 0.42, -wingBeat, 0.35 * perspectiveOpacity);
 
         // Shell
         const shellGradient = ctx.createLinearGradient(0, -bodyLength * 0.16, 0, bodyLength * 0.16);
@@ -846,58 +993,21 @@
       }
 
       // ──────────────────────────────────────────
-      // 3. DRAGONFLIES
-      // ──────────────────────────────────────────
-      const dragonflies = Array.from({ length: 2 }, (_, i) => ({
-        x: 0.25 + i * 0.50,
-        y: 0.35 + i * 0.25,
-        z: 0.65 + i * 0.2,
-        vx: 0.06 * (i === 0 ? 1 : -1),
-        vy: 0.04 * (i === 0 ? -1 : 1),
-        facing: 0,
-        visualFacing: 0,
-        wingPhase: i * 2.1,
-        species: i,
-        seed: i + 1
-      }));
-
-      function drawDragonfly(df) {
-        const depthScale = 1.0 / df.z;
-        const bodyLength = clamp(Math.min(width, height) * 0.057 * depthScale, 31, 64);
-
-        ctx.save();
-        ctx.translate(df.x * width, df.y * height);
-        ctx.rotate(df.visualFacing);
-        ctx.scale(depthScale, depthScale);
-
-        // Body
-        ctx.fillStyle = df.species === 0 ? '#104875' : '#5a2d8a';
-        ctx.beginPath(); ctx.ellipse(-bodyLength * 0.3, 0, bodyLength * 0.5, bodyLength * 0.06, 0, 0, TAU); ctx.fill();
-        ctx.fillStyle = df.species === 0 ? '#5bb8c1' : '#9db14a';
-        ctx.beginPath(); ctx.ellipse(bodyLength * 0.06, 0, bodyLength * 0.16, bodyLength * 0.08, 0, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#020302';
-        ctx.beginPath(); ctx.ellipse(bodyLength * 0.24, 0, bodyLength * 0.08, bodyLength * 0.06, 0, 0, TAU); ctx.fill();
-
-        ctx.restore();
-      }
-
-      // ──────────────────────────────────────────
-      // 4. DANDELION SEEDS
+      // 4. DANDELION SEEDS (7 count)
       // ──────────────────────────────────────────
       const dandelions = Array.from({ length: 7 }, (_, i) => ({
         x: width * (0.12 + (i / 6) * 0.76),
         y: height * (0.18 + (i % 4) * 0.20),
         vx: Math.sin(i * 2.3) * 6.0,
-        vy: 3.5 + Math.cos(i * 1.7) * 2.0,
-        size: 0.85 + (i % 4) * 0.08
+        vy: 3.5 + Math.cos(i * 1.7) * 2.0
       }));
 
       function drawSeed(seed) {
         ctx.save();
         ctx.translate(seed.x, seed.y);
-        ctx.scale(0.5, 0.5);
-        ctx.strokeStyle = 'rgba(255,255,246,0.7)';
-        ctx.beginPath(); ctx.arc(0, 0, 15, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,246,0.65)';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.stroke();
         ctx.restore();
       }
 
@@ -934,7 +1044,7 @@
 
         ctx.clearRect(0, 0, width, height);
 
-        // Jellyfish
+        // Jellyfish (Scientific Pulsed Jet)
         if (jellyfishActive) {
           for (const jelly of jellies) {
             updateJellyfish(jelly, dt);
@@ -963,11 +1073,33 @@
           }
         }
 
-        // Dragonflies
+        // Dragonflies (100% Explicit Artwork & On-Screen Bounds)
         if (dragonfliesActive) {
           for (const df of dragonflies) {
+            df.wingPhase = (df.wingPhase + dt * 30) % TAU;
+            let ax = 0; let ay = 0;
+            const marginX = 0.08; const marginY = 0.10;
+            if (df.x < marginX) ax += (marginX - df.x) * 4.4;
+            if (df.x > 1 - marginX) ax -= (df.x - (1 - marginX)) * 4.4;
+            if (df.y < marginY) ay += (marginY - df.y) * 4.4;
+            if (df.y > 1 - marginY) ay -= (df.y - (1 - marginY)) * 4.4;
+
+            df.vx += ax * dt; df.vy += ay * dt;
+            df.vx *= Math.exp(-1.45 * dt); df.vy *= Math.exp(-1.45 * dt);
+
+            if (Math.hypot(df.vx, df.vy) < 0.03) {
+              df.vx += Math.cos(df.facing) * 0.04 * dt;
+              df.vy += Math.sin(df.facing) * 0.04 * dt;
+            }
+
             df.x = clamp(df.x + df.vx * dt, 0.05, 0.95);
             df.y = clamp(df.y + df.vy * dt, 0.07, 0.93);
+
+            df.facing = Math.atan2(df.vy, df.vx);
+            let turn = df.facing - df.visualFacing;
+            turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+            df.visualFacing += turn * Math.min(1, dt * 6.5);
+
             drawDragonfly(df);
           }
         }
