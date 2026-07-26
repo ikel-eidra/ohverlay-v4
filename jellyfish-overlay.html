@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bioluminescent Cyan Jellyfish Overlay — Fluid Kinematics Engine</title>
+  <title>Bioluminescent Cyan Jellyfish Overlay — Dispersal & Fluid Kinematics</title>
   <style>
     * {
       box-sizing: border-box;
@@ -87,21 +87,24 @@
 
       function createJellyfish(index) {
         const seed = index + 1;
-        const x = 0.12 + pseudoRandom(seed * 1.3) * 0.76;
-        const y = 0.18 + pseudoRandom(seed * 2.7) * 0.64;
+        // Evenly dispersed initial positions across full screen height and width
+        const x = 0.15 + (index / Math.max(1, targetCount)) * 0.70 + (pseudoRandom(seed * 1.3) - 0.5) * 0.15;
+        const y = 0.20 + (index % 3) * 0.28 + (pseudoRandom(seed * 2.7) - 0.5) * 0.15;
         const z = 0.35 + pseudoRandom(seed * 3.9) * 0.65;
-        const targetAngle = (pseudoRandom(seed * 4.1) - 0.5) * 0.8;
+        const targetAngle = (pseudoRandom(seed * 4.1) - 0.5) * 1.2;
 
         return {
-          x, y, z,
+          x: clamp(x, 0.1, 0.9),
+          y: clamp(y, 0.15, 0.85),
+          z,
           vx: (pseudoRandom(seed * 5.3) - 0.5) * 0.02,
-          vy: -0.01 - pseudoRandom(seed * 6.7) * 0.02,
+          vy: (pseudoRandom(seed * 6.7) - 0.5) * 0.02,
           facing: targetAngle,
           visualFacing: targetAngle,
           targetAngle,
           pulsePhase: pseudoRandom(seed * 7.1) * TAU,
-          pulseSpeed: 0.75 + pseudoRandom(seed * 8.5) * 0.95,
-          thrustPower: 0.07 + pseudoRandom(seed * 9.3) * 0.05,
+          pulseSpeed: 0.70 + pseudoRandom(seed * 8.5) * 0.85,
+          thrustPower: 0.08 + pseudoRandom(seed * 9.3) * 0.05,
           seed,
           wanderTimer: 0
         };
@@ -109,45 +112,75 @@
 
       let jellies = Array.from({ length: targetCount }, (_, i) => createJellyfish(i));
 
-      function updateJellyfish(jelly, dt) {
+      function updateJellyfish(jelly, index, dt) {
         jelly.pulsePhase = (jelly.pulsePhase + dt * jelly.pulseSpeed) % TAU;
         const pulse = Math.sin(jelly.pulsePhase);
 
+        // Periodically update wandering angle
         jelly.wanderTimer -= dt;
         if (jelly.wanderTimer <= 0) {
-          jelly.wanderTimer = 3.0 + pseudoRandom(elapsed + jelly.seed) * 5.0;
-          jelly.targetAngle = (pseudoRandom(elapsed * 1.3 + jelly.seed) - 0.5) * 0.9;
+          jelly.wanderTimer = 3.5 + pseudoRandom(elapsed + jelly.seed) * 4.5;
+          // Random 360 degree roaming angle
+          jelly.targetAngle = (pseudoRandom(elapsed * 1.3 + jelly.seed) - 0.5) * 1.4;
         }
 
-        const marginX = 0.12; const marginY = 0.14;
-        if (jelly.x < marginX) jelly.targetAngle = Math.abs(jelly.targetAngle) + 0.3;
-        if (jelly.x > 1 - marginX) jelly.targetAngle = -Math.abs(jelly.targetAngle) - 0.3;
-        if (jelly.y < marginY) jelly.targetAngle = Math.PI * 0.6 * (jelly.x > 0.5 ? -1 : 1);
-        if (jelly.y > 1 - marginY) jelly.targetAngle = (pseudoRandom(elapsed + jelly.seed) - 0.5) * 0.4;
+        // BOUNDARY REPULSION: Steer smoothly back into screen center, NEVER trapping at top!
+        const marginX = 0.15; const marginY = 0.18;
+        if (jelly.x < marginX) {
+          jelly.targetAngle = 0.6 + pseudoRandom(elapsed + jelly.seed) * 0.6; // Steer right
+        } else if (jelly.x > 1 - marginX) {
+          jelly.targetAngle = -0.6 - pseudoRandom(elapsed + jelly.seed) * 0.6; // Steer left
+        }
 
-        jelly.facing = lerp(jelly.facing, jelly.targetAngle, dt * 1.2);
-        // Smooth tilt of bell dome
-        jelly.visualFacing = lerp(jelly.visualFacing, jelly.facing, dt * 2.0);
+        if (jelly.y < marginY) {
+          // TOP EDGE: Steer DOWNWARD with random left/right angle (Math.PI ± 0.6)
+          const dir = (pseudoRandom(elapsed + jelly.seed) > 0.5 ? 1 : -1);
+          jelly.targetAngle = Math.PI + dir * (0.3 + pseudoRandom(elapsed * 2.1 + jelly.seed) * 0.5);
+        } else if (jelly.y > 1 - marginY) {
+          // BOTTOM EDGE: Steer UPWARD
+          jelly.targetAngle = (pseudoRandom(elapsed + jelly.seed) - 0.5) * 0.8;
+        }
 
+        // INTER-JELLYFISH DISPERSAL REPULSION (Prevents clustering!)
+        for (let j = 0; j < jellies.length; j++) {
+          if (i === j) continue;
+          const other = jellies[j];
+          const dx = jelly.x - other.x;
+          const dy = jelly.y - other.y;
+          const dist = Math.hypot(dx, dy);
+          const minSeparation = 0.22; // Dispersal radius
+          if (dist > 0.0001 && dist < minSeparation) {
+            const push = (minSeparation - dist) / minSeparation * 0.15 * dt;
+            jelly.vx += (dx / dist) * push;
+            jelly.vy += (dy / dist) * push;
+          }
+        }
+
+        jelly.facing = lerp(jelly.facing, jelly.targetAngle, dt * 1.4);
+        jelly.visualFacing = lerp(jelly.visualFacing, jelly.facing, dt * 2.2);
+
+        // SYSTOLE (Jet Contraction along facing vector)
         const isSystole = pulse > 0.35;
         if (isSystole) {
           const contractionPower = Math.pow((pulse - 0.35) / 0.65, 1.8);
           const thrust = contractionPower * jelly.thrustPower * dt;
-          jelly.vx += Math.sin(jelly.facing) * thrust * 0.6;
+          jelly.vx += Math.sin(jelly.facing) * thrust * 0.7;
           jelly.vy -= Math.cos(jelly.facing) * thrust;
         } else {
-          jelly.vy += 0.0015 * dt;
+          // DIASTOLE (Gentle passive sinking/drift downward so they roam full height)
+          jelly.vy += 0.008 * dt;
         }
 
-        const dragFactor = isSystole ? 0.90 : 1.35;
+        // Viscous Fluid Drag
+        const dragFactor = isSystole ? 0.85 : 1.25;
         jelly.vx *= Math.exp(-dragFactor * dt);
         jelly.vy *= Math.exp(-dragFactor * dt);
 
         jelly.x += jelly.vx * dt;
         jelly.y += jelly.vy * dt;
 
-        jelly.x = clamp(jelly.x, 0.05, 0.95);
-        jelly.y = clamp(jelly.y, 0.07, 0.93);
+        jelly.x = clamp(jelly.x, 0.06, 0.94);
+        jelly.y = clamp(jelly.y, 0.08, 0.92);
       }
 
       function drawJellyfish(jelly) {
@@ -161,7 +194,7 @@
         const posY = jelly.y * height;
         const bellTilt = jelly.visualFacing;
 
-        // 1. Ambient Luminescent Glow Sprite
+        // Glow Sprite
         const glowSize = bellRadius * 4.8;
         ctx.save();
         ctx.translate(posX, posY);
@@ -170,7 +203,7 @@
         ctx.drawImage(glowSprite, -glowSize * 0.5, -glowSize * 0.5, glowSize, glowSize);
         ctx.restore();
 
-        // 2. FLUID TENTACLES (Progressive Angle Lag Segment Kinematics — NOT STIFF!)
+        // 8 FLUID TENTACLES (Segment Angle Lag)
         ctx.save();
         ctx.translate(posX, posY);
         ctx.lineWidth = 0.8 * depthScale;
@@ -186,7 +219,6 @@
           const segCount = 12;
           for (let s = 1; s <= segCount; s++) {
             const segRatio = s / segCount;
-            // Progressive segment angle lag: base follows bell tilt, tip lags far behind in fluid drag
             const segLagAngle = bellTilt * Math.pow(1.0 - segRatio, 1.8);
             const dragLagY = -jelly.vy * 90 * segRatio * segRatio * depthScale;
             const wave = Math.sin(elapsed * 2.8 - segRatio * 4.2 + t * 0.8 + jelly.seed) * (8 * segRatio * depthScale);
@@ -201,7 +233,7 @@
         }
         ctx.restore();
 
-        // 3. FLUID CENTRAL ORAL ARMS (4 frilled feeding arms with fluid segment lag)
+        // 4 FLUID ORAL ARMS
         ctx.save();
         ctx.translate(posX, posY);
         ctx.lineWidth = 2.2 * depthScale;
@@ -233,7 +265,7 @@
         }
         ctx.restore();
 
-        // 4. TRANSLUCENT UMBRELLA BELL (Tilts with bellFacing)
+        // 4. TRANSLUCENT UMBRELLA BELL
         ctx.save();
         ctx.translate(posX, posY);
         ctx.rotate(bellTilt);
@@ -257,7 +289,7 @@
         ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // 5. 4 INNER HORSESHOE GONADS
+        // 5. 4 GONADS
         for (let g = 0; g < 4; g++) {
           const angle = (g / 4) * TAU;
           const gx = Math.cos(angle) * bellRadius * 0.35;
@@ -284,9 +316,9 @@
 
         ctx.clearRect(0, 0, width, height);
 
-        for (const jelly of jellies) {
-          updateJellyfish(jelly, dt);
-          drawJellyfish(jelly);
+        for (let i = 0; i < jellies.length; i++) {
+          updateJellyfish(jellies[i], i, dt);
+          drawJellyfish(jellies[i]);
         }
 
         requestAnimationFrame(frame);
