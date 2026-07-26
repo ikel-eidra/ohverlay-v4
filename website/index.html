@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ohverlay — Living Ambient Desktop Environment for Windows</title>
+  <meta name="description" content="Ohverlay brings calm, transparent, interactive nature overlays (fireflies, dragonflies, dandelion seeds) to your Windows desktop. 100% free, offline, and lightweight.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0f17;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-blue: #3b82f6;
+      --accent-blue-hover: #2563eb;
+      --accent-emerald: #10b981;
+      --accent-glow: rgba(59, 130, 246, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Live Hero Canvas Background */
+    #heroCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Header Navbar */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 18px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(11, 15, 23, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-emerald));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      color: #fff;
+      font-size: 18px;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .brand-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    nav a:hover {
+      color: var(--text-main);
+    }
+
+    .btn-download-sm {
+      background: var(--accent-blue);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      text-decoration: none;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .btn-download-sm:hover {
+      background: var(--accent-blue-hover);
+      transform: translateY(-1px);
+    }
+
+    /* Hero Section */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 120px 24px 80px 24px;
+      z-index: 10;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 20px;
+      color: #60a5fa;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 24px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent-emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+      max-width: 840px;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 19px;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin-bottom: 36px;
+      font-weight: 400;
+    }
+
+    .cta-group {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue), #1d4ed8);
+      color: #ffffff;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 16px;
+      text-decoration: none;
+      box-shadow: 0 10px 25px var(--accent-glow);
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 16px;
+      text-decoration: none;
+      border: 1px solid var(--card-border);
+      transition: all 0.25s ease;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-2px);
+    }
+
+    /* Live Interactive Demo Control Dock */
+    .demo-dock {
+      margin-top: 48px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      padding: 16px 28px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .demo-dock span {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .toggle-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: var(--accent-blue);
+      color: #60a5fa;
+    }
+
+    /* Features Section */
+    .features {
+      position: relative;
+      z-index: 10;
+      padding: 100px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .section-header h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      margin-bottom: 12px;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(59, 130, 246, 0.3);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(59, 130, 246, 0.12);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+
+    .card h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Installation Section */
+    .install-section {
+      position: relative;
+      z-index: 10;
+      padding: 80px 40px;
+      max-width: 900px;
+      margin: 0 auto 100px auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      text-align: center;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+      text-align: left;
+    }
+
+    .step-number {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent-blue);
+      margin-bottom: 8px;
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 10;
+      border-top: 1px solid var(--card-border);
+      padding: 40px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    footer a {
+      color: var(--text-main);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Live Canvas Background -->
+  <canvas id="heroCanvas"></canvas>
+
+  <!-- Header -->
+  <header>
+    <a href="#" class="brand">
+      <div class="brand-logo">O</div>
+      <span class="brand-name">Ohverlay</span>
+    </a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#install">Quickstart</a>
+      <a href="https://github.com/michaelfutol/ohverlay-v4" target="_blank">GitHub</a>
+      <a href="https://github.com/michaelfutol/ohverlay-v4/archive/refs/heads/main.zip" class="btn-download-sm">Download Free</a>
+    </nav>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Ohverlay v4.0 Minimal Nature Release
+    </div>
+    <h1>Bring Living Ambient Nature<br>To Your Windows Desktop</h1>
+    <p>Render ultra-lightweight, transparent fireflies, dragonflies, and dandelion seeds over your workspace with zero CPU distraction.</p>
+    
+    <div class="cta-group">
+      <a href="https://github.com/michaelfutol/ohverlay-v4/archive/refs/heads/main.zip" class="btn-primary">
+        <span>⚡ Download Ohverlay (.zip)</span>
+      </a>
+      <a href="https://github.com/michaelfutol/ohverlay-v4" target="_blank" class="btn-secondary">
+        <span>⭐ View Source on GitHub</span>
+      </a>
+    </div>
+
+    <!-- Live Website Interactive Controls -->
+    <div class="demo-dock">
+      <span>Live Canvas Demo:</span>
+      <button class="toggle-btn active" id="toggleFireflies">✨ Fireflies</button>
+      <button class="toggle-btn active" id="toggleDandelions">🌱 Dandelion Seeds</button>
+      <button class="toggle-btn" id="triggerBreeze">🍃 Trigger Breeze</button>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="section-header">
+      <h2>Crafted for Focus & Serenity</h2>
+      <p>Designed to enhance your desktop environment without getting in the way of work.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon">🎛️</div>
+        <h3>Floating Control Center</h3>
+        <p>Left-click the system tray icon anytime to reveal a compact floating control dock. Toggle species, adjust quantities, and change scale instantly.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Click-Through Transparency</h3>
+        <p>All nature overlays run in frameless, hardware-accelerated transparent windows. Your mouse clicks pass right through to your active apps.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🌱</div>
+        <h3>Organic Periodic Breeze</h3>
+        <p>Dandelion seeds float across your displays with realistic physics and 20-minute periodic gentle wind impulses.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>100% Private & Offline</h3>
+        <p>No telemetry, no tracking, and no internet connection required. Runs completely locally on your machine.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🖥️</div>
+        <h3>Multi-Monitor Ready</h3>
+        <p>Automatically detects and spans across all your connected displays seamlessly in high DPI.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">⌨️</div>
+        <h3>Global Hotkey Support</h3>
+        <p>Instantly toggle overlay visibility with <code>Ctrl + Alt + H</code> or switch interactivity modes with <code>Ctrl + Alt + I</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quickstart Installation -->
+  <section class="install-section" id="install">
+    <div class="section-header">
+      <h2>Get Started in 30 Seconds</h2>
+      <p>No setup wizard or background service required. Just extract and run.</p>
+    </div>
+
+    <div class="steps">
+      <div>
+        <div class="step-number">01</div>
+        <h4>Download Portable ZIP</h4>
+        <p style="color: var(--text-muted); font-size: 14px;">Grab the latest lightweight release package from GitHub.</p>
+      </div>
+      <div>
+        <div class="step-number">02</div>
+        <h4>Extract to Folder</h4>
+        <p style="color: var(--text-muted); font-size: 14px;">Unzip the archive to any folder on your Windows PC.</p>
+      </div>
+      <div>
+        <div class="step-number">03</div>
+        <h4>Run Ohverlay.exe</h4>
+        <p style="color: var(--text-muted); font-size: 14px;">Double-click to launch. Control everything from your system tray!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Crafted by <strong>FutolTech</strong> • Open Source under MIT License</p>
+    <p style="margin-top: 8px; font-size: 13px;">
+      <a href="https://github.com/michaelfutol/ohverlay-v4" target="_blank">GitHub Repository</a> • 
+      <a href="https://github.com/michaelfutol/ohverlay-v4/blob/main/PRIVACY.md" target="_blank">Privacy Policy</a>
+    </p>
+  </footer>
+
+  <!-- Live Canvas Background Simulation Script -->
+  <script>
+    (() => {
+      const canvas = document.getElementById('heroCanvas');
+      const ctx = canvas.getContext('2d');
+      let width, height;
+
+      function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      let firefliesActive = true;
+      let dandelionsActive = true;
+      let gust = 0;
+
+      // Fireflies
+      const fireflies = Array.from({ length: 8 }, (_, i) => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: (Math.random() - 0.5) * 0.6,
+        size: 2.5 + Math.random() * 2,
+        flash: Math.random() * Math.PI * 2,
+        flashSpeed: 0.02 + Math.random() * 0.03
+      }));
+
+      // Dandelions
+      const dandelions = Array.from({ length: 5 }, (_, i) => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: 15 + Math.random() * 10,
+        vy: 4 + Math.random() * 4,
+        size: 14 + Math.random() * 6,
+        angle: (Math.random() - 0.5) * 0.3
+      }));
+
+      document.getElementById('toggleFireflies').addEventListener('click', (e) => {
+        firefliesActive = !firefliesActive;
+        e.target.classList.toggle('active', firefliesActive);
+      });
+
+      document.getElementById('toggleDandelions').addEventListener('click', (e) => {
+        dandelionsActive = !dandelionsActive;
+        e.target.classList.toggle('active', dandelionsActive);
+      });
+
+      document.getElementById('triggerBreeze').addEventListener('click', () => {
+        gust += 180;
+      });
+
+      let lastTime = performance.now();
+      function draw(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        gust *= 0.95;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw Fireflies
+        if (firefliesActive) {
+          ctx.save();
+          for (const ff of fireflies) {
+            ff.x += ff.vx + (Math.random() - 0.5) * 0.2;
+            ff.y += ff.vy + (Math.random() - 0.5) * 0.2;
+            ff.flash += ff.flashSpeed;
+
+            if (ff.x < 0) ff.x = width;
+            if (ff.x > width) ff.x = 0;
+            if (ff.y < 0) ff.y = height;
+            if (ff.y > height) ff.y = 0;
+
+            const alpha = (Math.sin(ff.flash) + 1) * 0.45;
+            ctx.fillStyle = `rgba(163, 230, 53, ${alpha})`;
+            ctx.shadowColor = '#a3e635';
+            ctx.shadowBlur = 12 * alpha;
+            ctx.beginPath();
+            ctx.arc(ff.x, ff.y, ff.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        // Draw Dandelions
+        if (dandelionsActive) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255, 255, 245, 0.4)';
+          ctx.lineWidth = 1;
+          for (const dd of dandelions) {
+            dd.x += (dd.vx + gust) * dt;
+            dd.y += dd.vy * dt;
+
+            if (dd.x > width + 40) dd.x = -40;
+            if (dd.y > height + 40) dd.y = -40;
+
+            ctx.save();
+            ctx.translate(dd.x, dd.y);
+            ctx.rotate(dd.angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0); ctx.lineTo(0, dd.size);
+            ctx.stroke();
+
+            // Pappus filaments
+            for (let a = -1.2; a <= 1.2; a += 0.4) {
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(Math.sin(a) * (dd.size * 0.7), -Math.cos(a) * (dd.size * 0.7));
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+          ctx.restore();
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      requestAnimationFrame(draw);
+    })();
+  </script>
+</body>
+</html>
