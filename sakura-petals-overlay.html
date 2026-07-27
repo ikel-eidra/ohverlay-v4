@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sakura Cherry Blossom Petals — Ground Accumulation & Wind Physics</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+      const TAU = Math.PI * 2;
+
+      let width = 1, height = 1, pixelRatio = 1;
+      let elapsed = 0, lastTime = performance.now();
+      let overlayScale = 1.0;
+      let targetCount = 18;
+
+      // 5-Minute Periodic Wind Gust State
+      let windTimer = 0;
+      const WIND_INTERVAL = 300; // 5 minutes in seconds (300s)
+      let globalWindImpulse = 0;
+      let windDirection = 1; // +1 = Left-to-Right, -1 = Right-to-Left
+
+      function parseParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const scaleParam = parseFloat(urlParams.get('scale'));
+        if (!isNaN(scaleParam) && scaleParam > 0) overlayScale = scaleParam;
+        const countParam = parseInt(urlParams.get('count'), 10);
+        if (!isNaN(countParam) && countParam > 0) targetCount = countParam;
+      }
+      parseParams();
+
+      function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+      function pseudoRandom(seed, salt = 0) {
+        const x = Math.sin(seed * 127.1 + salt * 311.7) * 43758.5453123;
+        return x - Math.floor(x);
+      }
+
+      function resize() {
+        width = Math.max(1, window.innerWidth);
+        height = Math.max(1, window.innerHeight);
+        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      const PETAL_PALETTES = [
+        { primary: 'rgba(255, 183, 197, 0.76)', secondary: 'rgba(255, 218, 224, 0.52)', shadow: 'rgba(219, 112, 147, 0.35)', stem: '#b85276' },
+        { primary: 'rgba(255, 192, 203, 0.80)', secondary: 'rgba(255, 235, 240, 0.58)', shadow: 'rgba(199, 92, 127, 0.38)', stem: '#a04265' },
+        { primary: 'rgba(247, 143, 179, 0.72)', secondary: 'rgba(255, 204, 221, 0.48)', shadow: 'rgba(178, 60, 100, 0.40)', stem: '#8a2b4e' }
+      ];
+
+      function createPetal(index) {
+        const seed = index + 1;
+        const palette = PETAL_PALETTES[index % PETAL_PALETTES.length];
+        
+        return {
+          x: pseudoRandom(seed, 1) * width,
+          y: -20 - pseudoRandom(seed, 2) * height * 0.8,
+          z: 0.35 + pseudoRandom(seed, 3) * 0.65,
+          size: (12 + pseudoRandom(seed, 4) * 8) * overlayScale,
+          rotation: pseudoRandom(seed, 5) * TAU,
+          rotationSpeed: (pseudoRandom(seed, 6) - 0.5) * 1.8,
+          flipPhase: pseudoRandom(seed, 7) * TAU,
+          flipSpeed: 1.4 + pseudoRandom(seed, 8) * 2.2,
+          swayPhase: pseudoRandom(seed, 9) * TAU,
+          swaySpeed: 0.9 + pseudoRandom(seed, 10) * 1.6,
+          swayAmplitude: 20 + pseudoRandom(seed, 11) * 30,
+          fallSpeed: 24 + pseudoRandom(seed, 12) * 36,
+          isGrounded: false,
+          groundX: 0,
+          palette,
+          seed
+        };
+      }
+
+      let petals = Array.from({ length: targetCount }, (_, i) => createPetal(i));
+
+      function updatePetal(petal, dt) {
+        const groundY = height - 36; // Just above taskbar line
+
+        // If strong wind gust is active, blow grounded petals back into the air!
+        if (globalWindImpulse > 0.1 && petal.isGrounded) {
+          petal.isGrounded = false;
+          petal.vy = - (40 + Math.random() * 60) * globalWindImpulse;
+          petal.vx = windDirection * (80 + Math.random() * 120) * globalWindImpulse;
+        }
+
+        if (petal.isGrounded) {
+          // Petal rests gracefully at taskbar line
+          petal.y = lerp(petal.y, groundY + Math.sin(petal.seed * 3) * 4, dt * 4.0);
+          petal.rotation = lerp(petal.rotation, (petal.seed % 2 === 0 ? 0.3 : -0.3), dt * 3.0);
+          return;
+        }
+
+        petal.swayPhase += dt * petal.swaySpeed;
+        petal.flipPhase += dt * petal.flipSpeed;
+        petal.rotation += petal.rotationSpeed * dt;
+
+        const swayX = Math.sin(petal.swayPhase) * petal.swayAmplitude;
+        const windX = windDirection * globalWindImpulse * 140;
+
+        petal.x += (swayX * 0.35 + windX) * dt;
+        petal.y += (petal.fallSpeed + Math.sin(petal.flipPhase) * 6) * dt;
+
+        // Check ground accumulation at top of taskbar line
+        if (petal.y >= groundY) {
+          petal.y = groundY;
+          petal.isGrounded = true;
+          petal.groundX = petal.x;
+        }
+
+        // Screen boundary wrap if blown far off-screen
+        if (petal.x < -80) petal.x = width + 60;
+        if (petal.x > width + 80) petal.x = -60;
+      }
+
+      // Draw characteristic notched Sakura Cherry Blossom Petal Path
+      function drawSakuraPetalPath(ctx, size) {
+        ctx.beginPath();
+        ctx.moveTo(0, size * 0.6); // Base stem
+        
+        // Left side curve to top notch
+        ctx.bezierCurveTo(-size * 0.75, size * 0.2, -size * 0.8, -size * 0.4, -size * 0.25, -size * 0.85);
+        
+        // Characteristic top center notch cut
+        ctx.lineTo(0, -size * 0.62);
+        ctx.lineTo(size * 0.25, -size * 0.85);
+
+        // Right side curve back to base
+        ctx.bezierCurveTo(size * 0.8, -size * 0.4, size * 0.75, size * 0.2, 0, size * 0.6);
+        ctx.closePath();
+      }
+
+      function drawPetal(petal) {
+        const depthScale = 0.65 + petal.z * 0.7;
+        const size = petal.size * depthScale;
+        const flipScale = Math.cos(petal.flipPhase);
+
+        ctx.save();
+        ctx.translate(petal.x, petal.y);
+        ctx.rotate(petal.rotation + (petal.isGrounded ? 0 : Math.sin(petal.swayPhase) * 0.20));
+        ctx.scale(flipScale, 1.0); // 3D flip effect
+
+        // Soft ground/air shadow
+        ctx.save();
+        ctx.translate(2, petal.isGrounded ? 2 : 4);
+        ctx.globalAlpha = petal.isGrounded ? 0.25 : 0.12;
+        ctx.fillStyle = '#000000';
+        drawSakuraPetalPath(ctx, size);
+        ctx.fill();
+        ctx.restore();
+
+        // Translucent Sakura Pink Radial Fill
+        const petalGrad = ctx.createRadialGradient(0, -size * 0.2, 1, 0, 0, size * 0.9);
+        petalGrad.addColorStop(0, petal.palette.secondary);
+        petalGrad.addColorStop(0.65, petal.palette.primary);
+        petalGrad.addColorStop(1, petal.palette.shadow);
+
+        ctx.fillStyle = petalGrad;
+        drawSakuraPetalPath(ctx, size);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+
+        // Delicate central petal vein
+        ctx.strokeStyle = petal.palette.stem;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(0, size * 0.55);
+        ctx.lineTo(0, -size * 0.4);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function frame(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        elapsed += dt;
+
+        // 5-Minute Periodic Wind Gust Logic
+        windTimer += dt;
+        if (windTimer >= WIND_INTERVAL) {
+          windTimer = 0;
+          globalWindImpulse = 1.0;
+          windDirection = (Math.random() > 0.5 ? 1 : -1);
+        }
+
+        // Decay wind impulse smoothly
+        if (globalWindImpulse > 0) {
+          globalWindImpulse = Math.max(0, globalWindImpulse - dt * 0.18);
+        }
+
+        ctx.clearRect(0, 0, width, height);
+
+        for (const petal of petals) {
+          updatePetal(petal, dt);
+          drawPetal(petal);
+        }
+
+        requestAnimationFrame(frame);
+      }
+
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

@@ -190,7 +190,7 @@ class ControlCenter(QWidget):
             ("✨ Fireflies", "fireflies", 6),
             ("🪶 Dragonflies", "dragonflies", 2),
             ("🌱 Dandelions", "dandelions", 3),
-            ("🍂 Autumn Leaves", "autumn_leaves", 12),
+            ("🌸 Sakura Petals", "sakura_petals", 18),
         ]
 
         for label_text, oid, default_count in species_list:

@@ -49,11 +49,11 @@ OVERLAY_REGISTRY = [
         "description": "Two realistic dragonflies hovering and darting",
     },
     {
-        "id": "autumn_leaves",
-        "name": "Autumn Leaves",
-        "file": "autumn-leaves-overlay.html",
+        "id": "sakura_petals",
+        "name": "Sakura Cherry Blossom Petals",
+        "file": "sakura-petals-overlay.html",
         "category": "ambient",
-        "description": "Realistic 3D tumbling and swaying autumn maple leaves floating down display",
+        "description": "Translucent sakura petals falling, resting at taskbar ground, and blown by 5-minute breeze",
     },
 ]
 
