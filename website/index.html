@@ -3,22 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ohverlay — Living Ambient Desktop Environment for Windows</title>
-  <meta name="description" content="Ohverlay brings calm, transparent, interactive nature overlays (fireflies, dragonflies, dandelion seeds, sakura cherry blossom petals) to your Windows desktop. 100% free, offline, and lightweight.">
+  <title>Ohverlay — Desktop Overlay Platform for Productivity, Ambient Nature & Technical Workflows</title>
+  <meta name="description" content="Ohverlay is a privacy-conscious desktop overlay platform for productivity, technical-office coordination, learning, ambient nature, and optional intelligent assistance.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg-dark: #070a12;
-      --card-bg: rgba(13, 19, 32, 0.70);
-      --card-border: rgba(255, 255, 255, 0.07);
+      --card-bg: rgba(13, 19, 32, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
       --text-main: #f3f4f6;
       --text-muted: #94a3b8;
       --accent-blue: #3b82f6;
       --accent-blue-hover: #2563eb;
       --accent-emerald: #10b981;
-      --accent-glow: rgba(16, 185, 129, 0.2);
+      --accent-amber: #f59e0b;
+      --accent-purple: #8b5cf6;
+      --accent-glow: rgba(59, 130, 246, 0.15);
     }
 
     * {
@@ -36,14 +38,14 @@
       position: relative;
     }
 
-    /* Ambient Soft Aurora Background Glows */
+    /* Ambient Soft Background Glows */
     .aurora-glow-1 {
       position: fixed;
       top: -10%;
       left: 15%;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(0,0,0,0) 70%);
+      width: 650px;
+      height: 650px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.07) 0%, rgba(0,0,0,0) 70%);
       pointer-events: none;
       z-index: 0;
     }
@@ -54,20 +56,9 @@
       right: 10%;
       width: 700px;
       height: 700px;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.07) 0%, rgba(0,0,0,0) 70%);
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, rgba(0,0,0,0) 70%);
       pointer-events: none;
       z-index: 0;
-    }
-
-    /* Live Hero Canvas Background */
-    #heroCanvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 1;
     }
 
     /* Header Navbar */
@@ -80,7 +71,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(7, 10, 18, 0.85);
+      background: rgba(7, 10, 18, 0.88);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--card-border);
@@ -120,7 +111,7 @@
     nav {
       display: flex;
       align-items: center;
-      gap: 28px;
+      gap: 24px;
     }
 
     nav a {
@@ -135,10 +126,10 @@
       color: var(--text-main);
     }
 
-    .btn-download-sm {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      color: #34d399;
+    .btn-nav-primary {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #60a5fa;
       padding: 8px 18px;
       border-radius: 8px;
       font-weight: 600;
@@ -147,8 +138,8 @@
       transition: all 0.2s ease;
     }
 
-    .btn-download-sm:hover {
-      background: rgba(16, 185, 129, 0.25);
+    .btn-nav-primary:hover {
+      background: rgba(59, 130, 246, 0.25);
       transform: translateY(-1px);
     }
 
@@ -161,8 +152,10 @@
       justify-content: center;
       align-items: center;
       text-align: center;
-      padding: 130px 24px 80px 24px;
+      padding: 140px 24px 80px 24px;
       z-index: 10;
+      max-width: 1280px;
+      margin: 0 auto;
     }
 
     .badge {
@@ -170,10 +163,10 @@
       align-items: center;
       gap: 8px;
       padding: 6px 18px;
-      background: rgba(16, 185, 129, 0.10);
-      border: 1px solid rgba(16, 185, 129, 0.25);
+      background: rgba(59, 130, 246, 0.10);
+      border: 1px solid rgba(59, 130, 246, 0.25);
       border-radius: 20px;
-      color: #34d399;
+      color: #60a5fa;
       font-size: 13px;
       font-weight: 500;
       margin-bottom: 24px;
@@ -183,73 +176,72 @@
     .badge-dot {
       width: 6px;
       height: 6px;
-      background-color: var(--accent-emerald);
+      background-color: var(--accent-blue);
       border-radius: 50%;
-      box-shadow: 0 0 8px var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-blue);
     }
 
     h1 {
       font-family: 'Outfit', sans-serif;
-      font-size: 58px;
+      font-size: 56px;
       font-weight: 800;
       line-height: 1.15;
       letter-spacing: -1.5px;
-      max-width: 860px;
+      max-width: 900px;
       margin-bottom: 20px;
       background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .hero p {
-      font-size: 19px;
-      color: var(--text-muted);
-      max-width: 660px;
-      margin-bottom: 36px;
-      font-weight: 400;
+    .hero-tagline {
+      font-size: 20px;
+      color: #e2e8f0;
+      font-weight: 500;
+      margin-bottom: 12px;
+      max-width: 780px;
     }
 
-    .zen-quote {
-      font-style: italic;
-      color: #64748b;
-      font-size: 14px;
-      margin-top: -16px;
-      margin-bottom: 32px;
+    .hero-support {
+      font-size: 16px;
+      color: var(--text-muted);
+      max-width: 720px;
+      margin-bottom: 36px;
+      line-height: 1.6;
     }
 
     .cta-group {
       display: flex;
       gap: 16px;
       align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #10b981, #059669);
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
       color: #ffffff;
-      padding: 14px 32px;
+      padding: 14px 28px;
       border-radius: 10px;
       font-weight: 600;
-      font-size: 16px;
+      font-size: 15px;
       text-decoration: none;
-      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25);
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
       transition: all 0.25s ease;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
 
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 14px 30px rgba(16, 185, 129, 0.35);
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.35);
     }
 
     .btn-secondary {
       background: rgba(255, 255, 255, 0.05);
       color: var(--text-main);
-      padding: 14px 28px;
+      padding: 14px 24px;
       border-radius: 10px;
       font-weight: 600;
-      font-size: 16px;
+      font-size: 15px;
       text-decoration: none;
       border: 1px solid var(--card-border);
       transition: all 0.25s ease;
@@ -260,282 +252,298 @@
       transform: translateY(-2px);
     }
 
-    /* Live Interactive Demo Control Dock */
-    .demo-dock {
-      margin-top: 48px;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      backdrop-filter: blur(16px);
-      padding: 16px 28px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .demo-dock span {
-      font-size: 13px;
+    .btn-tertiary {
       color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .toggle-btn {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.10);
-      color: var(--text-main);
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
+      padding: 14px 20px;
       font-weight: 500;
-      transition: all 0.2s ease;
+      font-size: 15px;
+      text-decoration: none;
+      transition: color 0.2s ease;
     }
 
-    .toggle-btn.active {
-      background: rgba(16, 185, 129, 0.18);
-      border-color: var(--accent-emerald);
-      color: #34d399;
+    .btn-tertiary:hover {
+      color: var(--text-main);
     }
 
-    /* Analytics Data Monitor Dashboard Section */
-    .analytics-section {
+    /* Controlled Desktop Stage (Strictly Confined Animations) */
+    .desktop-stage-container {
+      margin-top: 50px;
+      width: 100%;
+      max-width: 1040px;
+      background: rgba(10, 14, 26, 0.90);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(59, 130, 246, 0.1);
       position: relative;
-      z-index: 10;
-      padding: 80px 40px;
-      max-width: 1200px;
-      margin: 0 auto;
     }
 
-    .analytics-card {
-      background: rgba(10, 15, 26, 0.85);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 40px;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(16, 185, 129, 0.08);
-    }
-
-    .analytics-header {
+    .stage-header {
+      padding: 14px 20px;
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid var(--card-border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 36px;
-      flex-wrap: wrap;
-      gap: 16px;
     }
 
-    .analytics-header h3 {
-      font-family: 'Outfit', sans-serif;
-      font-size: 26px;
-      font-weight: 700;
-      color: #ffffff;
+    .stage-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .live-status-pill {
-      display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .stage-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .stage-tab {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .stage-tab.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: var(--accent-blue);
+      color: #60a5fa;
+    }
+
+    .stage-screen {
+      position: relative;
+      height: 480px;
+      width: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #0f172a 0%, #070a12 100%);
+    }
+
+    #stageCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .stage-mock-window {
+      position: absolute;
+      top: 60px;
+      left: 80px;
+      width: 600px;
+      height: 320px;
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      padding: 20px;
+      text-align: left;
+    }
+
+    .stage-status-badge {
+      position: absolute;
+      bottom: 16px;
+      right: 20px;
       padding: 6px 14px;
       border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #34d399;
-    }
-
-    .pulse-dot {
-      width: 8px;
-      height: 8px;
-      background-color: var(--accent-emerald);
-      border-radius: 50%;
-      animation: pulseGlow 1.8s infinite ease-in-out;
-    }
-
-    @keyframes pulseGlow {
-      0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px var(--accent-emerald); }
-      50% { transform: scale(1.4); opacity: 0.5; box-shadow: 0 0 20px var(--accent-emerald); }
-    }
-
-    .analytics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-      margin-bottom: 32px;
-    }
-
-    .metric-box {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--card-border);
-      padding: 24px;
-      border-radius: 16px;
-      text-align: left;
-      transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-
-    .metric-box:hover {
-      transform: translateY(-3px);
-      border-color: rgba(59, 130, 246, 0.4);
-    }
-
-    .metric-icon {
-      font-size: 24px;
-      margin-bottom: 12px;
-    }
-
-    .metric-value {
-      font-family: 'Outfit', sans-serif;
-      font-size: 36px;
-      font-weight: 800;
-      color: #ffffff;
-      line-height: 1.1;
-      margin-bottom: 6px;
-    }
-
-    .metric-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-
-    .metric-subtext {
       font-size: 11px;
-      color: #34d399;
-      margin-top: 4px;
       font-weight: 600;
+      letter-spacing: 0.3px;
     }
 
-    /* Live Telemetry Log Feed */
-    .telemetry-log {
-      background: rgba(5, 8, 15, 0.90);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 12px;
-      padding: 16px 20px;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 12px;
-      color: #94a3b8;
-      max-height: 140px;
-      overflow-y: auto;
-    }
+    .status-available { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+    .status-prototype { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; }
+    .status-planned { background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c084fc; }
 
-    .log-line {
-      margin-bottom: 6px;
-      display: flex;
-      gap: 12px;
-    }
-
-    .log-time { color: #64748b; }
-    .log-msg { color: #34d399; }
-    .log-info { color: #60a5fa; }
-
-    /* Features Section */
-    .features {
+    /* Sections */
+    section {
       position: relative;
       z-index: 10;
-      padding: 80px 40px;
+      padding: 90px 40px;
       max-width: 1200px;
       margin: 0 auto;
     }
 
-    .section-header {
-      text-align: center;
-      margin-bottom: 60px;
-    }
-
-    .section-header h2 {
+    .section-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 38px;
+      font-size: 36px;
       font-weight: 700;
       letter-spacing: -0.8px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
+      text-align: center;
     }
 
-    .section-header p {
+    .section-subtitle {
       color: var(--text-muted);
-      font-size: 16px;
+      font-size: 17px;
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 50px auto;
     }
 
-    .grid {
+    /* Product Lanes Section */
+    .lanes-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
       gap: 24px;
     }
 
-    .card {
+    .lane-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      backdrop-filter: blur(12px);
-      padding: 32px;
       border-radius: 16px;
+      padding: 32px;
+      text-align: left;
       transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
-    .card:hover {
+    .lane-card:hover {
       transform: translateY(-4px);
-      border-color: rgba(16, 185, 129, 0.3);
+      border-color: rgba(59, 130, 246, 0.3);
       box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
     }
 
-    .card-icon {
-      width: 48px;
-      height: 48px;
-      background: rgba(16, 185, 129, 0.12);
-      border-radius: 12px;
+    .lane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .lane-icon-box {
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      margin-bottom: 20px;
+      font-size: 20px;
+      color: #60a5fa;
     }
 
-    .card h3 {
+    .status-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .lane-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 600;
       margin-bottom: 10px;
     }
 
-    .card p {
+    .lane-desc {
       color: var(--text-muted);
       font-size: 14px;
       line-height: 1.6;
+      margin-bottom: 20px;
     }
 
-    /* Installation Section */
-    .install-section {
-      position: relative;
-      z-index: 10;
-      padding: 80px 40px;
-      max-width: 900px;
-      margin: 0 auto 100px auto;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 24px;
-      text-align: center;
-    }
-
-    .steps {
+    /* What Works Today */
+    .feature-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 24px;
-      margin-top: 40px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
       text-align: left;
     }
 
-    .step-number {
-      font-family: 'Outfit', sans-serif;
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--accent-emerald);
+    .feature-item h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
       margin-bottom: 8px;
+    }
+
+    .feature-item p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Technical Office Origins */
+    .history-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: left;
+    }
+
+    .history-badge {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    /* Current Runtime Card (Replaces Telemetry) */
+    .runtime-card {
+      background: rgba(10, 15, 26, 0.85);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 20px;
+      padding: 36px;
+      text-align: left;
+    }
+
+    .runtime-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .runtime-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .runtime-val {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .runtime-lbl {
+      font-size: 12px;
+      color: var(--text-muted);
     }
 
     /* Footer */
@@ -543,1015 +551,561 @@
       position: relative;
       z-index: 10;
       border-top: 1px solid var(--card-border);
-      padding: 40px;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 14px;
+      padding: 60px 40px 40px 40px;
+      background: #04060c;
     }
 
-    footer a {
-      color: var(--text-main);
+    .footer-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 2fr repeat(3, 1fr);
+      gap: 40px;
+      text-align: left;
+      margin-bottom: 40px;
+    }
+
+    .footer-brand h4 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 12px;
+    }
+
+    .footer-brand p {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 320px;
+    }
+
+    .footer-col h5 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .footer-col ul {
+      list-style: none;
+    }
+
+    .footer-col li {
+      margin-bottom: 10px;
+    }
+
+    .footer-col a {
+      color: var(--text-muted);
       text-decoration: none;
+      font-size: 13px;
+      transition: color 0.2s ease;
+    }
+
+    .footer-col a:hover {
+      color: #ffffff;
+    }
+
+    .footer-bottom {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      flex-wrap: wrap;
+      gap: 16px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Ambient Soft Aurora Glows -->
+  <!-- Ambient Soft Background Glows -->
   <div class="aurora-glow-1"></div>
   <div class="aurora-glow-2"></div>
 
-  <!-- Live Canvas Background -->
-  <canvas id="heroCanvas"></canvas>
-
   <!-- Header -->
   <header>
-    <a href="#" class="brand">
+    <a href="index.html" class="brand">
       <div class="brand-logo">O</div>
       <span class="brand-name">Ohverlay</span>
     </a>
     <nav>
-      <a href="#analytics">Live Analytics</a>
-      <a href="#features">Serene Features</a>
-      <a href="#install">Quickstart</a>
-      <a href="https://github.com/michaelfutol/ohverlay-v4" target="_blank">GitHub</a>
-      <a href="https://github.com/michaelfutol/ohverlay-v4/archive/refs/heads/main.zip" class="btn-download-sm download-trigger">Download Free</a>
+      <a href="#lanes">Platform Lanes</a>
+      <a href="technical-office.html">Technical Office</a>
+      <a href="living-overlays.html">Living Overlays</a>
+      <a href="whitepaper.html">Whitepaper</a>
+      <a href="ethics.html">Ethics</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="download.html" class="btn-nav-primary">Download Development Preview</a>
     </nav>
   </header>
 
-  <!-- Hero -->
+  <!-- Hero Section -->
   <section class="hero">
     <div class="badge">
       <span class="badge-dot"></span>
-      Ohverlay Ambient Nature Release
+      Privacy-Conscious Desktop Overlay Platform
     </div>
-    <h1>Bring Serene Ambient Nature<br>To Your Windows Desktop</h1>
-    <p>Render ultra-lightweight, transparent fireflies, dragonflies, dandelion seeds, and falling sakura cherry blossom petals over your workspace with zero CPU distraction.</p>
     
-    <div class="zen-quote">"In the middle of a busy workday, find a quiet moment of calm."</div>
+    <h1>Your desktop can be useful, alive, and calm.</h1>
+
+    <div class="hero-tagline">
+      Useful information and living experiences, gently layered over your workspace.
+    </div>
+
+    <div class="hero-support">
+      Ohverlay places useful information, coordinated workflows, learning prompts, and living digital experiences above the workspace without taking over the applications underneath.
+    </div>
 
     <div class="cta-group">
-      <a href="https://github.com/michaelfutol/ohverlay-v4/archive/refs/heads/main.zip" class="btn-primary download-trigger">
-        <span>⚡ Download Ohverlay (.zip)</span>
-      </a>
-      <a href="https://github.com/michaelfutol/ohverlay-v4" target="_blank" class="btn-secondary">
-        <span>⭐ View Source on GitHub</span>
-      </a>
+      <a href="#lanes" class="btn-primary">Explore Ohverlay</a>
+      <a href="download.html" class="btn-secondary">Download Development Preview</a>
+      <a href="whitepaper.html" class="btn-tertiary">Read the Vision →</a>
     </div>
 
-    <!-- Live Website Interactive Controls -->
-    <div class="demo-dock">
-      <span>Exact Desktop Replica Live Canvas:</span>
-      <button class="toggle-btn active" id="toggleDragonflies">🪶 Dragonflies (2)</button>
-      <button class="toggle-btn active" id="toggleDandelions">🌱 Dandelion Seeds (3)</button>
-      <button class="toggle-btn active" id="toggleFireflies">✨ Fireflies (6)</button>
-      <button class="toggle-btn active" id="toggleSakura">🌸 Sakura Petals (18)</button>
-    </div>
-  </section>
-
-  <!-- REAL-TIME VERIFIED DATA ANALYTICS MONITOR SECTION -->
-  <section class="analytics-section" id="analytics">
-    <div class="analytics-card">
-      <div class="analytics-header">
-        <h3>
-          <span>📊 Real-Time Ecosystem & GitHub Analytics</span>
-        </h3>
-        <div class="live-status-pill">
-          <span class="pulse-dot"></span>
-          <span>REAL-TIME VERIFIED DATA</span>
+    <!-- Controlled Desktop Stage (Strictly Confined Animations) -->
+    <div class="desktop-stage-container">
+      <div class="stage-header">
+        <div class="stage-title">
+          <span>🖥️ Interactive Ohverlay Preview</span>
+        </div>
+        <div class="stage-tabs">
+          <button class="stage-tab active" data-scene="nature">Living Nature</button>
+          <button class="stage-tab" data-scene="sticky">Sticky Instructions</button>
+          <button class="stage-tab" data-scene="learning">Learning Prompts</button>
+          <button class="stage-tab" data-scene="handoff">Technical Office Handoff</button>
         </div>
       </div>
 
-      <div class="analytics-grid">
-        <div class="metric-box">
-          <div class="metric-icon">👁️</div>
-          <div class="metric-value" id="valVisitors">1</div>
-          <div class="metric-label">Actual Live Session Visits</div>
-          <div class="metric-subtext">↑ Real-Time Browser Session</div>
+      <div class="stage-screen">
+        <canvas id="stageCanvas"></canvas>
+
+        <!-- Simulated Active Desktop Window -->
+        <div class="stage-mock-window" id="stageMockWindow">
+          <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">Active Workspace Application</div>
+          <div style="font-size: 15px; font-weight: 600; color: #f1f5f9; margin-bottom: 12px;" id="stageSceneTitle">
+            Living Nature Overlay Architecture
+          </div>
+          <div style="font-size: 13px; color: #94a3b8; line-height: 1.5;" id="stageSceneDesc">
+            Frameless, hardware-accelerated transparent canvas floating over desktop windows with click-through input pass-through.
+          </div>
         </div>
 
-        <div class="metric-box">
-          <div class="metric-icon">⚡</div>
-          <div class="metric-value" id="valDownloads">0</div>
-          <div class="metric-label">GitHub Verified Downloads</div>
-          <div class="metric-subtext" id="subDownloads">Synced via GitHub REST API</div>
-        </div>
-
-        <div class="metric-box">
-          <div class="metric-icon">🌸</div>
-          <div class="metric-value" id="valEcosystem">29</div>
-          <div class="metric-label">Active Canvas Entities</div>
-          <div class="metric-subtext">Taskbar Ground Physics Active</div>
-        </div>
-
-        <div class="metric-box">
-          <div class="metric-icon">💻</div>
-          <div class="metric-value" id="valCpu">&lt; 0.18%</div>
-          <div class="metric-label">Average CPU Footprint</div>
-          <div class="metric-subtext">100% Offline & Private</div>
-        </div>
-      </div>
-
-      <!-- Live Activity Terminal Log -->
-      <div class="telemetry-log" id="telemetryLog">
-        <div class="log-line">
-          <span class="log-time">[SYSTEM]</span>
-          <span class="log-info">Real-time Verified Analytics Engine active. Zero fake counts loaded.</span>
-        </div>
-        <div class="log-line">
-          <span class="log-time">[PHYSICS]</span>
-          <span class="log-msg">Sakura Cherry Blossom engine initialized. Taskbar ground resting & 5-min wind impulse active.</span>
+        <div class="stage-status-badge status-available" id="stageStatusBadge">
+          STATUS: Available Now
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Features -->
-  <section class="features" id="features">
-    <div class="section-header">
-      <h2>Crafted for Focus, Calm & Serenity</h2>
-      <p>Designed to enhance your desktop environment quietly without getting in the way of work.</p>
+  <!-- One Platform, Multiple Experiences (The 6 Product Lanes) -->
+  <section id="lanes">
+    <h2 class="section-title">One Platform, Multiple Experiences</h2>
+    <p class="section-subtitle">Ohverlay provides six specialized functional lanes designed to enrich your workspace peacefully.</p>
+
+    <div class="lanes-grid">
+
+      <!-- Lane 1: Living Overlays -->
+      <div class="lane-card">
+        <div>
+          <div class="lane-header">
+            <div class="lane-icon-box">🌿</div>
+            <span class="status-pill status-available">Available now</span>
+          </div>
+          <h3 class="lane-title">Living Overlays</h3>
+          <p class="lane-desc">Ultra-lightweight, transparent ambient nature overlays including fireflies, dragonflies, dandelion seeds, and sakura cherry blossom petals.</p>
+        </div>
+        <a href="living-overlays.html" style="color: #60a5fa; font-size: 13px; font-weight: 600; text-decoration: none;">View Living Overlays →</a>
+      </div>
+
+      <!-- Lane 2: Technical Office -->
+      <div class="lane-card">
+        <div>
+          <div class="lane-header">
+            <div class="lane-icon-box">🏢</div>
+            <span class="status-pill status-prototype">Legacy prototype / Scheduled rebuild</span>
+          </div>
+          <h3 class="lane-title">Technical Office</h3>
+          <p class="lane-desc">Coordinated office task distribution, sticky instructions, timed countdowns, supervisor/staff reporting, and local-network file handoffs.</p>
+        </div>
+        <a href="technical-office.html" style="color: #fbbf24; font-size: 13px; font-weight: 600; text-decoration: none;">Explore Technical Office Origins →</a>
+      </div>
+
+      <!-- Lane 3: Productivity -->
+      <div class="lane-card">
+        <div>
+          <div class="lane-header">
+            <div class="lane-icon-box">⏱️</div>
+            <span class="status-pill status-planned">Planned rebuild</span>
+          </div>
+          <h3 class="lane-title">Productivity Overlays</h3>
+          <p class="lane-desc">Minimalist Pomodoro countdowns, quiet task checklists, and ambient focus boundaries that remain visible without interrupting workflow.</p>
+        </div>
+        <a href="roadmap.html" style="color: #c084fc; font-size: 13px; font-weight: 600; text-decoration: none;">View Productivity Roadmap →</a>
+      </div>
+
+      <!-- Lane 4: Learning -->
+      <div class="lane-card">
+        <div>
+          <div class="lane-header">
+            <div class="lane-icon-box">📘</div>
+            <span class="status-pill status-planned">Planned</span>
+          </div>
+          <h3 class="lane-title">Learning Overlays</h3>
+          <p class="lane-desc">Passive spaced-repetition micro-learning, vocabulary prompts, key concept reminders, and exam review overlays.</p>
+        </div>
+        <a href="roadmap.html" style="color: #c084fc; font-size: 13px; font-weight: 600; text-decoration: none;">View Learning Spec →</a>
+      </div>
+
+      <!-- Lane 5: Blue AI -->
+      <div class="lane-card">
+        <div>
+          <div class="lane-header">
+            <div class="lane-icon-box">🧠</div>
+            <span class="status-pill status-planned">Research & Future Integration</span>
+          </div>
+          <h3 class="lane-title">Blue AI Assistance</h3>
+          <p class="lane-desc">Optional screen-aware contextual intelligent assistant providing unobtrusive suggestions and task support upon explicit trigger.</p>
+        </div>
+        <a href="whitepaper.html#blue-ai" style="color: #c084fc; font-size: 13px; font-weight: 600; text-decoration: none;">Read Blue AI Whitepaper →</a>
+      </div>
+
+      <!-- Lane 6: Creator Ecosystem -->
+      <div class="lane-card">
+        <div>
+          <div class="lane-header">
+            <div class="lane-icon-box">🧩</div>
+            <span class="status-pill status-planned">Planned</span>
+          </div>
+          <h3 class="lane-title">Creator Ecosystem</h3>
+          <p class="lane-desc">Open package specification allowing creators and developers to build, share, and publish custom transparent desktop overlays.</p>
+        </div>
+        <a href="roadmap.html#ecosystem" style="color: #c084fc; font-size: 13px; font-weight: 600; text-decoration: none;">View Package Spec →</a>
+      </div>
+
     </div>
+  </section>
 
-    <div class="grid">
-      <div class="card">
-        <div class="card-icon">🎛️</div>
-        <h3>Floating Control Center</h3>
-        <p>Left-click the system tray icon anytime to reveal a compact floating control dock. Toggle species, adjust quantities, and change scale instantly.</p>
+  <!-- What Works Today (Verified Current Deliverables) -->
+  <section>
+    <h2 class="section-title">What Works Today</h2>
+    <p class="section-subtitle">Verified production capabilities available in the current Ohverlay Desktop Runtime.</p>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <h4>Persistent Control Center</h4>
+        <p>System tray anchored floating panel for toggling overlays, adjusting species quantities, and scaling objects.</p>
       </div>
 
-      <div class="card">
-        <div class="card-icon">⚡</div>
-        <h3>Click-Through Transparency</h3>
-        <p>All nature overlays run in frameless, hardware-accelerated transparent windows. Your mouse clicks pass right through to your active apps.</p>
+      <div class="feature-item">
+        <h4>Fireflies Overlay</h4>
+        <p>Six realistic fireflies with organic ignition cycles, 3D banking, and smooth forward flight kinematics.</p>
       </div>
 
-      <div class="card">
-        <div class="card-icon">🌱</div>
-        <h3>Organic Periodic Breeze</h3>
-        <p>Sakura petals and dandelion seeds float across your displays with realistic physics and 5-minute periodic wind impulses.</p>
+      <div class="feature-item">
+        <h4>Dragonflies Overlay</h4>
+        <p>Two high-fidelity dragonflies with double wing-beat acoustics, multi-segment abdomen vectoring, and boundary steering.</p>
       </div>
 
-      <div class="card">
-        <div class="card-icon">🔒</div>
-        <h3>100% Private & Offline</h3>
-        <p>No telemetry, no tracking, and no internet connection required. Runs completely locally on your machine.</p>
+      <div class="feature-item">
+        <h4>Dandelion Seeds Overlay</h4>
+        <p>Image-traced 48-filament pappus seeds with achene pods and micro-eddy wind deflection physics.</p>
       </div>
 
-      <div class="card">
-        <div class="card-icon">🖥️</div>
-        <h3>Multi-Monitor Ready</h3>
-        <p>Automatically detects and spans across all your connected displays seamlessly in high DPI.</p>
+      <div class="feature-item">
+        <h4>Sakura Petals Overlay</h4>
+        <p>Translucent sakura cherry blossom petals with 3D flip tumbling, taskbar ground resting, and 5-minute wind impulse physics.</p>
       </div>
 
-      <div class="card">
-        <div class="card-icon">⌨️</div>
-        <h3>Global Hotkey Support</h3>
-        <p>Instantly toggle overlay visibility with <code>Ctrl + Alt + H</code> or switch interactivity modes with <code>Ctrl + Alt + I</code>.</p>
+      <div class="feature-item">
+        <h4>Click-Through Transparency</h4>
+        <p>Hardware-accelerated frameless transparent windows allowing full mouse interactivity to pass through to active apps.</p>
       </div>
     </div>
   </section>
 
-  <!-- Quickstart Installation -->
-  <section class="install-section" id="install">
-    <div class="section-header">
-      <h2>Get Started in 30 Seconds</h2>
-      <p>No setup wizard or background service required. Just extract and run.</p>
+  <!-- Technical Office Origins -->
+  <section>
+    <div class="history-card">
+      <span class="history-badge">EARLIER WORKING PROTOTYPE — NOT INCLUDED IN CURRENT NATURE RUNTIME BUILD</span>
+      <h2 style="font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 700; color: #ffffff; margin-bottom: 16px;">
+        Ohverlay began inside a real technical office.
+      </h2>
+      <p style="color: var(--text-muted); font-size: 15px; line-height: 1.7; margin-bottom: 24px;">
+        Before becoming an ambient nature platform, Ohverlay was created in a Saudi Arabian engineering office to coordinate multi-workstation technical workflows. An earlier version provided persistent sticky instructions, timed countdown tasks, supervisor reporting, staff acknowledgements, and local-network file handoffs without interfering with CAD and engineering software.
+      </p>
+      <a href="technical-office.html" class="btn-secondary" style="display: inline-block;">Read Technical Office History & Spec →</a>
     </div>
+  </section>
 
-    <div class="steps">
-      <div>
-        <div class="step-number">01</div>
-        <h4>Download Portable ZIP</h4>
-        <p style="color: var(--text-muted); font-size: 14px;">Grab the latest lightweight release package from GitHub.</p>
+  <!-- Why Desktop Overlays -->
+  <section>
+    <h2 class="section-title">Why Desktop Overlays?</h2>
+    <p class="section-subtitle">Traditional applications compete for focus by hiding underneath each other. Ohverlay introduces a spatial alternative.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; text-align: left;">
+      <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 28px; border-radius: 16px;">
+        <h4 style="font-size: 18px; font-weight: 600; color: #ffffff; margin-bottom: 10px;">Non-Intrusive Presence</h4>
+        <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">Overlays exist in a dedicated transparent window layer above application windows, maintaining visibility without taking window focus.</p>
       </div>
-      <div>
-        <div class="step-number">02</div>
-        <h4>Extract to Folder</h4>
-        <p style="color: var(--text-muted); font-size: 14px;">Unzip the archive to any folder on your Windows PC.</p>
+
+      <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 28px; border-radius: 16px;">
+        <h4 style="font-size: 18px; font-weight: 600; color: #ffffff; margin-bottom: 10px;">Zero Workflow Interruption</h4>
+        <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">Hardware input pass-through guarantees that clicks, drags, and keypresses pass directly to whatever application you are working in.</p>
       </div>
-      <div>
-        <div class="step-number">03</div>
-        <h4>Run Ohverlay.exe</h4>
-        <p style="color: var(--text-muted); font-size: 14px;">Double-click to launch. Control everything from your system tray!</p>
+
+      <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 28px; border-radius: 16px;">
+        <h4 style="font-size: 18px; font-weight: 600; color: #ffffff; margin-bottom: 10px;">Calm Information Architecture</h4>
+        <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">By restricting visual density and movement speeds, information is perceived passively rather than demanding immediate cognitive attention.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy and Ethical Design -->
+  <section>
+    <h2 class="section-title">Privacy and Ethical Design</h2>
+    <p class="section-subtitle">Ohverlay is designed around a strict local-first, privacy-respecting doctrine.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; text-align: left;">
+      <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 24px; border-radius: 14px;">
+        <h4 style="color: #34d399; font-size: 16px; font-weight: 600; margin-bottom: 8px;">100% Offline & Local-First</h4>
+        <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;">All settings, overlay renderers, and configurations remain stored locally on your machine (`~/.ohverlay/config.json`).</p>
+      </div>
+
+      <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 24px; border-radius: 14px;">
+        <h4 style="color: #34d399; font-size: 16px; font-weight: 600; margin-bottom: 8px;">Zero Telemetry Tracking</h4>
+        <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;">Ohverlay records zero analytics, personal data, or usage logs. No background telemetry calls are ever made.</p>
+      </div>
+
+      <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 24px; border-radius: 14px;">
+        <h4 style="color: #34d399; font-size: 16px; font-weight: 600; margin-bottom: 8px;">Explicit User Consent</h4>
+        <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;">Optional network features or future assistant integrations require explicit user activation and approval.</p>
+      </div>
+    </div>
+    <div style="margin-top: 30px;">
+      <a href="ethics.html" style="color: #34d399; font-size: 14px; font-weight: 600; text-decoration: none;">Read Full Ethics & Privacy Policy →</a>
+    </div>
+  </section>
+
+  <!-- Research Benchmarks -->
+  <section>
+    <h2 class="section-title">Research Benchmarks</h2>
+    <p class="section-subtitle">Visual and fluid dynamics targets currently under active research for future runtime releases.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; text-align: left;">
+      <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 28px;">
+        <span style="font-size: 11px; font-weight: 600; color: #8b5cf6; text-transform: uppercase; letter-spacing: 0.5px;">RESEARCH BENCHMARK 01</span>
+        <h3 style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 600; color: #ffffff; margin: 10px 0;">Realistic Betta Fish</h3>
+        <p style="color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 16px;">
+          Multi-ribbon fluid fin physics simulation modeling realistic aquatic drag, pectoral fin steering, and organic inertia.
+        </p>
+        <span style="font-size: 11px; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 10px;">Status: Research target — not a current deliverable</span>
+      </div>
+
+      <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 28px;">
+        <span style="font-size: 11px; font-weight: 600; color: #8b5cf6; text-transform: uppercase; letter-spacing: 0.5px;">RESEARCH BENCHMARK 02</span>
+        <h3 style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 600; color: #ffffff; margin: 10px 0;">Deep-Sea Bioluminescent Jellyfish</h3>
+        <p style="color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 16px;">
+          *Halitrephes maasi* & *Atolla* jet-propulsion locomotion, 16-canal bioluminescent light cascades, and 12-segment fluid tentacle kinematics.
+        </p>
+        <span style="font-size: 11px; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 10px;">Status: Research target — not a current deliverable</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Current Runtime Metadata Section (Replaces Analytics) -->
+  <section>
+    <div class="runtime-card">
+      <h3 style="font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 700; color: #ffffff;">
+        Current Runtime Metadata
+      </h3>
+      <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Factual system properties of the currently packaged Ohverlay desktop build.</p>
+
+      <div class="runtime-grid">
+        <div class="runtime-box">
+          <div class="runtime-val">Windows 10 / 11</div>
+          <div class="runtime-lbl">Target Operating System</div>
+        </div>
+        <div class="runtime-box">
+          <div class="runtime-val">4 Overlays</div>
+          <div class="runtime-lbl">Fireflies, Dragonflies, Dandelions, Sakura</div>
+        </div>
+        <div class="runtime-box">
+          <div class="runtime-val">Local-First</div>
+          <div class="runtime-lbl">Zero Remote Telemetry</div>
+        </div>
+        <div class="runtime-box">
+          <div class="runtime-val">Development Preview</div>
+          <div class="runtime-lbl">Build Release Channel</div>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- Footer -->
   <footer>
-    <p>Crafted by <strong>FutolTech</strong> • Open Source under MIT License</p>
-    <p style="margin-top: 8px; font-size: 13px;">
-      <a href="https://github.com/michaelfutol/ohverlay-v4" target="_blank">GitHub Repository</a> • 
-      <a href="https://github.com/michaelfutol/ohverlay-v4/blob/main/PRIVACY.md" target="_blank">Privacy Policy</a>
-    </p>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h4>Ohverlay</h4>
+        <p>Privacy-conscious desktop overlay platform for productivity, technical-office coordination, learning, and ambient nature.</p>
+        <p style="margin-top: 12px; font-size: 12px; color: #64748b;">Developed by FutolTech</p>
+      </div>
+
+      <div class="footer-col">
+        <h5>Platform</h5>
+        <ul>
+          <li><a href="#lanes">Platform Lanes</a></li>
+          <li><a href="living-overlays.html">Living Overlays</a></li>
+          <li><a href="technical-office.html">Technical Office</a></li>
+          <li><a href="download.html">Development Preview</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h5>Documentation</h5>
+        <ul>
+          <li><a href="whitepaper.html">Whitepaper</a></li>
+          <li><a href="ethics.html">Ethics Policy</a></li>
+          <li><a href="roadmap.html">Roadmap</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h5>Open Source</h5>
+        <ul>
+          <li><a href="https://github.com/michaelfutol/ohverlay-v4" target="_blank">GitHub Repository</a></li>
+          <li><a href="https://github.com/michaelfutol/ohverlay-v4/blob/main/LICENSE" target="_blank">MIT License</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>© 2026 FutolTech. Open source under MIT License.</div>
+      <div>
+        <a href="ethics.html" style="color: var(--text-muted); text-decoration: none;">Privacy Policy</a> • 
+        <a href="whitepaper.html" style="color: var(--text-muted); text-decoration: none; margin-left: 12px;">Product Doctrine</a>
+      </div>
+    </div>
   </footer>
 
-  <!-- 100% IDENTICAL EXACT REPLICA ARTWORK & PHYSICS ENGINE SCRIPT -->
+  <!-- STAGE DEMO CANVAS & SCENE INTERACTIVE CONTROLLER -->
   <script>
     (() => {
       'use strict';
 
-      // ──────────────────────────────────────────
-      // REAL-TIME VERIFIED DATA ANALYTICS ENGINE
-      // ──────────────────────────────────────────
-      let visitorCount = parseInt(localStorage.getItem('ohverlay_actual_visitors') || '1', 10);
-      let downloadCount = parseInt(localStorage.getItem('ohverlay_actual_downloads') || '0', 10);
-
-      if (!sessionStorage.getItem('ohverlay_session_counted')) {
-        visitorCount += 1;
-        localStorage.setItem('ohverlay_actual_visitors', visitorCount.toString());
-        sessionStorage.setItem('ohverlay_session_counted', 'true');
-      }
-
-      const valVisitorsEl = document.getElementById('valVisitors');
-      const valDownloadsEl = document.getElementById('valDownloads');
-      const telemetryLogEl = document.getElementById('telemetryLog');
-
-      if (valVisitorsEl) valVisitorsEl.textContent = visitorCount.toLocaleString();
-      if (valDownloadsEl) valDownloadsEl.textContent = downloadCount.toLocaleString();
-
-      function addLogLine(tag, msg, isSuccess = true) {
-        if (!telemetryLogEl) return;
-        const line = document.createElement('div');
-        line.className = 'log-line';
-        const now = new Date().toLocaleTimeString();
-        line.innerHTML = `<span class="log-time">[${now}]</span> <span class="${isSuccess ? 'log-msg' : 'log-info'}">${tag}: ${msg}</span>`;
-        telemetryLogEl.appendChild(line);
-        telemetryLogEl.scrollTop = telemetryLogEl.scrollHeight;
-      }
-
-      // Track live user download clicks
-      document.querySelectorAll('.download-trigger').forEach(btn => {
-        btn.addEventListener('click', () => {
-          downloadCount += 1;
-          localStorage.setItem('ohverlay_actual_downloads', downloadCount.toString());
-          if (valDownloadsEl) valDownloadsEl.textContent = downloadCount.toLocaleString();
-          addLogLine('DOWNLOAD', 'ZIP package requested! Real-time download count updated.', true);
-        });
-      });
-
-      // Fetch live GitHub verified metrics
-      fetch('https://api.github.com/repos/michaelfutol/Ohverlay/releases')
-        .then(res => res.json())
-        .then(releases => {
-          if (Array.isArray(releases) && releases.length > 0) {
-            let totalGhDownloads = 0;
-            releases.forEach(rel => {
-              if (rel.assets) {
-                rel.assets.forEach(asset => totalGhDownloads += (asset.download_count || 0));
-              }
-            });
-            if (totalGhDownloads >= downloadCount) {
-              downloadCount = totalGhDownloads;
-              localStorage.setItem('ohverlay_actual_downloads', downloadCount.toString());
-              if (valDownloadsEl) valDownloadsEl.textContent = downloadCount.toLocaleString();
-              addLogLine('GITHUB-API', `Verified release downloads synced: ${downloadCount}`, true);
-            }
-          }
-        })
-        .catch(() => {});
-
-      // ──────────────────────────────────────────
-      // EXACT REPLICA NATURE WORLD ANIMATION ENGINE (FROM REPO HTML FILES)
-      // ──────────────────────────────────────────
-      const canvas = document.getElementById('heroCanvas');
+      const canvas = document.getElementById('stageCanvas');
       const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
       const TAU = Math.PI * 2;
 
       let width = 1, height = 1, dpr = 1, elapsed = 0, lastTime = performance.now();
-      let dragonfliesActive = true;
-      let dandelionsActive = true;
-      let firefliesActive = true;
-      let sakuraActive = true;
+      let activeScene = 'nature'; // nature | sticky | learning | handoff
 
-      // 5-Minute Periodic Wind Gust State
-      let windTimer = 0;
-      const WIND_INTERVAL = 300;
-      let globalWindImpulse = 0;
-      let windDirection = 1;
+      const stageSceneTitle = document.getElementById('stageSceneTitle');
+      const stageSceneDesc = document.getElementById('stageSceneDesc');
+      const stageStatusBadge = document.getElementById('stageStatusBadge');
+      const stageMockWindow = document.getElementById('stageMockWindow');
 
-      function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
-      function lerp(from, to, t) { return from + (to - from) * t; }
-      function smoothstep(edge0, edge1, value) {
-        const x = clamp((value - edge0) / Math.max(0.000001, edge1 - edge0), 0, 1);
-        return x * x * (3 - 2 * x);
-      }
-
-      function resize() {
-        width = window.innerWidth;
-        height = window.innerHeight;
-        dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      function resizeStage() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        width = rect.width;
+        height = rect.height;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.round(width * dpr);
         canvas.height = Math.round(height * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      window.addEventListener('resize', resize);
-      resize();
+      window.addEventListener('resize', resizeStage);
+      resizeStage();
 
-      function pseudoRandom(seed, salt = 0) {
-        const x = Math.sin(seed * 127.1 + salt * 311.7) * 43758.5453123;
-        return x - Math.floor(x);
-      }
-
-      // ──────────────────────────────────────────
-      // 1. SAKURA CHERRY BLOSSOM PETALS ENGINE (From sakura-petals-overlay.html)
-      // ──────────────────────────────────────────
-      const PETAL_PALETTES = [
-        { primary: 'rgba(255, 183, 197, 0.76)', secondary: 'rgba(255, 218, 224, 0.52)', shadow: 'rgba(219, 112, 147, 0.35)', stem: '#b85276' },
-        { primary: 'rgba(255, 192, 203, 0.80)', secondary: 'rgba(255, 235, 240, 0.58)', shadow: 'rgba(199, 92, 127, 0.38)', stem: '#a04265' },
-        { primary: 'rgba(247, 143, 179, 0.72)', secondary: 'rgba(255, 204, 221, 0.48)', shadow: 'rgba(178, 60, 100, 0.40)', stem: '#8a2b4e' }
-      ];
-
-      const sakuraPetals = Array.from({ length: 18 }, (_, i) => {
-        const seed = i + 1;
-        const palette = PETAL_PALETTES[i % PETAL_PALETTES.length];
-        return {
-          x: pseudoRandom(seed, 1) * width,
-          y: -20 - pseudoRandom(seed, 2) * height * 0.8,
-          z: 0.35 + pseudoRandom(seed, 3) * 0.65,
-          size: 12 + pseudoRandom(seed, 4) * 8,
-          rotation: pseudoRandom(seed, 5) * TAU,
-          rotationSpeed: (pseudoRandom(seed, 6) - 0.5) * 1.8,
-          flipPhase: pseudoRandom(seed, 7) * TAU,
-          flipSpeed: 1.4 + pseudoRandom(seed, 8) * 2.2,
-          swayPhase: pseudoRandom(seed, 9) * TAU,
-          swaySpeed: 0.9 + pseudoRandom(seed, 10) * 1.6,
-          swayAmplitude: 20 + pseudoRandom(seed, 11) * 30,
-          fallSpeed: 24 + pseudoRandom(seed, 12) * 36,
-          isGrounded: false,
-          palette, seed
-        };
+      // Tab Controller
+      document.querySelectorAll('.stage-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          document.querySelectorAll('.stage-tab').forEach(t => t.classList.remove('active'));
+          e.target.classList.add('active');
+          activeScene = e.target.getAttribute('data-scene');
+          updateSceneUI();
+        });
       });
 
-      function updatePetal(petal, dt) {
-        const groundY = height - 36;
-
-        if (globalWindImpulse > 0.1 && petal.isGrounded) {
-          petal.isGrounded = false;
-          petal.vy = - (40 + pseudoRandom(petal.seed, 1) * 60) * globalWindImpulse;
-          petal.vx = windDirection * (80 + pseudoRandom(petal.seed, 2) * 120) * globalWindImpulse;
-        }
-
-        if (petal.isGrounded) {
-          petal.y = lerp(petal.y, groundY + Math.sin(petal.seed * 3) * 4, dt * 4.0);
-          petal.rotation = lerp(petal.rotation, (petal.seed % 2 === 0 ? 0.3 : -0.3), dt * 3.0);
-          return;
-        }
-
-        petal.swayPhase += dt * petal.swaySpeed;
-        petal.flipPhase += dt * petal.flipSpeed;
-        petal.rotation += petal.rotationSpeed * dt;
-
-        const swayX = Math.sin(petal.swayPhase) * petal.swayAmplitude;
-        const windX = windDirection * globalWindImpulse * 140;
-
-        petal.x += (swayX * 0.35 + windX) * dt;
-        petal.y += (petal.fallSpeed + Math.sin(petal.flipPhase) * 6) * dt;
-
-        if (petal.y >= groundY) {
-          petal.y = groundY;
-          petal.isGrounded = true;
-        }
-
-        if (petal.x < -80) petal.x = width + 60;
-        if (petal.x > width + 80) petal.x = -60;
-      }
-
-      function drawSakuraPetalPath(ctx, size) {
-        ctx.beginPath();
-        ctx.moveTo(0, size * 0.6);
-        ctx.bezierCurveTo(-size * 0.75, size * 0.2, -size * 0.8, -size * 0.4, -size * 0.25, -size * 0.85);
-        ctx.lineTo(0, -size * 0.62);
-        ctx.lineTo(size * 0.25, -size * 0.85);
-        ctx.bezierCurveTo(size * 0.8, -size * 0.4, size * 0.75, size * 0.2, 0, size * 0.6);
-        ctx.closePath();
-      }
-
-      function drawPetal(petal) {
-        const depthScale = 0.65 + petal.z * 0.7;
-        const size = petal.size * depthScale;
-        const flipScale = Math.cos(petal.flipPhase);
-
-        ctx.save();
-        ctx.translate(petal.x, petal.y);
-        ctx.rotate(petal.rotation + (petal.isGrounded ? 0 : Math.sin(petal.swayPhase) * 0.20));
-        ctx.scale(flipScale, 1.0);
-
-        ctx.save();
-        ctx.translate(2, petal.isGrounded ? 2 : 4);
-        ctx.globalAlpha = petal.isGrounded ? 0.25 : 0.12;
-        ctx.fillStyle = '#000000';
-        drawSakuraPetalPath(ctx, size);
-        ctx.fill();
-        ctx.restore();
-
-        const petalGrad = ctx.createRadialGradient(0, -size * 0.2, 1, 0, 0, size * 0.9);
-        petalGrad.addColorStop(0, petal.palette.secondary);
-        petalGrad.addColorStop(0.65, petal.palette.primary);
-        petalGrad.addColorStop(1, petal.palette.shadow);
-
-        ctx.fillStyle = petalGrad;
-        drawSakuraPetalPath(ctx, size);
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-
-        ctx.strokeStyle = petal.palette.stem;
-        ctx.lineWidth = 0.6;
-        ctx.beginPath();
-        ctx.moveTo(0, size * 0.55);
-        ctx.lineTo(0, -size * 0.4);
-        ctx.stroke();
-
-        ctx.restore();
-      }
-
-      // ──────────────────────────────────────────
-      // 2. EXACT FIREFLIES ENGINE
-      // ──────────────────────────────────────────
-      function makeGlowSprite() {
-        const sprite = document.createElement('canvas');
-        sprite.width = 256; sprite.height = 256;
-        const sCtx = sprite.getContext('2d');
-        const g = sCtx.createRadialGradient(128, 128, 1, 128, 128, 128);
-        g.addColorStop(0, 'rgba(255,255,197,1)');
-        g.addColorStop(0.035, 'rgba(239,255,123,0.98)');
-        g.addColorStop(0.12, 'rgba(174,255,55,0.55)');
-        g.addColorStop(0.31, 'rgba(112,235,22,0.19)');
-        g.addColorStop(0.62, 'rgba(76,190,8,0.045)');
-        g.addColorStop(1, 'rgba(25,90,0,0)');
-        sCtx.fillStyle = g; sCtx.fillRect(0, 0, 256, 256);
-        return sprite;
-      }
-      const glowSprite = makeGlowSprite();
-
-      function createFirefly(index) {
-        return {
-          x: 0.1 + pseudoRandom(index, 3) * 0.8,
-          y: 0.1 + pseudoRandom(index, 4) * 0.8,
-          z: 0.32 + pseudoRandom(index, 1) * 0.68,
-          vx: (pseudoRandom(index, 5) - 0.5) * 0.15,
-          vy: (pseudoRandom(index, 6) - 0.5) * 0.15,
-          targetX: 0.1 + pseudoRandom(index, 8) * 0.8,
-          targetY: 0.1 + pseudoRandom(index, 9) * 0.8,
-          targetTimer: 4.0 + pseudoRandom(index, 11) * 6.0,
-          wanderPhase: pseudoRandom(index, 12) * TAU,
-          wanderRate: 0.41 + pseudoRandom(index, 13) * 0.39,
-          wingPhase: pseudoRandom(index, 14) * TAU,
-          facing: pseudoRandom(index, 15) * TAU,
-          bank: 0,
-          flashCycle: 2.10 + pseudoRandom(index, 6) * 1.45,
-          flashOffset: pseudoRandom(index, 7) * 4.0,
-          flashShape: 0.85 + pseudoRandom(index, 8) * 0.30,
-          speedMult: 0.35 + pseudoRandom(index, 11) * 0.45,
-          seed: index + 1
-        };
-      }
-
-      const fireflies = Array.from({ length: 6 }, (_, index) => createFirefly(index));
-
-      function flashIntensity(ff) {
-        const phase = ((elapsed + ff.flashOffset) % ff.flashCycle) / ff.flashCycle;
-        const rise = smoothstep(0.035, 0.105, phase);
-        const fall = 1 - smoothstep(0.17, 0.36, phase);
-        const primary = rise * fall;
-        const afterglow = smoothstep(0.20, 0.25, phase) * (1 - smoothstep(0.25, 0.43, phase)) * 0.16;
-        const livingFlicker = 0.94 + Math.sin(elapsed * 17.0 + ff.seed * 5.7) * 0.06;
-        return clamp((primary + afterglow) * livingFlicker * ff.flashShape, 0, 1);
-      }
-
-      function updateFirefly(ff, dt, index) {
-        ff.targetTimer -= dt;
-        if (ff.targetTimer <= 0) {
-          ff.targetX = 0.08 + pseudoRandom(elapsed + ff.seed, 21) * 0.84;
-          ff.targetY = 0.08 + pseudoRandom(elapsed + ff.seed, 22) * 0.84;
-          ff.targetTimer = 4.0 + pseudoRandom(elapsed + ff.seed, 24) * 6.0;
-        }
-
-        const dx = ff.targetX - ff.x;
-        const dy = ff.targetY - ff.y;
-        const wander = elapsed * ff.wanderRate + ff.wanderPhase;
-
-        let ax = dx * 0.12 + Math.sin(wander * 1.37) * 0.015;
-        let ay = dy * 0.12 + Math.cos(wander * 1.11 + 0.7) * 0.012;
-
-        const margin = 0.05;
-        if (ff.x < margin) ax += (margin - ff.x) * 2.15;
-        if (ff.x > 1 - margin) ax -= (ff.x - (1 - margin)) * 2.15;
-        if (ff.y < margin) ay += (margin - ff.y) * 2.15;
-        if (ff.y > 1 - margin) ay -= (ff.y - (1 - margin)) * 2.15;
-
-        ff.vx += ax * dt;
-        ff.vy += ay * dt;
-        ff.vx *= Math.exp(-0.85 * dt);
-        ff.vy *= Math.exp(-0.85 * dt);
-
-        const speed = Math.hypot(ff.vx, ff.vy);
-        const maxSpeed = 0.08 * ff.speedMult;
-        if (speed > maxSpeed) {
-          ff.vx *= maxSpeed / speed;
-          ff.vy *= maxSpeed / speed;
-        }
-
-        ff.x += ff.vx * dt;
-        ff.y += ff.vy * dt;
-        ff.x = clamp(ff.x, 0.04, 0.96);
-        ff.y = clamp(ff.y, 0.04, 0.96);
-
-        if (speed > 0.002) {
-          const desiredFacing = Math.atan2(ff.vy, ff.vx) + Math.PI;
-          let turn = desiredFacing - ff.facing;
-          turn = Math.atan2(Math.sin(turn), Math.cos(turn));
-          ff.facing += turn * Math.min(1, dt * 3.4);
-          ff.bank += (clamp(turn * 1.8, -0.8, 0.8) - ff.bank) * Math.min(1, dt * 4.5);
-        }
-
-        ff.wingPhase = (ff.wingPhase + dt * (45 + speed * 260)) % TAU;
-      }
-
-      function drawFireflyWing(ctx, side, length, widthValue, beat, alpha) {
-        ctx.save();
-        ctx.scale(1, side);
-        ctx.rotate(-0.24 - beat * 0.24);
-        ctx.beginPath();
-        ctx.moveTo(-length * 0.05, 0);
-        ctx.bezierCurveTo(length * 0.18, -widthValue * 0.36, length * 0.83, -widthValue * 0.22, length, 0);
-        ctx.bezierCurveTo(length * 0.72, widthValue * 0.42, length * 0.20, widthValue * 0.40, -length * 0.05, 0);
-        const wingGradient = ctx.createLinearGradient(0, 0, length, 0);
-        wingGradient.addColorStop(0, `rgba(178,153,103,${alpha * 0.50})`);
-        wingGradient.addColorStop(0.45, `rgba(224,214,178,${alpha * 0.28})`);
-        wingGradient.addColorStop(1, 'rgba(195,210,188,0)');
-        ctx.fillStyle = wingGradient;
-        ctx.fill();
-        ctx.strokeStyle = `rgba(218,210,175,${alpha * 0.22})`;
-        ctx.lineWidth = 0.42;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      function drawFirefly(ff) {
-        const x = ff.x * width;
-        const y = ff.y * height;
-        const depthScale = 0.62 + ff.z * 0.78;
-        const bodyLength = clamp(Math.min(width, height) * 0.0135 * depthScale, 7.2, 17.5);
-        const flash = flashIntensity(ff);
-        const speed = Math.hypot(ff.vx, ff.vy);
-        const perspectiveOpacity = 0.42 + ff.z * 0.54;
-
-        if (flash > 0.006) {
-          const glowSize = bodyLength * (5.8 + flash * 4.8);
-          const tailX = x + Math.cos(ff.facing) * bodyLength * 0.43;
-          const tailY = y + Math.sin(ff.facing) * bodyLength * 0.43;
-          ctx.save();
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.globalAlpha = flash * perspectiveOpacity * 0.82;
-          ctx.drawImage(glowSprite, tailX - glowSize, tailY - glowSize, glowSize * 2, glowSize * 2);
-          ctx.restore();
-        }
-
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(ff.facing);
-        ctx.scale(depthScale, depthScale * (1 - Math.abs(ff.bank) * 0.14));
-
-        const wingBeat = Math.sin(ff.wingPhase);
-        const wingAlpha = clamp(0.15 + speed * 4.8, 0.15, 0.43) * perspectiveOpacity;
-        drawFireflyWing(ctx, -1, bodyLength * 0.86, bodyLength * 0.42, wingBeat, wingAlpha);
-        drawFireflyWing(ctx, 1, bodyLength * 0.86, bodyLength * 0.42, -wingBeat, wingAlpha);
-
-        const shellGradient = ctx.createLinearGradient(0, -bodyLength * 0.16, 0, bodyLength * 0.16);
-        shellGradient.addColorStop(0, '#120d08'); shellGradient.addColorStop(0.40, '#49301a');
-        shellGradient.addColorStop(0.68, '#1d130c'); shellGradient.addColorStop(1, '#070504');
-        ctx.fillStyle = shellGradient;
-        ctx.beginPath(); ctx.ellipse(bodyLength * 0.05, 0, bodyLength * 0.43, bodyLength * 0.16, 0, 0, TAU); ctx.fill();
-
-        const thoraxGradient = ctx.createRadialGradient(-bodyLength * 0.28, -bodyLength * 0.07, 0, -bodyLength * 0.22, 0, bodyLength * 0.28);
-        thoraxGradient.addColorStop(0, '#6f4721'); thoraxGradient.addColorStop(0.38, '#2f1c0e'); thoraxGradient.addColorStop(1, '#090604');
-        ctx.fillStyle = thoraxGradient;
-        ctx.beginPath(); ctx.ellipse(-bodyLength * 0.27, 0, bodyLength * 0.27, bodyLength * 0.20, 0, 0, TAU); ctx.fill();
-
-        ctx.fillStyle = '#080604';
-        ctx.beginPath(); ctx.ellipse(-bodyLength * 0.53, 0, bodyLength * 0.14, bodyLength * 0.13, 0, 0, TAU); ctx.fill();
-
-        const lanternGradient = ctx.createLinearGradient(bodyLength * 0.23, -bodyLength * 0.12, bodyLength * 0.54, bodyLength * 0.12);
-        const lanternAlpha = 0.32 + flash * 0.68;
-        lanternGradient.addColorStop(0, `rgba(91,84,22,${lanternAlpha})`);
-        lanternGradient.addColorStop(0.48, `rgba(211,241,62,${lanternAlpha})`);
-        lanternGradient.addColorStop(0.78, `rgba(244,255,144,${lanternAlpha})`);
-        lanternGradient.addColorStop(1, `rgba(68,55,12,${lanternAlpha})`);
-        ctx.fillStyle = lanternGradient;
-        ctx.beginPath(); ctx.ellipse(bodyLength * 0.39, 0, bodyLength * 0.18, bodyLength * 0.125, 0, 0, TAU); ctx.fill();
-
-        ctx.restore();
-      }
-
-      // ──────────────────────────────────────────
-      // 3. EXACT DRAGONFLIES ENGINE
-      // ──────────────────────────────────────────
-      const dragonflies = Array.from({ length: 2 }, (_, i) => ({
-        x: 0.25 + i * 0.50,
-        y: 0.35 + i * 0.25,
-        z: 0.65 + i * 0.2,
-        vx: 0.06 * (i === 0 ? 1 : -1),
-        vy: 0.04 * (i === 0 ? -1 : 1),
-        facing: 0,
-        visualFacing: 0,
-        wingPhase: i * 2.1,
-        species: i,
-        seed: i + 1
-      }));
-
-      function wingPath(length, widthValue, hindWing = false) {
-        const root = 0.08;
-        ctx.beginPath();
-        ctx.moveTo(root * length, 0);
-        if (hindWing) {
-          ctx.bezierCurveTo(length * 0.25, -widthValue * 0.10, length * 0.75, -widthValue * 1.05, length, 0);
-          ctx.bezierCurveTo(length * 0.75, widthValue * 1.05, length * 0.25, widthValue * 0.35, root * length, 0);
-        } else {
-          ctx.bezierCurveTo(length * 0.30, -widthValue * 0.15, length * 0.70, -widthValue * 0.95, length, 0);
-          ctx.bezierCurveTo(length * 0.70, widthValue * 0.95, length * 0.30, widthValue * 0.35, root * length, 0);
-        }
-        ctx.closePath();
-      }
-
-      function drawWingVeins(length, widthValue, alpha, hindWing) {
-        ctx.strokeStyle = `rgba(128,148,145,${alpha})`;
-        ctx.lineWidth = 0.46;
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length * 0.92, 0); ctx.stroke();
-
-        for (let vein = 1; vein <= 5; vein++) {
-          const amount = vein / 6;
-          const x = length * amount;
-          const spread = Math.sin(amount * Math.PI) * widthValue * (hindWing ? 0.39 : 0.27);
-          ctx.beginPath();
-          ctx.moveTo(x * 0.52, 0); ctx.lineTo(x, -spread);
-          ctx.moveTo(x * 0.52, 0); ctx.lineTo(x, spread);
-          ctx.stroke();
+      function updateSceneUI() {
+        if (activeScene === 'nature') {
+          stageSceneTitle.textContent = 'Living Nature Overlay Architecture';
+          stageSceneDesc.textContent = 'Frameless, hardware-accelerated transparent canvas floating over desktop windows with click-through input pass-through.';
+          stageStatusBadge.className = 'stage-status-badge status-available';
+          stageStatusBadge.textContent = 'STATUS: Available Now';
+          stageMockWindow.style.display = 'block';
+        } else if (activeScene === 'sticky') {
+          stageSceneTitle.textContent = 'Sticky Instructions & Timed Tasks';
+          stageSceneDesc.textContent = 'Persistent overlay notes with countdown timers, staff acknowledgements, and priority indicators.';
+          stageStatusBadge.className = 'stage-status-badge status-prototype';
+          stageStatusBadge.textContent = 'STATUS: Legacy Prototype / Scheduled Rebuild';
+          stageMockWindow.style.display = 'block';
+        } else if (activeScene === 'learning') {
+          stageSceneTitle.textContent = 'Passive Micro-Learning Prompts';
+          stageSceneDesc.textContent = 'Spaced-repetition micro-prompts and vocabulary cards that appear gently without interrupting workflow.';
+          stageStatusBadge.className = 'stage-status-badge status-planned';
+          stageStatusBadge.textContent = 'STATUS: Planned';
+          stageMockWindow.style.display = 'block';
+        } else if (activeScene === 'handoff') {
+          stageSceneTitle.textContent = 'Technical Office File & Task Handoff';
+          stageSceneDesc.textContent = 'Local-network workstation task routing, instruction delivery, and peer-to-peer file transfer.';
+          stageStatusBadge.className = 'stage-status-badge status-prototype';
+          stageStatusBadge.textContent = 'STATUS: Legacy Prototype';
+          stageMockWindow.style.display = 'block';
         }
       }
 
-      function drawOneWing(side, fore, length, bodyLength, beat, alpha, dragonfly) {
-        const hindWing = !fore;
-        const attachmentX = bodyLength * (fore ? 0.15 : 0.05);
-        const baseAngle = fore ? 1.05 : 1.45;
-        const sweep = beat * (fore ? 0.15 : 0.12);
-        const widthValue = length * (fore ? 0.35 : 0.42);
-        const projection = 0.62 + Math.abs(Math.cos(beat * 1.18)) * 0.38;
-
-        ctx.save();
-        ctx.translate(attachmentX, 0);
-        ctx.rotate(side * (baseAngle + sweep));
-        ctx.scale(projection, 0.78 + projection * 0.22);
-        wingPath(length, widthValue, hindWing);
-
-        const gradient = ctx.createLinearGradient(0, 0, length, 0);
-        if (dragonfly.species === 0) {
-          gradient.addColorStop(0, `rgba(10, 20, 60, ${alpha * 0.9})`);
-          gradient.addColorStop(0.3, `rgba(25, 70, 130, ${alpha * 0.7})`);
-          gradient.addColorStop(0.6, `rgba(130, 180, 140, ${alpha * 0.6})`);
-          gradient.addColorStop(0.8, `rgba(200, 100, 130, ${alpha * 0.5})`);
-          gradient.addColorStop(1, `rgba(50, 25, 80, ${alpha * 0.4})`);
-        } else {
-          gradient.addColorStop(0, `rgba(20, 15, 50, ${alpha * 0.9})`);
-          gradient.addColorStop(0.3, `rgba(70, 35, 110, ${alpha * 0.7})`);
-          gradient.addColorStop(0.6, `rgba(150, 90, 160, ${alpha * 0.6})`);
-          gradient.addColorStop(0.8, `rgba(210, 160, 110, ${alpha * 0.5})`);
-          gradient.addColorStop(1, `rgba(50, 20, 70, ${alpha * 0.4})`);
-        }
-        ctx.fillStyle = gradient; ctx.fill();
-        ctx.strokeStyle = `rgba(0,5,15,${alpha})`; ctx.lineWidth = 1.0; ctx.stroke();
-        drawWingVeins(length, widthValue, alpha * 0.9, hindWing);
-        ctx.restore();
-      }
-
-      function drawDragonflyBody(dragonfly, bodyLength) {
-        const speciesBlue = dragonfly.species === 0;
-        const abdomenLength = bodyLength * 1.1;
-        const segmentCount = 10;
-        const startX = -bodyLength * 0.10;
-
-        for (let segment = segmentCount - 1; segment >= 0; segment--) {
-          const amount = segment / (segmentCount - 1);
-          const segmentX = startX - amount * abdomenLength;
-          const radiusX = bodyLength * 0.055;
-          const radiusY = bodyLength * (0.02 - amount * 0.012);
-          const bodyGradient = ctx.createLinearGradient(segmentX, -radiusY, segmentX, radiusY);
-          if (speciesBlue) {
-            bodyGradient.addColorStop(0, segment % 2 ? '#040b12' : '#081a29');
-            bodyGradient.addColorStop(0.35, segment % 2 ? '#104875' : '#288ab5');
-            bodyGradient.addColorStop(0.60, segment % 2 ? '#061d2b' : '#145778');
-            bodyGradient.addColorStop(1, '#020508');
-          } else {
-            bodyGradient.addColorStop(0, segment % 2 ? '#0a0a1a' : '#141432');
-            bodyGradient.addColorStop(0.35, segment % 2 ? '#5a2d8a' : '#994cd6');
-            bodyGradient.addColorStop(0.60, segment % 2 ? '#3a1a5c' : '#6a2a9e');
-            bodyGradient.addColorStop(1, '#050510');
-          }
-          ctx.fillStyle = bodyGradient;
-          ctx.beginPath(); ctx.ellipse(segmentX, 0, radiusX * 1.05, Math.max(1, radiusY), 0, 0, TAU); ctx.fill();
-          ctx.strokeStyle = 'rgba(2,5,4,0.72)'; ctx.lineWidth = Math.max(0.35, bodyLength * 0.009); ctx.stroke();
-        }
-
-        const thoraxGradient = ctx.createRadialGradient(bodyLength * 0.03, -bodyLength * 0.08, bodyLength * 0.01, bodyLength * 0.01, 0, bodyLength * 0.28);
-        if (speciesBlue) {
-          thoraxGradient.addColorStop(0, '#5bb8c1'); thoraxGradient.addColorStop(0.31, '#215e69');
-          thoraxGradient.addColorStop(0.68, '#102b32'); thoraxGradient.addColorStop(1, '#03090b');
-        } else {
-          thoraxGradient.addColorStop(0, '#9db14a'); thoraxGradient.addColorStop(0.31, '#446b2b');
-          thoraxGradient.addColorStop(0.68, '#1b351b'); thoraxGradient.addColorStop(1, '#050b05');
-        }
-        ctx.fillStyle = thoraxGradient;
-        ctx.beginPath(); ctx.ellipse(bodyLength * 0.06, 0, bodyLength * 0.16, bodyLength * 0.08, 0, 0, TAU); ctx.fill();
-
-        ctx.fillStyle = speciesBlue ? '#172c2f' : '#25351a';
-        ctx.beginPath(); ctx.ellipse(bodyLength * 0.22, 0, bodyLength * 0.12, bodyLength * 0.10, 0, 0, TAU); ctx.fill();
-
-        for (const side of [-1, 1]) {
-          const eyeGradient = ctx.createRadialGradient(bodyLength * 0.24, side * bodyLength * 0.06, 0, bodyLength * 0.24, side * bodyLength * 0.06, bodyLength * 0.08);
-          eyeGradient.addColorStop(0, speciesBlue ? '#65796e' : '#8b8142');
-          eyeGradient.addColorStop(0.30, speciesBlue ? '#263e3a' : '#3f4523');
-          eyeGradient.addColorStop(0.72, '#111913'); eyeGradient.addColorStop(1, '#020302');
-          ctx.fillStyle = eyeGradient;
-          ctx.beginPath(); ctx.ellipse(bodyLength * 0.24, side * bodyLength * 0.06, bodyLength * 0.08, bodyLength * 0.06, 0, 0, TAU); ctx.fill();
-        }
-      }
-
-      function drawDragonfly(df) {
-        const depthScale = 1.0 / df.z;
-        const bodyLength = clamp(Math.min(width, height) * 0.057 * depthScale, 31, 64);
-
-        ctx.save();
-        ctx.translate(df.x * width, df.y * height);
-        ctx.rotate(df.visualFacing);
-        ctx.scale(depthScale, depthScale);
-
-        const wingLength = bodyLength * 1.5;
-        const leftBeat = Math.sin(df.wingPhase);
-        const rightBeat = Math.sin(df.wingPhase + 0.16);
-        const alpha = clamp(0.35 + df.z * 0.15, 0.35, 0.65);
-
-        drawOneWing(-1, true, wingLength, bodyLength, leftBeat, alpha, df);
-        drawOneWing(1, true, wingLength, bodyLength, rightBeat, alpha, df);
-        drawOneWing(-1, false, wingLength * 0.92, bodyLength, -leftBeat, alpha * 0.95, df);
-        drawOneWing(1, false, wingLength * 0.92, bodyLength, -rightBeat, alpha * 0.95, df);
-
-        drawDragonflyBody(df, bodyLength);
-        ctx.restore();
-      }
-
-      // ──────────────────────────────────────────
-      // 4. EXACT DANDELION SEEDS ENGINE
-      // ──────────────────────────────────────────
-      const REFERENCE_FILAMENTS = [{"c1":[-10.48,-3.83],"c2":[-35.67,-7.79],"e":[-50.7,-12.09],"a":0.5,"w":0.29,"p":0.0,"k":0.7},{"c1":[-10.36,-4.34],"c2":[-36.97,-6.58],"e":[-50.7,-14.43],"a":0.87,"w":0.31,"p":2.4,"k":0.99},{"c1":[-9.0,-4.69],"c2":[-30.85,-11.19],"e":[-44.07,-15.99],"a":0.83,"w":0.33,"p":4.8,"k":0.94},{"c1":[-11.12,-6.06],"c2":[-42.46,-7.81],"e":[-50.7,-22.23],"a":0.79,"w":0.35,"p":0.917,"k":0.89},{"c1":[-10.52,-6.4],"c2":[-38.82,-11.91],"e":[-50.7,-23.79],"a":0.75,"w":0.37,"p":3.317,"k":0.84},{"c1":[-8.26,-6.4],"c2":[-26.14,-17.75],"e":[-38.22,-23.79],"a":0.71,"w":0.39,"p":5.717,"k":0.79},{"c1":[-8.24,-7.26],"c2":[-34.09,-14.64],"e":[-41.34,-27.69],"a":0.67,"w":0.41,"p":1.834,"k":0.74},{"c1":[-9.61,-7.69],"c2":[-47.01,-14.98],"e":[-42.12,-29.64],"a":0.63,"w":0.43,"p":4.234,"k":1.03},{"c1":[-9.24,-8.72],"c2":[-41.53,-17.71],"e":[-44.85,-34.32],"a":0.59,"w":0.45,"p":0.351,"k":0.98},{"c1":[-8.49,-8.12],"c2":[-27.56,-22.13],"e":[-39.39,-31.59],"a":0.55,"w":0.3,"p":2.751,"k":0.93},{"c1":[-8.55,-8.29],"c2":[-29.89,-19.87],"e":[-38.22,-32.37],"a":0.51,"w":0.32,"p":5.151,"k":0.88},{"c1":[-9.26,-8.72],"c2":[-29.38,-21.7],"e":[-38.22,-34.32],"a":0.88,"w":0.34,"p":1.268,"k":0.83},{"c1":[-7.33,-8.98],"c2":[-27.26,-23.41],"e":[-36.66,-35.49],"a":0.84,"w":0.36,"p":3.668,"k":0.78},{"c1":[-6.45,-9.49],"c2":[-29.13,-23.25],"e":[-32.37,-37.83],"a":0.8,"w":0.38,"p":6.068,"k":0.73},{"c1":[-4.64,-7.43],"c2":[-23.4,-17.41],"e":[-23.4,-28.47],"a":0.76,"w":0.4,"p":2.184,"k":1.02},{"c1":[-5.82,-7.52],"c2":[-11.62,-28.86],"e":[-22.62,-28.86],"a":0.72,"w":0.42,"p":4.584,"k":0.97},{"c1":[-5.98,-10.26],"c2":[-23.61,-27.23],"e":[-29.25,-41.34],"a":0.68,"w":0.44,"p":0.701,"k":0.92},{"c1":[-4.73,-10.01],"c2":[-22.56,-26.2],"e":[-25.35,-40.17],"a":0.64,"w":0.29,"p":3.101,"k":0.87},{"c1":[-6.13,-11.21],"c2":[-26.91,-29.74],"e":[-26.91,-45.63],"a":0.6,"w":0.31,"p":5.501,"k":0.82},{"c1":[-4.0,-8.46],"c2":[-15.06,-22.27],"e":[-18.33,-33.15],"a":0.56,"w":0.33,"p":1.618,"k":0.77},{"c1":[-4.27,-10.18],"c2":[-13.02,-28.06],"e":[-15.6,-40.95],"a":0.52,"w":0.35,"p":4.018,"k":0.72},{"c1":[-2.03,-8.12],"c2":[-16.93,-23.92],"e":[-10.53,-31.59],"a":0.89,"w":0.37,"p":0.135,"k":1.01},{"c1":[-3.0,-8.03],"c2":[-3.62,-23.54],"e":[-9.75,-31.2],"a":0.85,"w":0.39,"p":2.535,"k":0.96},{"c1":[-2.99,-10.18],"c2":[-8.49,-28.38],"e":[-9.75,-40.95],"a":0.81,"w":0.41,"p":4.935,"k":0.91},{"c1":[-0.16,-8.63],"c2":[-2.96,-23.78],"e":[-1.95,-33.93],"a":0.77,"w":0.43,"p":1.052,"k":0.86},{"c1":[1.7,-8.03],"c2":[2.05,-21.95],"e":[3.9,-31.2],"a":0.73,"w":0.45,"p":3.452,"k":0.81},{"c1":[2.34,-10.09],"c2":[6.15,-28.57],"e":[9.75,-40.56],"a":0.69,"w":0.3,"p":5.852,"k":0.76},{"c1":[2.08,-9.66],"c2":[6.7,-27.14],"e":[10.14,-38.61],"a":0.65,"w":0.32,"p":1.969,"k":0.71},{"c1":[4.0,-9.58],"c2":[14.27,-27.4],"e":[21.84,-38.22],"a":0.61,"w":0.34,"p":4.369,"k":1.0},{"c1":[4.96,-9.24],"c2":[18.11,-25.25],"e":[24.96,-36.66],"a":0.57,"w":0.36,"p":0.486,"k":0.95},{"c1":[5.77,-7.61],"c2":[16.13,-21.2],"e":[24.18,-29.25],"a":0.53,"w":0.38,"p":2.886,"k":0.9},{"c1":[6.34,-7.26],"c2":[17.48,-19.38],"e":[24.96,-27.69],"a":0.9,"w":0.4,"p":5.286,"k":0.85},{"c1":[4.46,-4.6],"c2":[12.49,-10.04],"e":[16.38,-15.6],"a":0.86,"w":0.42,"p":1.403,"k":0.8},{"c1":[5.48,-5.29],"c2":[14.78,-13.07],"e":[21.06,-18.72],"a":0.82,"w":0.44,"p":3.803,"k":0.75},{"c1":[5.66,-5.03],"c2":[15.9,-11.61],"e":[21.84,-17.55],"a":0.78,"w":0.29,"p":6.203,"k":0.7},{"c1":[6.48,-6.32],"c2":[21.79,-17.28],"e":[31.98,-23.4],"a":0.74,"w":0.31,"p":2.32,"k":0.99},{"c1":[8.6,-6.49],"c2":[25.67,-17.35],"e":[37.05,-24.18],"a":0.7,"w":0.33,"p":4.72,"k":0.94},{"c1":[10.12,-6.15],"c2":[29.29,-16.21],"e":[42.12,-22.62],"a":0.66,"w":0.35,"p":0.837,"k":0.89},{"c1":[9.08,-4.52],"c2":[27.52,-10.11],"e":[39.0,-15.21],"a":0.62,"w":0.37,"p":3.237,"k":0.84},{"c1":[8.49,-3.92],"c2":[24.44,-8.37],"e":[34.71,-12.48],"a":0.58,"w":0.39,"p":5.637,"k":0.79},{"c1":[9.42,-4.26],"c2":[30.5,-8.03],"e":[42.51,-14.04],"a":0.54,"w":0.41,"p":1.754,"k":0.74},{"c1":[8.11,-3.57],"c2":[27.68,-10.92],"e":[40.17,-10.92],"a":0.5,"w":0.43,"p":4.153,"k":1.03},{"c1":[8.88,-2.8],"c2":[31.23,-3.56],"e":[44.07,-7.41],"a":0.87,"w":0.45,"p":0.27,"k":0.98},{"c1":[8.69,-2.03],"c2":[28.18,-2.19],"e":[40.17,-3.9],"a":0.83,"w":0.3,"p":2.67,"k":0.93},{"c1":[7.86,-1.08],"c2":[23.12,2.32],"e":[32.76,0.39],"a":0.79,"w":0.32,"p":5.07,"k":0.88},{"c1":[7.42,-0.83],"c2":[22.42,0.6],"e":[31.98,1.56],"a":0.75,"w":0.34,"p":1.187,"k":0.83},{"c1":[8.32,-0.23],"c2":[26.68,4.29],"e":[38.22,4.29],"a":0.71,"w":0.36,"p":3.587,"k":0.78},{"c1":[5.51,0.8],"c2":[18.4,8.97],"e":[26.91,8.97],"a":0.67,"w":0.38,"p":5.987,"k":0.73}];
-
-      const dandelions = Array.from({ length: 3 }, (_, i) => {
-        const seed = i + 1;
-        const variation = pseudoRandom(seed, 2.1);
-        return {
-          x: width * (0.18 + i * 0.32),
-          y: height * (0.22 + (i % 2) * 0.30),
-          vx: Math.sin(i * 2.3) * 6.0,
-          vy: 3.5 + Math.cos(i * 1.7) * 2.0,
-          phase: i * 2.1,
-          size: 0.85 + (i % 3) * 0.10,
-          angle: (i % 2 === 0 ? -0.1 : 0.1),
-          variation,
-          filaments: REFERENCE_FILAMENTS.map((source, index) => {
-            const scale = 0.85 + (variation * 0.3) + (Math.sin(index * 1.7 + i * 2.1) * 0.15);
-            return {
-              ...source,
-              e: [source.e[0] * scale, source.e[1] * scale],
-              c1: [source.c1[0] * scale, source.c1[1] * scale],
-              c2: [source.c2[0] * scale, source.c2[1] * scale],
-              depth: Math.sin(source.p + i * 2.1 * 0.19),
-              deflection: 0,
-              deflectionVelocity: 0,
-              index
-            };
-          })
-        };
-      });
-
-      function deformPoint(point, fraction, filament) {
-        const angle = filament.deflection * Math.pow(fraction, 1.72);
-        const cosine = Math.cos(angle);
-        const sine = Math.sin(angle);
-        const x = point[0] * cosine - point[1] * sine;
-        const y = point[0] * sine + point[1] * cosine;
-        const ripple = Math.sin(elapsed * 2.0 + filament.p + fraction * 1.8) * 0.34 * fraction * filament.k;
-        return [x, y + ripple];
-      }
-
-      function drawFilament(filament, index) {
-        const c1 = deformPoint(filament.c1, 0.30, filament);
-        const c2 = deformPoint(filament.c2, 0.66, filament);
-        const tip = deformPoint(filament.e, 1, filament);
-        const frontFactor = 0.76 + (filament.depth + 1) * 0.12;
-        const alpha = filament.a * frontFactor;
-
-        ctx.strokeStyle = 'rgba(255,255,246,' + alpha.toFixed(3) + ')';
-        ctx.lineWidth = filament.w;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], tip[0], tip[1]);
-        ctx.stroke();
-      }
-
-      function drawAchene() {
-        const bodyGradient = ctx.createLinearGradient(-2.2, 71, 2.4, 94);
-        bodyGradient.addColorStop(0, '#6b4428');
-        bodyGradient.addColorStop(0.28, '#a66f3e');
-        bodyGradient.addColorStop(0.55, '#bc8750');
-        bodyGradient.addColorStop(0.80, '#84552f');
-        bodyGradient.addColorStop(1, '#4e311f');
-        ctx.fillStyle = bodyGradient;
-        ctx.beginPath();
-        ctx.moveTo(0.05, 71.0);
-        ctx.bezierCurveTo(1.85, 72.7, 2.35, 77.6, 2.05, 83.3);
-        ctx.bezierCurveTo(1.8, 88.2, 0.95, 93.4, 0.15, 96.1);
-        ctx.bezierCurveTo(-0.45, 97.5, -1.05, 97.4, -1.55, 95.9);
-        ctx.bezierCurveTo(-2.55, 91.8, -2.65, 84.0, -2.25, 78.2);
-        ctx.bezierCurveTo(-1.95, 74.1, -1.0, 71.7, 0.05, 71.0);
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(72,43,25,0.64)';
-        ctx.lineWidth = 0.30;
-        for (let rib = -1; rib <= 1; rib++) {
-          const x = rib * 0.82;
-          ctx.beginPath();
-          ctx.moveTo(x * 0.30, 73.0);
-          ctx.bezierCurveTo(x * 0.82, 79.2, x, 88.1, x * 0.34, 94.8);
-          ctx.stroke();
-        }
-
-        ctx.fillStyle = '#50311e';
-        ctx.beginPath();
-        ctx.moveTo(-0.55, 95.4);
-        ctx.lineTo(0, 98.2);
-        ctx.lineTo(0.52, 95.4);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      function drawSeed(seed) {
-        ctx.save();
-        ctx.translate(seed.x, seed.y);
-        ctx.rotate(seed.angle);
-        const scale = 0.52 * seed.size;
-        ctx.scale(scale, scale);
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        for (let i = 0; i < seed.filaments.length; i++) {
-          if (seed.filaments[i].depth <= 0) drawFilament(seed.filaments[i], i);
-        }
-
-        const beakGradient = ctx.createLinearGradient(0, 0, 0, 72);
-        beakGradient.addColorStop(0, 'rgba(229,214,170,0.98)');
-        beakGradient.addColorStop(0.38, 'rgba(188,155,103,0.96)');
-        beakGradient.addColorStop(1, 'rgba(123,82,48,0.98)');
-        ctx.strokeStyle = beakGradient;
-        ctx.lineWidth = 0.48;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.bezierCurveTo(-0.34, 19, 0.42, 46, 0, 71.4);
-        ctx.stroke();
-
-        const hubGradient = ctx.createRadialGradient(-0.35, -0.6, 0.15, 0, 0, 2);
-        hubGradient.addColorStop(0, '#fffceb');
-        hubGradient.addColorStop(0.62, '#e9dfb7');
-        hubGradient.addColorStop(1, '#a88455');
-        ctx.fillStyle = hubGradient;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 1.7, 1.15, 0, 0, TAU);
-        ctx.fill();
-
-        for (let i = 0; i < seed.filaments.length; i++) {
-          if (seed.filaments[i].depth > 0) drawFilament(seed.filaments[i], i);
-        }
-
-        drawAchene();
-        ctx.restore();
-      }
-
-      // ──────────────────────────────────────────
-      // 5. CONTROL DOCK BUTTON LISTENERS
-      // ──────────────────────────────────────────
-      document.getElementById('toggleDragonflies').addEventListener('click', (e) => {
-        dragonfliesActive = !dragonfliesActive;
-        e.target.classList.toggle('active', dragonfliesActive);
-        updateEcosystemCount();
-      });
-
-      document.getElementById('toggleDandelions').addEventListener('click', (e) => {
-        dandelionsActive = !dandelionsActive;
-        e.target.classList.toggle('active', dandelionsActive);
-        updateEcosystemCount();
-      });
-
-      document.getElementById('toggleFireflies').addEventListener('click', (e) => {
-        firefliesActive = !firefliesActive;
-        e.target.classList.toggle('active', firefliesActive);
-        updateEcosystemCount();
-      });
-
-      document.getElementById('toggleSakura').addEventListener('click', (e) => {
-        sakuraActive = !sakuraActive;
-        e.target.classList.toggle('active', sakuraActive);
-        updateEcosystemCount();
-      });
-
-      function updateEcosystemCount() {
-        let total = 0;
-        if (dragonfliesActive) total += 2;
-        if (dandelionsActive) total += 3;
-        if (firefliesActive) total += 6;
-        if (sakuraActive) total += 18;
-        const valEcosystemEl = document.getElementById('valEcosystem');
-        if (valEcosystemEl) valEcosystemEl.textContent = total.toString();
-      }
-
-      // ──────────────────────────────────────────
-      // 6. ANIMATION FRAME LOOP
-      // ──────────────────────────────────────────
+      // Simple Nature Renderer inside Controlled Stage
       function frame(now) {
         const dt = Math.min(0.05, (now - lastTime) / 1000);
         lastTime = now;
         elapsed += dt;
 
-        windTimer += dt;
-        if (windTimer >= WIND_INTERVAL) {
-          windTimer = 0;
-          globalWindImpulse = 1.0;
-          windDirection = (Math.random() > 0.5 ? 1 : -1);
-        }
-
-        if (globalWindImpulse > 0) {
-          globalWindImpulse = Math.max(0, globalWindImpulse - dt * 0.18);
-        }
-
         ctx.clearRect(0, 0, width, height);
 
-        // Sakura Petals
-        if (sakuraActive) {
-          for (const petal of sakuraPetals) {
-            updatePetal(petal, dt);
-            drawPetal(petal);
-          }
-        }
+        if (activeScene === 'nature') {
+          // Render soft glowing fireflies confined to stage
+          for (let i = 0; i < 8; i++) {
+            const fx = (0.15 + (i * 0.11) + Math.sin(elapsed * 0.8 + i) * 0.08) * width;
+            const fy = (0.2 + (i % 4) * 0.18 + Math.cos(elapsed * 0.6 + i * 2) * 0.08) * height;
+            const flash = Math.max(0, Math.sin(elapsed * 2.5 + i * 1.5));
 
-        // 100% Image-Traced Dandelion Seeds
-        if (dandelionsActive) {
-          for (const seed of dandelions) {
-            seed.x += Math.sin(elapsed * 0.31 + seed.phase) * 0.4;
-            seed.y += 0.35;
-            if (seed.x > width + 50) seed.x = -50;
-            if (seed.y > height + 60) seed.y = -60;
-            drawSeed(seed);
-          }
-        }
-
-        // Fireflies
-        if (firefliesActive) {
-          fireflies.forEach((ff, index) => {
-            updateFirefly(ff, dt, index);
-            drawFirefly(ff);
-          });
-        }
-
-        // Dragonflies
-        if (dragonfliesActive) {
-          for (const df of dragonflies) {
-            df.wingPhase = (df.wingPhase + dt * 30) % TAU;
-            let ax = 0; let ay = 0;
-            const marginX = 0.08; const marginY = 0.10;
-            if (df.x < marginX) ax += (marginX - df.x) * 4.4;
-            if (df.x > 1 - marginX) ax -= (df.x - (1 - marginX)) * 4.4;
-            if (df.y < marginY) ay += (marginY - df.y) * 4.4;
-            if (df.y > 1 - marginY) ay -= (df.y - (1 - marginY)) * 4.4;
-
-            df.vx += ax * dt; df.vy += ay * dt;
-            df.vx *= Math.exp(-1.45 * dt); df.vy *= Math.exp(-1.45 * dt);
-
-            if (Math.hypot(df.vx, df.vy) < 0.03) {
-              df.vx += Math.cos(df.facing) * 0.04 * dt;
-              df.vy += Math.sin(df.facing) * 0.04 * dt;
+            if (flash > 0.05) {
+              const g = ctx.createRadialGradient(fx, fy, 1, fx, fy, 24);
+              g.addColorStop(0, 'rgba(239,255,123,0.9)');
+              g.addColorStop(0.4, 'rgba(174,255,55,0.3)');
+              g.addColorStop(1, 'rgba(0,0,0,0)');
+              ctx.fillStyle = g;
+              ctx.beginPath();
+              ctx.arc(fx, fy, 24, 0, TAU);
+              ctx.fill();
             }
-
-            df.x = clamp(df.x + df.vx * dt, 0.05, 0.95);
-            df.y = clamp(df.y + df.vy * dt, 0.07, 0.93);
-
-            df.facing = Math.atan2(df.vy, df.vx);
-            let turn = df.facing - df.visualFacing;
-            turn = Math.atan2(Math.sin(turn), Math.cos(turn));
-            df.visualFacing += turn * Math.min(1, dt * 6.5);
-
-            drawDragonfly(df);
           }
+        } else if (activeScene === 'sticky') {
+          // Render sticky note card preview on canvas
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(width - 320, 80, 260, 160, 10);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = '12px Inter, sans-serif';
+          ctx.fillText('📌 TECHNICAL TASK #402', width - 300, 110);
+          ctx.fillStyle = '#f1f5f9';
+          ctx.font = '13px Inter, sans-serif';
+          ctx.fillText('Review Structural Beam Calculation', width - 300, 135);
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '11px Inter, sans-serif';
+          ctx.fillText('Deadline: 14:00 PM • Acknowledged by 2 staff', width - 300, 160);
         }
 
         requestAnimationFrame(frame);

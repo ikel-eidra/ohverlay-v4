@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Roadmap — Ohverlay</title>
+  <meta name="description" content="Explore the official development roadmap for Ohverlay: Stable Nature Baseline, Technical Office Rebuild, Privacy Architecture, Package Manager, and Blue AI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg-dark: #070a12; --card-bg: rgba(13, 19, 32, 0.75); --card-border: rgba(255, 255, 255, 0.08); --text-main: #f3f4f6; --text-muted: #94a3b8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-dark); color: var(--text-main); line-height: 1.7; padding-top: 100px; }
+    header { position: fixed; top: 0; left: 0; width: 100%; padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; background: rgba(7, 10, 18, 0.88); backdrop-filter: blur(16px); border-bottom: 1px solid var(--card-border); z-index: 100; }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-logo { width: 34px; height: 34px; background: linear-gradient(135deg, #10b981, #3b82f6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-weight: 800; color: #fff; font-size: 18px; }
+    .brand-name { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; }
+    nav { display: flex; align-items: center; gap: 24px; }
+    nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+    nav a:hover { color: var(--text-main); }
+    .container { max-width: 900px; margin: 0 auto; padding: 60px 24px; text-align: left; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 44px; font-weight: 800; margin-bottom: 20px; }
+    .phase { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 28px; margin: 24px 0; }
+    .phase h3 { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 600; color: #ffffff; margin-bottom: 8px; }
+    .badge-curr { display: inline-block; background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-bottom: 12px; }
+    .badge-plan { display: inline-block; background: rgba(139, 92, 246, 0.15); color: #c084fc; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="brand">
+      <div class="brand-logo">O</div>
+      <span class="brand-name">Ohverlay</span>
+    </a>
+    <nav>
+      <a href="index.html#lanes">Platform Lanes</a>
+      <a href="technical-office.html">Technical Office</a>
+      <a href="living-overlays.html">Living Overlays</a>
+      <a href="whitepaper.html">Whitepaper</a>
+      <a href="ethics.html">Ethics</a>
+      <a href="roadmap.html" style="color: #ffffff;">Roadmap</a>
+      <a href="download.html" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #60a5fa; padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; text-decoration: none;">Download Development Preview</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1>Platform Development Roadmap</h1>
+    <p style="font-size: 17px; color: #e2e8f0;">
+      A staged roadmap for restoring and expanding Ohverlay's six platform lanes.
+    </p>
+
+    <div class="phase">
+      <span class="badge-curr">PHASE 1 — COMPLETED BASELINE</span>
+      <h3>1. Stable Desktop Nature Runtime</h3>
+      <p style="color: var(--text-muted); font-size: 14px;">
+        Clean standalone Python PySide6 QWebEngine architecture delivering 4 verified living overlays (Fireflies, Dragonflies, Dandelion Seeds, Sakura Petals) with Control Center tray interaction.
+      </p>
+    </div>
+
+    <div class="phase">
+      <span class="badge-plan">PHASE 2 — IN DEVELOPMENT</span>
+      <h3>2. Technical Office Rebuild</h3>
+      <p style="color: var(--text-muted); font-size: 14px;">
+        Restoring sticky instructions, timed countdowns, supervisor acknowledgements, and local LAN file handoffs under the local-first architecture.
+      </p>
+    </div>
+
+    <div class="phase" id="ecosystem">
+      <span class="badge-plan">PHASE 3 — PLANNED</span>
+      <h3>3. Overlay Package Manager & Creator Ecosystem</h3>
+      <p style="color: var(--text-muted); font-size: 14px;">
+        Open package manifest specification (`manifest.json`) allowing third-party creators to author and publish custom desktop overlays.
+      </p>
+    </div>
+
+    <div class="phase">
+      <span class="badge-plan">PHASE 4 — RESEARCH</span>
+      <h3>4. Optional Blue AI Screen Integration</h3>
+      <p style="color: var(--text-muted); font-size: 14px;">
+        On-demand screen-aware assistant providing contextual support upon explicit user hotkey request.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

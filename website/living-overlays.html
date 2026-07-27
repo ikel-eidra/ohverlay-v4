@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Living Overlays — Ambient Nature Architecture | Ohverlay</title>
+  <meta name="description" content="Explore Ohverlay's verified living nature overlays: fireflies, dragonflies, dandelion seeds, and sakura cherry blossom petals.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg-dark: #070a12; --card-bg: rgba(13, 19, 32, 0.75); --card-border: rgba(255, 255, 255, 0.08); --text-main: #f3f4f6; --text-muted: #94a3b8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-dark); color: var(--text-main); line-height: 1.6; padding-top: 100px; }
+    header { position: fixed; top: 0; left: 0; width: 100%; padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; background: rgba(7, 10, 18, 0.88); backdrop-filter: blur(16px); border-bottom: 1px solid var(--card-border); z-index: 100; }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-logo { width: 34px; height: 34px; background: linear-gradient(135deg, #10b981, #3b82f6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-weight: 800; color: #fff; font-size: 18px; }
+    .brand-name { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; }
+    nav { display: flex; align-items: center; gap: 24px; }
+    nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+    nav a:hover { color: var(--text-main); }
+    .container { max-width: 1000px; margin: 0 auto; padding: 60px 24px; text-align: left; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 44px; font-weight: 800; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 40px; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 28px; }
+    .card h3 { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 600; color: #ffffff; margin-bottom: 10px; }
+    .card p { color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+    .badge { display: inline-block; background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="brand">
+      <div class="brand-logo">O</div>
+      <span class="brand-name">Ohverlay</span>
+    </a>
+    <nav>
+      <a href="index.html#lanes">Platform Lanes</a>
+      <a href="technical-office.html">Technical Office</a>
+      <a href="living-overlays.html" style="color: #ffffff;">Living Overlays</a>
+      <a href="whitepaper.html">Whitepaper</a>
+      <a href="ethics.html">Ethics</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="download.html" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #60a5fa; padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; text-decoration: none;">Download Development Preview</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1>Living Overlays</h1>
+    <p style="color: var(--text-muted); font-size: 17px; max-width: 720px;">
+      Living Overlays constitute the ambient nature lane of the Ohverlay platform. They provide gentle, hardware-accelerated desktop presence without interrupting active application focus.
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <span class="badge">AVAILABLE NOW</span>
+        <h3>✨ Fireflies Overlay</h3>
+        <p>Six realistic fireflies with organic pulse ignition, 3D banking during flight, and smooth forward orientation kinematics.</p>
+      </div>
+
+      <div class="card">
+        <span class="badge">AVAILABLE NOW</span>
+        <h3>🪶 Dragonflies Overlay</h3>
+        <p>Two realistic dragonflies with double wing-beat acoustics, multi-segment abdomen vectoring, and smooth on-screen boundary steering.</p>
+      </div>
+
+      <div class="card">
+        <span class="badge">AVAILABLE NOW</span>
+        <h3>🌱 Dandelion Seeds Overlay</h3>
+        <p>Image-traced 48-filament pappus seeds with achene pods and micro-eddy wind deflection animation.</p>
+      </div>
+
+      <div class="card">
+        <span class="badge">AVAILABLE NOW</span>
+        <h3>🌸 Sakura Petals Overlay</h3>
+        <p>Translucent sakura cherry blossom petals featuring 3D flip tumbling, taskbar ground resting, and a 5-minute wind impulse engine.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

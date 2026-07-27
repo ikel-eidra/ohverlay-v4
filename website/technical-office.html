@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Technical Office Origins — Ohverlay</title>
+  <meta name="description" content="Discover the origins of Ohverlay inside a real Saudi Arabian engineering office, supporting sticky instructions, timed tasks, supervisor reporting, and file handoffs.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070a12;
+      --card-bg: rgba(13, 19, 32, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #94a3b8;
+      --accent-blue: #3b82f6;
+      --accent-amber: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding-top: 100px;
+    }
+    header {
+      position: fixed; top: 0; left: 0; width: 100%; padding: 18px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(7, 10, 18, 0.88); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border); z-index: 100;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-logo { width: 34px; height: 34px; background: linear-gradient(135deg, #10b981, #3b82f6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-weight: 800; color: #fff; font-size: 18px; }
+    .brand-name { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; }
+    nav { display: flex; align-items: center; gap: 24px; }
+    nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+    nav a:hover { color: var(--text-main); }
+    .container { max-width: 960px; margin: 0 auto; padding: 60px 24px; text-align: left; }
+    .history-badge { display: inline-block; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; margin-bottom: 24px; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 44px; font-weight: 800; margin-bottom: 20px; line-height: 1.2; }
+    p { color: var(--text-muted); font-size: 16px; line-height: 1.7; margin-bottom: 24px; }
+    .spec-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 32px; margin: 32px 0; }
+    .spec-box h3 { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 600; color: #ffffff; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="brand">
+      <div class="brand-logo">O</div>
+      <span class="brand-name">Ohverlay</span>
+    </a>
+    <nav>
+      <a href="index.html#lanes">Platform Lanes</a>
+      <a href="technical-office.html" style="color: #ffffff;">Technical Office</a>
+      <a href="living-overlays.html">Living Overlays</a>
+      <a href="whitepaper.html">Whitepaper</a>
+      <a href="ethics.html">Ethics</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="download.html" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #60a5fa; padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; text-decoration: none;">Download Development Preview</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <span class="history-badge">EARLIER WORKING PROTOTYPE — NOT INCLUDED IN CURRENT NATURE RUNTIME BUILD</span>
+    <h1>Technical Office Origins</h1>
+    <p>
+      Ohverlay did not start as a screensaver or aesthetic decoration. It originated inside a real, high-demand Saudi Arabian engineering office where technical teams needed a unobtrusive way to deliver urgent task instructions, track supervisor approvals, and hand off local files without interrupting active CAD and structural engineering applications.
+    </p>
+
+    <div class="spec-box">
+      <h3>Historical Capabilities (Saudi-Era Prototype)</h3>
+      <ul style="color: var(--text-muted); font-size: 15px; line-height: 1.8; margin-left: 20px;">
+        <li><strong>Sticky Instructions & Timed Tasks:</strong> Floating persistent note overlays anchored to desktop corners with countdown deadlines.</li>
+        <li><strong>Staff Acknowledgements:</strong> Interactive receipt buttons confirming task execution back to supervisor dashboards.</li>
+        <li><strong>Local-Network File Handoffs:</strong> Direct peer-to-peer file transfer between workstation overlays on the local LAN.</li>
+        <li><strong>Supervisor Workstation Dashboard:</strong> Centralized real-time overview of active office task statuses.</li>
+      </ul>
+    </div>
+
+    <div class="spec-box" style="border-color: rgba(59, 130, 246, 0.3);">
+      <h3 style="color: #60a5fa;">Current Status & Planned Rebuild</h3>
+      <p style="margin-bottom: 0;">
+        The current Ohverlay Desktop Runtime (`python main.py`) focuses on a clean, stable nature baseline. The Technical Office capabilities are scheduled for a complete modular rebuild under our privacy-conscious local-first architecture.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

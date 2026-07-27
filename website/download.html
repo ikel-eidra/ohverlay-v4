@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Ohverlay Development Preview</title>
+  <meta name="description" content="Download the Ohverlay Development Preview for Windows 10/11 x64. Portable, lightweight, and 100% offline.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg-dark: #070a12; --card-bg: rgba(13, 19, 32, 0.75); --card-border: rgba(255, 255, 255, 0.08); --text-main: #f3f4f6; --text-muted: #94a3b8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-dark); color: var(--text-main); line-height: 1.7; padding-top: 100px; }
+    header { position: fixed; top: 0; left: 0; width: 100%; padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; background: rgba(7, 10, 18, 0.88); backdrop-filter: blur(16px); border-bottom: 1px solid var(--card-border); z-index: 100; }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-logo { width: 34px; height: 34px; background: linear-gradient(135deg, #10b981, #3b82f6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-weight: 800; color: #fff; font-size: 18px; }
+    .brand-name { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 700; color: #ffffff; }
+    nav { display: flex; align-items: center; gap: 24px; }
+    nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+    nav a:hover { color: var(--text-main); }
+    .container { max-width: 900px; margin: 0 auto; padding: 60px 24px; text-align: left; }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 44px; font-weight: 800; margin-bottom: 20px; }
+    .dl-card { background: var(--card-bg); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 20px; padding: 40px; margin: 32px 0; }
+    .btn-download { display: inline-block; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; padding: 16px 36px; border-radius: 12px; font-weight: 700; font-size: 16px; text-decoration: none; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3); transition: transform 0.2s ease; }
+    .btn-download:hover { transform: translateY(-2px); }
+    .meta-table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 14px; }
+    .meta-table td { padding: 10px 0; border-bottom: 1px solid var(--card-border); color: var(--text-muted); }
+    .meta-table td:first-child { font-weight: 600; color: #ffffff; width: 220px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="brand">
+      <div class="brand-logo">O</div>
+      <span class="brand-name">Ohverlay</span>
+    </a>
+    <nav>
+      <a href="index.html#lanes">Platform Lanes</a>
+      <a href="technical-office.html">Technical Office</a>
+      <a href="living-overlays.html">Living Overlays</a>
+      <a href="whitepaper.html">Whitepaper</a>
+      <a href="ethics.html">Ethics</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="download.html" style="color: #ffffff; background: rgba(59, 130, 246, 0.25); border: 1px solid #3b82f6; padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; text-decoration: none;">Download Development Preview</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1>Ohverlay Development Preview</h1>
+    <p style="font-size: 17px; color: #e2e8f0;">
+      Get the latest portable build of the Ohverlay desktop environment for Windows.
+    </p>
+
+    <div class="dl-card">
+      <a href="https://github.com/michaelfutol/ohverlay-v4/archive/refs/heads/main.zip" class="btn-download">
+        ⚡ Download Development Preview (.zip)
+      </a>
+
+      <table class="meta-table">
+        <tr>
+          <td>Package Name</td>
+          <td>Ohverlay Development Preview (Portable ZIP)</td>
+        </tr>
+        <tr>
+          <td>Supported OS</td>
+          <td>Windows 10 / Windows 11 (64-bit)</td>
+        </tr>
+        <tr>
+          <td>Architecture</td>
+          <td>Standalone Offline Python PySide6 QWebEngine</td>
+        </tr>
+        <tr>
+          <td>Included Overlays</td>
+          <td>Fireflies, Dragonflies, Dandelion Seeds, Sakura Petals</td>
+        </tr>
+        <tr>
+          <td>Known Issues</td>
+          <td>Technical Office modules currently in planned rebuild phase.</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
