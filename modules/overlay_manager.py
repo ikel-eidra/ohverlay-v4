@@ -49,11 +49,11 @@ OVERLAY_REGISTRY = [
         "description": "Two realistic dragonflies hovering and darting",
     },
     {
-        "id": "jellyfish",
-        "name": "Cyan Jellyfish",
-        "file": "jellyfish-overlay.html",
+        "id": "autumn_leaves",
+        "name": "Autumn Leaves",
+        "file": "autumn-leaves-overlay.html",
         "category": "ambient",
-        "description": "Translucent bioluminescent cyan jellyfish pulsating and drifting vertically",
+        "description": "Realistic 3D tumbling and swaying autumn maple leaves floating down display",
     },
 ]
 
