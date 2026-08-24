@@ -55,6 +55,20 @@ OVERLAY_REGISTRY = [
         "category": "ambient",
         "description": "Translucent sakura petals falling, resting at taskbar ground, and blown by 5-minute breeze",
     },
+    {
+        "id": "sticky_note",
+        "name": "Technical Office Sticky Note",
+        "file": "sticky-note-overlay.html",
+        "category": "office",
+        "description": "Persistent technical instruction note with task deadline countdown, pin/tape styles, and drag-and-drop",
+    },
+    {
+        "id": "exam_reviewer",
+        "name": "Exam & Study Reviewer",
+        "file": "exam-reviewer-overlay.html",
+        "category": "learning",
+        "description": "Spaced repetition exam study flashcard overlay",
+    },
 ]
 
 

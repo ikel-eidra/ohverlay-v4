@@ -191,6 +191,8 @@ class ControlCenter(QWidget):
             ("🪶 Dragonflies", "dragonflies", 2),
             ("🌱 Dandelions", "dandelions", 3),
             ("🌸 Sakura Petals", "sakura_petals", 8),
+            ("📌 Sticky Note", "sticky_note", 1),
+            ("📖 Exam Reviewer", "exam_reviewer", 1),
         ]
 
         for label_text, oid, default_count in species_list:
