@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal VA Companion Overlay</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden; background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      user-select: none; -webkit-user-select: none;
+    }
+    
+    .va-card {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      width: 320px;
+      background: rgba(13, 19, 32, 0.88);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 16px;
+      padding: 18px;
+      color: #f3f4f6;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.15);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .va-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 10px;
+    }
+
+    .va-avatar-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .va-avatar {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .va-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    .va-subtitle {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .va-status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .task-input-box {
+      margin-bottom: 12px;
+    }
+
+    .task-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #ffffff;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .task-input:focus {
+      border-color: #3b82f6;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .task-checkbox {
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+
+    .message-alert {
+      margin-top: 14px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+    }
+
+    .msg-icon { font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="va-card" id="vaCard">
+    <div class="va-header">
+      <div class="va-avatar-title">
+        <div class="va-avatar">🤖</div>
+        <div>
+          <div class="va-title">Personal VA Companion</div>
+          <div class="va-subtitle">Workstation Assistant</div>
+        </div>
+      </div>
+      <div class="va-status-dot" title="VA Active & Listening"></div>
+    </div>
+
+    <div class="task-input-box">
+      <input type="text" id="taskInput" class="task-input" placeholder="+ Add quick reminder or note..." />
+    </div>
+
+    <div class="task-list" id="taskList">
+      <div class="task-item">
+        <input type="checkbox" class="task-checkbox" />
+        <span>Review client report PDF</span>
+      </div>
+      <div class="task-item">
+        <input type="checkbox" class="task-checkbox" />
+        <span>Send WhatsApp update at 3:00 PM</span>
+      </div>
+    </div>
+
+    <div class="message-alert">
+      <span class="msg-icon">💬</span>
+      <div>
+        <strong style="color: #60a5fa;">Messaging Hook Ready</strong>
+        <div style="color: #94a3b8; font-size: 10px;">WhatsApp / Messenger webhooks active</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const taskInput = document.getElementById('taskInput');
+    const taskList = document.getElementById('taskList');
+
+    taskInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && taskInput.value.trim()) {
+        const item = document.createElement('div');
+        item.className = 'task-item';
+        item.innerHTML = `<input type="checkbox" class="task-checkbox" /><span>${taskInput.value.trim()}</span>`;
+        taskList.prepend(item);
+        taskInput.value = '';
+      }
+    });
+  </script>
+</body>
+</html>

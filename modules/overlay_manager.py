@@ -69,6 +69,20 @@ OVERLAY_REGISTRY = [
         "category": "learning",
         "description": "Spaced repetition exam study flashcard overlay",
     },
+    {
+        "id": "personal_va",
+        "name": "Personal VA Companion",
+        "file": "personal-va-overlay.html",
+        "category": "productivity",
+        "description": "Sleek personal VA assistant with workstation tasks and messaging hooks",
+    },
+    {
+        "id": "live_widgets",
+        "name": "Live Weather, Stocks & News",
+        "file": "live-widgets-overlay.html",
+        "category": "widgets",
+        "description": "Real-time weather, stock/crypto ticker, and news headlines drifting on desktop",
+    },
 ]
 
 
